@@ -1,16 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { MainLayout } from "@/components/main-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Edit, Eye, Phone, Mail } from "lucide-react"
+import { Plus, Search, Edit, Eye, Phone, Mail, Users } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
-import Link from "next/link"
 
 const mockClientes = [
   {
@@ -59,119 +57,175 @@ export default function ClientesPage() {
 
   return (
     <MainLayout>
-      <div className="container py-8 space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-primary-dark">Clientes</h1>
-            <p className="text-muted-foreground">Gestiona tu cartera de clientes</p>
-          </div>
-          {isAdmin && (
-            <Link href="/clientes/nuevo">
-              <Button className="gradient-primary text-white hover:opacity-90">
-                <Plus className="mr-2 h-4 w-4" />
-                Nuevo Cliente
-              </Button>
-            </Link>
-          )}
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-primary-lighter/5 via-background to-primary-light/5">
+        {/* Header Section */}
+        <section className="py-12 lg:py-16">
+          <div className="container">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
+              <div className="space-y-2">
+                <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary-dark to-primary-medium bg-clip-text text-transparent">
+                  Clientes
+                </h1>
+                <p className="text-xl text-muted-foreground">
+                  Gestiona tu cartera de clientes de manera eficiente
+                </p>
+              </div>
+              
+              {isAdmin && (
+                <div className="flex gap-3">
+                  <Link href="/clientes/nuevo">
+                    <Button size="lg" className="btn-primary">
+                      <Plus className="mr-2 h-5 w-5" />
+                      Nuevo Cliente
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
 
-        {/* Filtros */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Filtros</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Label htmlFor="search">Buscar</Label>
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="search"
-                    placeholder="Buscar por nombre, email o empresa..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8"
-                  />
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="card-modern p-6 text-center bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{filteredClientes.filter(c => c.estado === 'activo').length}</div>
+                <div className="text-sm text-green-700 dark:text-green-300 font-medium">Clientes Activos</div>
+              </div>
+              <div className="card-modern p-6 text-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{filteredClientes.reduce((acc, c) => acc + c.proyectos, 0)}</div>
+                <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Proyectos</div>
+              </div>
+              <div className="card-modern p-6 text-center bg-gradient-to-br from-primary-lighter/50 to-primary-light/30 border-primary-light/30">
+                <div className="text-3xl font-bold text-primary-dark">{filteredClientes.length}</div>
+                <div className="text-sm text-primary-dark/80 font-medium">Total Clientes</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Filters Section */}
+        <section className="pb-8">
+          <div className="container">
+            <div className="card-modern p-6 mb-8">
+              <div className="flex flex-col lg:flex-row gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="search" className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Buscar clientes
+                  </Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="search"
+                      placeholder="Buscar por nombre, email o empresa..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="input-modern pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant={searchTerm ? "secondary" : "ghost"} 
+                    onClick={() => setSearchTerm("")}
+                    disabled={!searchTerm}
+                    className="btn-ghost"
+                  >
+                    Limpiar
+                  </Button>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        {/* Tabla de Clientes */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Lista de Clientes ({filteredClientes.length})</CardTitle>
-            <CardDescription>Todos los clientes registrados en el sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Contacto</TableHead>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Proyectos</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClientes.map((cliente) => (
-                  <TableRow key={cliente.id} className="animate-fade-in">
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{cliente.nombre}</div>
-                        <div className="text-sm text-muted-foreground">Registrado: {cliente.fechaRegistro}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm">
-                          <Mail className="mr-1 h-3 w-3" />
-                          {cliente.email}
+        {/* Clients Grid */}
+        <section className="pb-16">
+          <div className="container">
+            {filteredClientes.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
+                  <Users className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <h3 className="text-2xl font-semibold text-muted-foreground mb-2">No se encontraron clientes</h3>
+                <p className="text-muted-foreground mb-6">
+                  {searchTerm ? "Intenta con otros términos de búsqueda" : "Comienza agregando tu primer cliente"}
+                </p>
+                {isAdmin && !searchTerm && (
+                  <Link href="/clientes/nuevo">
+                    <Button className="btn-primary">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Agregar Cliente
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="grid-responsive-auto">
+                {filteredClientes.map((cliente, index) => (
+                  <div 
+                    key={cliente.id} 
+                    className="card-interactive group animate-slide-up"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div className="p-6 space-y-4">
+                      {/* Header */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-semibold text-lg">
+                            {cliente.nombre.charAt(0)}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg text-primary-dark">{cliente.nombre}</h3>
+                            <p className="text-sm text-muted-foreground">{cliente.empresa}</p>
+                          </div>
                         </div>
-                        <div className="flex items-center text-sm">
-                          <Phone className="mr-1 h-3 w-3" />
-                          {cliente.telefono}
+                        <div className={`status-${cliente.estado}`}>
+                          {cliente.estado === 'activo' ? 'Activo' : 'Inactivo'}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>{cliente.empresa}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{cliente.proyectos} proyectos</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={cliente.estado === "activo" ? "default" : "secondary"}
-                        className={cliente.estado === "activo" ? "bg-green-500" : ""}
-                      >
-                        {cliente.estado}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/clientes/${cliente.id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
+
+                      {/* Contact Info */}
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <Mail className="h-4 w-4" />
+                          <span>{cliente.email}</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <Phone className="h-4 w-4" />
+                          <span>{cliente.telefono}</span>
+                        </div>
+                      </div>
+
+                      {/* Projects */}
+                      <div className="flex items-center justify-between py-3 px-4 bg-muted/30 rounded-lg">
+                        <span className="text-sm font-medium">Proyectos</span>
+                        <Badge className="gradient-secondary text-primary-dark">
+                          {cliente.proyectos}
+                        </Badge>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 pt-2">
+                        <Link href={`/clientes/${cliente.id}`} className="flex-1">
+                          <Button variant="outline" size="sm" className="w-full btn-ghost">
+                            <Eye className="mr-2 h-4 w-4" />
+                            Ver
+                          </Button>
+                        </Link>
                         {isAdmin && (
-                          <Link href={`/clientes/${cliente.id}/editar`}>
-                            <Button variant="ghost" size="sm" className="hover:bg-[#c9e077]/20">
-                              <Edit className="h-4 w-4" />
+                          <Link href={`/clientes/${cliente.id}/editar`} className="flex-1">
+                            <Button variant="outline" size="sm" className="w-full btn-secondary">
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
                             </Button>
                           </Link>
                         )}
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </MainLayout>
   )

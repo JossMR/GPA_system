@@ -179,7 +179,7 @@ export default function ReportesPage() {
                       }`}
                     />
                     <div className="flex-1">
-                      <h3 className="font-medium">{report.title}</h3>
+                      <h4 className="font-medium">{report.title}</h4>
                       <p className="text-sm text-muted-foreground">{report.description}</p>
                     </div>
                   </div>
