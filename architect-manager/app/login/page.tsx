@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/components/auth-provider"
+import GoogleLoginButton from "@/components/GoogleLogin"
 import { Loader2, Facebook, Twitter, Building2 } from "lucide-react"
 
 export default function LoginPage() {
@@ -160,20 +161,13 @@ export default function LoginPage() {
                     "Enviar"
                   )}
                 </Button>
+                <div className="mt-6 flex flex-col items-center">
+                <GoogleLoginButton
+                  onSuccessRedirect={() => router.push("/")}
+                  setLoading={setLoading}
+                />
+              </div>
               </form>
-
-              <div className="mt-8 text-center animate-fade-in" style={{ animationDelay: "1s" }}>
-                <p className="text-sm text-gray-600">
-                  ¿No tienes cuenta?{" "}
-                  <a href="#" className="text-[#486b00] hover:text-[#2e4600] font-medium transition-colors">
-                    Regístrate
-                  </a>
-                </p>
-              </div>
-
-              <div className="mt-4 text-center animate-fade-in" style={{ animationDelay: "1.2s" }}>
-                <p className="text-xs text-gray-500">Usa cualquier email y contraseña para acceder</p>
-              </div>
             </div>
           </div>
         </div>
