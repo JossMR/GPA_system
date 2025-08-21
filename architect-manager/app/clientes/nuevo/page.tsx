@@ -66,11 +66,33 @@ export default function NuevoClientePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="nombre" className="text-[#2e4600] font-medium">
-                        Nombre completo *
+                        Nombre *
                       </Label>
                       <Input
-                        id="nombre"
-                        placeholder="Ej: María González"
+                        id="name"
+                        placeholder="Ej: María"
+                        className="border-[#a2c523]/30 focus:border-[#486b00]"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nombre" className="text-[#2e4600] font-medium">
+                        Primer apellido *
+                      </Label>
+                      <Input
+                        id="flastname"
+                        placeholder="Ej: González"
+                        className="border-[#a2c523]/30 focus:border-[#486b00]"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nombre" className="text-[#2e4600] font-medium">
+                        Segundo apellido *
+                      </Label>
+                      <Input
+                        id="slastname"
+                        placeholder="Ej: Lopez"
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                         required
                       />
