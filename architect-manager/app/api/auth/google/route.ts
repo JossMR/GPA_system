@@ -99,11 +99,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "User not registered in the system",
-          needsRegistration: true,
-          googleId: sub,
-          email,
-          name,
-          picture,
+          needsRegistration: true
         },
         { status: 401 },
       )

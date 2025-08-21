@@ -1,9 +1,9 @@
 "use client"
 
 //import { useUser } from "@/context/UserContext"
-import { GoogleLogin} from "@react-oauth/google"
+import { GoogleLogin } from "@react-oauth/google"
 import { useState, useEffect } from "react"
-
+import { User, useAuth } from "@/components/auth-provider";
 interface GoogleLoginButtonProps {
   onSuccessRedirect: () => void
   setLoading: (value: boolean) => void
@@ -13,6 +13,7 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
   //const { setUser } = useUser()
   const [error, setError] = useState<string | null>(null)
   const [csrfToken, setCsrfToken] = useState<string>("")
+  const { login } = useAuth()
 
   // Generate CSRF token on component mount
   useEffect(() => {
@@ -20,10 +21,8 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
     const token = Math.random().toString(36).substring(2, 15)
 
     // Set the CSRF token in a cookie
-    document.cookie = `g_csrf_token=${token}; path=/; SameSite=Strict; ${
-        window.location.protocol === "https:" ? "Secure;" : ""
-    }`
-
+    document.cookie = `g_csrf_token=${token}; path=/; SameSite=Strict; ${window.location.protocol === "https:" ? "Secure;" : ""
+      }`
     setCsrfToken(token)
   }, [])
 
@@ -44,9 +43,8 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
           g_csrf_token: csrfToken,
         }),
       })
-
       const data = await response.json()
-      console.log(response.ok)
+      console.log(data)
       if (!response.ok) {
         // Handle different error scenarios
         if (response.status === 401 && data.needsRegistration) {
@@ -59,18 +57,19 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
         setLoading(false)
         return
       }
-
+      console.log(data.message)
       // Authentication successful, update user context
-      /*setUser({
+      const user: User = {
         id: data.user.id,
-        googleId: data.user.googleId,
-        email: data.user.email,
+        active: data.user.active === 1,
         name: data.user.name,
-        role: data.user.role,
-        department: data.user.department,
+        flastname: data.user.flastname,
+        slastname: data.user.slastname,
         picture: data.user.picture,
-      })*/
-
+        roleid: data.user.roleid,
+        email: data.user.email
+      }
+      login(user);
       // Redirect to the success page
       onSuccessRedirect()
     } catch (error) {
@@ -81,19 +80,19 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
   }
 
   return (
-      <div className="w-full flex justify-center">
-        {error && <div className="text-red-500 mb-4 text-sm">{error}</div>}
+    <div className="w-full flex justify-center">
+      {error && <div className="text-red-500 mb-4 text-sm">{error}</div>}
 
-        <GoogleLogin
-            onSuccess={handleLogin}
-            onError={() => {
-              setError("Failed to authenticate with Google. Please try again.")
-              setLoading(false)
-            }}
-            useOneTap
-            size="large"
-            width={300}
-        />
-      </div>
+      <GoogleLogin
+        onSuccess={handleLogin}
+        onError={() => {
+          setError("Failed to authenticate with Google. Please try again.")
+          setLoading(false)
+        }}
+        useOneTap
+        size="large"
+        width={300}
+      />
+    </div>
   )
 }
