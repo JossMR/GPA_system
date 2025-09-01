@@ -12,23 +12,60 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Save, User, Building, Mail, Phone, MapPin } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { Switch } from "@/components/ui/switch"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
+import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-select"
+import { PhoneInput } from "@/components/ui/phone-input"
+import type { GPAClient } from "@/models/GPA_client"
 
-export default function NuevoClientePage() {
+export default function NewClientPage() {
   const { isAdmin } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [identificationType, setIdentificationType] = useState("")
+  const [phone, setPhone] = useState("")
+  const [civilStatus, setCivilStatus] = useState<"Single" | "Married" | "Divorced" | "Widowed">("Single")
+  const [province, setProvince] = useState("")
+  const [canton, setCanton] = useState("")
+  const [district, setDistrict] = useState("")
 
   if (!isAdmin) {
     router.push("/clientes")
     return null
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
+    const formData = new FormData(e.currentTarget)
+    const phone = formData.get("phone") as string
+    const countryCode = formData.get("countryCode")
+    console.log("Country code", countryCode)
 
-    // Simular guardado
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const newClient: GPAClient = {
+      CLI_name: formData.get("name") as string,
+      CLI_f_lastname: formData.get("flastname") as string,
+      CLI_s_lastname: formData.get("slastname") as string,
+      CLI_email: formData.get("email") as string,
+      CLI_identificationtype: identificationType as GPAClient["CLI_identificationtype"],
+      CLI_identification: formData.get("identification") as string,
+      CLI_phone: phone,
+      CLI_civil_status: formData.get("civilStatus") as GPAClient["CLI_civil_status"],
+      CLI_province: formData.get("province") as string,
+      CLI_canton: formData.get("canton") as string,
+      CLI_district: formData.get("district") as string,
+      CLI_neighborhood: formData.get("neighborhood") as string,
+      CLI_additional_directions: formData.get("additionalDirections") as string,
+      CLI_observations: formData.get("observations") as string,
+      CLI_isperson: formData.get("isPerson") === "on",
+    }
+    console.log("New client", newClient)
 
     setLoading(false)
     router.push("/clientes")
@@ -70,28 +107,34 @@ export default function NuevoClientePage() {
                       </Label>
                       <Input
                         id="name"
+                        name="name"
+                        maxLength={50}
                         placeholder="Ej: María"
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="nombre" className="text-[#2e4600] font-medium">
+                      <Label htmlFor="flastname" className="text-[#2e4600] font-medium">
                         Primer apellido *
                       </Label>
                       <Input
                         id="flastname"
+                        name="flastname"
+                        maxLength={50}
                         placeholder="Ej: González"
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="nombre" className="text-[#2e4600] font-medium">
+                      <Label htmlFor="slastname" className="text-[#2e4600] font-medium">
                         Segundo apellido *
                       </Label>
                       <Input
                         id="slastname"
+                        name="slastname"
+                        maxLength={50}
                         placeholder="Ej: Lopez"
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                         required
@@ -105,66 +148,116 @@ export default function NuevoClientePage() {
                         <Mail className="absolute left-3 top-2.5 h-4 w-4 text-[#486b00]" />
                         <Input
                           id="email"
+                          name="email"
+                          maxLength={150}
                           type="email"
-                          placeholder="maria@email.com"
+                          placeholder="Ej: maria@email.com"
                           className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
                           required
                         />
                       </div>
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="telefono" className="text-[#2e4600] font-medium">
-                        Teléfono *
+                      <Label htmlFor="identificationType" className="text-[#2e4600] font-medium">
+                        Tipo de identificación *
                       </Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-2.5 h-4 w-4 text-[#486b00]" />
-                        <Input
-                          id="telefono"
-                          placeholder="+1234567890"
-                          className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
-                          required
-                        />
-                      </div>
+                      <Select
+                        required
+                        onValueChange={setIdentificationType}>
+                        <SelectTrigger id="identificationType" name="identificationType" className="border-[#a2c523]/30 focus:border-[#486b00] rounded px-3 py-2 w-full">
+                          <SelectValue placeholder="Selecciona una opción" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="national">Cedula Nacional</SelectItem>
+                          <SelectItem value="dimex">Dimex</SelectItem>
+                          <SelectItem value="passport">Pasaporte</SelectItem>
+                          <SelectItem value="refugee">Refugiado</SelectItem>
+                          <SelectItem value="nite">Nite</SelectItem>
+                          <SelectItem value="entity">Entidad</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="empresa" className="text-[#2e4600] font-medium">
-                        Empresa
+                      <Label htmlFor="identification" className="text-[#2e4600] font-medium">
+                        Identificación *
                       </Label>
-                      <div className="relative">
-                        <Building className="absolute left-3 top-2.5 h-4 w-4 text-[#486b00]" />
-                        <Input
-                          id="empresa"
-                          placeholder="Constructora ABC"
-                          className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="direccion" className="text-[#2e4600] font-medium">
-                      Dirección
-                    </Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-[#486b00]" />
                       <Input
-                        id="direccion"
-                        placeholder="Calle Principal 123, Ciudad"
-                        className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
+                        id="identification"
+                        name="identification"
+                        maxLength={50}
+                        placeholder="Ej: 165484154"
+                        className="border-[#a2c523]/30 focus:border-[#486b00]"
+                        required
                       />
                     </div>
                   </div>
-
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <PhoneInput
+                        onChange={setPhone}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="civilStatus" className="text-[#2e4600] font-medium">
+                        Estado civil
+                      </Label>
+                      <Select
+                        required
+                        onValueChange={(value) => setCivilStatus(value as "Single" | "Married" | "Divorced" | "Widowed")}>
+                        <SelectTrigger id="civilStatus" name="civilStatus" className="border-[#a2c523]/30 focus:border-[#486b00] rounded px-3 py-2 w-full">
+                          <SelectValue placeholder="Selecciona una opción" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Single">Soltero</SelectItem>
+                          <SelectItem value="Married">Casado</SelectItem>
+                          <SelectItem value="Divorced">Divorciado</SelectItem>
+                          <SelectItem value="Widowed">Viudo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <div className="space-y-2">
-                    <Label htmlFor="notas" className="text-[#2e4600] font-medium">
-                      Notas adicionales
+                    <Label className="text-[#2e4600] font-medium">
+                      Ubicación *
+                    </Label>
+                    <CostaRicaLocationSelect
+                      province={province}
+                      setProvince={setProvince}
+                      canton={canton}
+                      setCanton={setCanton}
+                      district={district}
+                      setDistrict={setDistrict} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="neighborhood" className="text-[#2e4600] font-medium">
+                        Barrio
+                      </Label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-[#486b00]" />
+                        <Input
+                          id="neighborhood"
+                          name="neighborhood"
+                          maxLength={200}
+                          placeholder="Barrio Santa Catalina"
+                          className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="additionalDirections" className="text-[#2e4600] font-medium">
+                      Direcciones Adicionales
                     </Label>
                     <Textarea
-                      id="notas"
-                      placeholder="Información adicional sobre el cliente..."
+                      id="additionalDirections"
+                      name="additionalDirections"
+                      placeholder="Direcciones adicionales..."
                       className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[100px]"
                     />
                   </div>
