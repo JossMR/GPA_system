@@ -159,7 +159,7 @@ export default function clientsPage() {
                   {searchTerm ? "Intenta con otros términos de búsqueda" : "Comienza agregando tu primer cliente"}
                 </p>
                 {isAdmin && !searchTerm && (
-                  <Link href="/clients/nuevo">
+                  <Link href="/clientes/nuevo">
                     <Button className="btn-primary">
                       <Plus className="mr-2 h-4 w-4" />
                       Agregar Cliente
