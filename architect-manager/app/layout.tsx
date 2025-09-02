@@ -4,13 +4,13 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth-provider"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Gestor de Proyectos Arquitectónicos",
-  description: "Sistema de gestión para arquitectos",
-    generator: 'v0.dev'
+  description: "Sistema de gestión para arquitectos"
 }
 
 export default function RootLayout({
@@ -28,6 +28,7 @@ export default function RootLayout({
           disableTransitionOnChange={false}
           storageKey="architect-theme"
         >
+          <Toaster/>
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>

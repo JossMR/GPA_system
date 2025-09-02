@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery } from '@/lib/database';
 
-// Método GET - Ejemplo de consulta a la base de datos
 export async function GET(request: NextRequest) {
   try {
-    // Ejemplo: Obtener todos los usuarios
     const users = await executeQuery('SELECT * FROM gpa_users LIMIT 10');
     
     return NextResponse.json({
@@ -21,13 +19,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Método POST - Ejemplo de login con validación
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, password } = body;
     
-    // Validar que se enviaron los datos necesarios
     if (!username || !password) {
       return NextResponse.json(
         { error: "Usuario y contraseña son requeridos" },
@@ -35,7 +31,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Buscar el usuario en la base de datos
     const users = await executeQuery(
       'SELECT id, username, password FROM gpa_users WHERE username = ? LIMIT 1',
       [username]
@@ -50,8 +45,6 @@ export async function POST(request: NextRequest) {
     
     const user = users[0] as any;
     
-    // Aquí deberías comparar la contraseña hasheada
-    // Por ahora, comparación simple (NO usar en producción)
     if (user.password !== password) {
       return NextResponse.json(
         { error: "Contraseña incorrecta" },
@@ -59,7 +52,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Login exitoso
     return NextResponse.json({
       message: "Login exitoso",
       user: {

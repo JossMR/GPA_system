@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { MainLayout } from "@/components/main-layout"
 import { Button } from "@/components/ui/button"
@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Search, Edit, Eye, Phone, Mail, Users } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
-
-const mockClientes = [
+import { GPAClient } from '@/models/GPA_client';
+const mockclients = [
   {
     id: 1,
     nombre: "María González",
@@ -43,17 +43,27 @@ const mockClientes = [
   },
 ]
 
-export default function ClientesPage() {
+export default function clientsPage() {
   const { isAdmin } = useAuth()
-  const [clientes, setClientes] = useState(mockClientes)
+  const [clients, setClients] = useState<GPAClient[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
 
-  const filteredClientes = clientes.filter(
-    (cliente) =>
-      cliente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cliente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cliente.empresa.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredClients = clients.filter(
+    (client) =>
+      client.CLI_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.CLI_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.CLI_identification.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      const response = await fetch("/api/clients")
+      const data = await response.json()
+      const requestedClients: GPAClient[] = data.clients
+      setClients(requestedClients)
+    }
+    fetchClients()
+  }, [])
 
   return (
     <MainLayout>
@@ -70,10 +80,10 @@ export default function ClientesPage() {
                   Gestiona tu cartera de clientes de manera eficiente
                 </p>
               </div>
-              
+
               {isAdmin && (
                 <div className="flex gap-3">
-                  <Link href="/clientes/nuevo">
+                  <Link href="/clients/nuevo">
                     <Button size="lg" className="btn-primary">
                       <Plus className="mr-2 h-5 w-5" />
                       Nuevo Cliente
@@ -86,15 +96,15 @@ export default function ClientesPage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <div className="card-modern p-6 text-center bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{filteredClientes.filter(c => c.estado === 'activo').length}</div>
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{/*filteredClients.filter(c => c.estado === 'activo').length*/}</div>
                 <div className="text-sm text-green-700 dark:text-green-300 font-medium">Clientes Activos</div>
               </div>
               <div className="card-modern p-6 text-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{filteredClientes.reduce((acc, c) => acc + c.proyectos, 0)}</div>
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{/*filteredClients.reduce((acc, c) => acc + c.proyectos, 0)*/}</div>
                 <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Proyectos</div>
               </div>
               <div className="card-modern p-6 text-center bg-gradient-to-br from-primary-lighter/50 to-primary-light/30 border-primary-light/30">
-                <div className="text-3xl font-bold text-primary-dark">{filteredClientes.length}</div>
+                <div className="text-3xl font-bold text-primary-dark">{filteredClients.length}</div>
                 <div className="text-sm text-primary-dark/80 font-medium">Total Clientes</div>
               </div>
             </div>
@@ -122,8 +132,8 @@ export default function ClientesPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button 
-                    variant={searchTerm ? "secondary" : "ghost"} 
+                  <Button
+                    variant={searchTerm ? "secondary" : "ghost"}
                     onClick={() => setSearchTerm("")}
                     disabled={!searchTerm}
                     className="btn-ghost"
@@ -139,7 +149,7 @@ export default function ClientesPage() {
         {/* Clients Grid */}
         <section className="pb-16">
           <div className="container">
-            {filteredClientes.length === 0 ? (
+            {filteredClients.length === 0 ? (
               <div className="text-center py-16">
                 <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
                   <Users className="h-12 w-12 text-muted-foreground" />
@@ -149,7 +159,7 @@ export default function ClientesPage() {
                   {searchTerm ? "Intenta con otros términos de búsqueda" : "Comienza agregando tu primer cliente"}
                 </p>
                 {isAdmin && !searchTerm && (
-                  <Link href="/clientes/nuevo">
+                  <Link href="/clients/nuevo">
                     <Button className="btn-primary">
                       <Plus className="mr-2 h-4 w-4" />
                       Agregar Cliente
@@ -159,9 +169,9 @@ export default function ClientesPage() {
               </div>
             ) : (
               <div className="grid-responsive-auto">
-                {filteredClientes.map((cliente, index) => (
-                  <div 
-                    key={cliente.id} 
+                {filteredClients.map((client, index) => (
+                  <div
+                    key={client.CLI_id}
                     className="card-interactive group animate-slide-up"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
@@ -170,15 +180,15 @@ export default function ClientesPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-semibold text-lg">
-                            {cliente.nombre.charAt(0)}
+                            {client.CLI_name.charAt(0)}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-lg text-primary-dark">{cliente.nombre}</h3>
-                            <p className="text-sm text-muted-foreground">{cliente.empresa}</p>
+                            <h3 className="font-semibold text-lg text-primary-dark">{client.CLI_name}</h3>
+                            <p className="text-sm text-muted-foreground">{client.CLI_canton}</p>
                           </div>
                         </div>
-                        <div className={`status-${cliente.estado}`}>
-                          {cliente.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                        <div className={`status-${client.CLI_civil_status}`}>
+                          {/*client.CLI_civil_status === 'activo' ? 'Activo' : 'Inactivo'*/}
                         </div>
                       </div>
 
@@ -186,11 +196,11 @@ export default function ClientesPage() {
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                           <Mail className="h-4 w-4" />
-                          <span>{cliente.email}</span>
+                          <span>{client.CLI_email}</span>
                         </div>
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                           <Phone className="h-4 w-4" />
-                          <span>{cliente.telefono}</span>
+                          <span>{client.CLI_phone}</span>
                         </div>
                       </div>
 
@@ -198,20 +208,20 @@ export default function ClientesPage() {
                       <div className="flex items-center justify-between py-3 px-4 bg-muted/30 rounded-lg">
                         <span className="text-sm font-medium">Proyectos</span>
                         <Badge className="gradient-secondary text-primary-dark">
-                          {cliente.proyectos}
+                          {/*client.proyectos*/}
                         </Badge>
                       </div>
 
                       {/* Actions */}
                       <div className="flex gap-2 pt-2">
-                        <Link href={`/clientes/${cliente.id}`} className="flex-1">
+                        <Link href={`/clients/${client.CLI_id}`} className="flex-1">
                           <Button variant="outline" size="sm" className="w-full btn-ghost">
                             <Eye className="mr-2 h-4 w-4" />
                             Ver
                           </Button>
                         </Link>
                         {isAdmin && (
-                          <Link href={`/clientes/${cliente.id}/editar`} className="flex-1">
+                          <Link href={`/clients/${client.CLI_id}/editar`} className="flex-1">
                             <Button variant="outline" size="sm" className="w-full btn-secondary">
                               <Edit className="mr-2 h-4 w-4" />
                               Editar
