@@ -140,7 +140,7 @@ export function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-primary/10 transition-colors duration-300">
                 <Avatar className="h-10 w-10 border-2 border-primary/20">
-                  <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name} />
+                  <AvatarImage src={user?.picture || "/placeholder.svg"} alt={user?.name} />
                   <AvatarFallback className="bg-gradient-to-br from-primary-light to-primary-medium text-white font-semibold">
                     {user?.name?.charAt(0)}
                   </AvatarFallback>
@@ -156,7 +156,7 @@ export function Header() {
               <div className="p-4 bg-gradient-to-r from-primary-lighter/20 to-primary-light/20">
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name} />
+                    <AvatarImage src={user?.picture || "/placeholder.svg"} alt={user?.name} />
                     <AvatarFallback className="bg-gradient-to-br from-primary-light to-primary-medium text-white font-semibold text-lg">
                       {user?.name?.charAt(0)}
                     </AvatarFallback>
