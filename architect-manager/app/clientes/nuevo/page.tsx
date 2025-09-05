@@ -23,6 +23,7 @@ import {
 import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-select"
 import { PhoneInput } from "@/components/ui/phone-input"
 import type { GPAClient } from "@/models/GPA_client"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function NewClientPage() {
   const { isAdmin } = useAuth()
@@ -34,6 +35,7 @@ export default function NewClientPage() {
   const [province, setProvince] = useState("")
   const [canton, setCanton] = useState("")
   const [district, setDistrict] = useState("")
+  const { toast } = useToast()
 
   if (!isAdmin) {
     router.push("/clientes")
@@ -44,9 +46,6 @@ export default function NewClientPage() {
     e.preventDefault()
     setLoading(true)
     const formData = new FormData(e.currentTarget)
-    const phone = formData.get("phone") as string
-    const countryCode = formData.get("countryCode")
-    console.log("Country code", countryCode)
 
     const newClient: GPAClient = {
       CLI_name: formData.get("name") as string,
@@ -56,19 +55,44 @@ export default function NewClientPage() {
       CLI_identificationtype: identificationType as GPAClient["CLI_identificationtype"],
       CLI_identification: formData.get("identification") as string,
       CLI_phone: phone,
-      CLI_civil_status: formData.get("civilStatus") as GPAClient["CLI_civil_status"],
-      CLI_province: formData.get("province") as string,
-      CLI_canton: formData.get("canton") as string,
-      CLI_district: formData.get("district") as string,
+      CLI_civil_status: civilStatus,
+      CLI_province: province,
+      CLI_canton: canton,
+      CLI_district: district,
       CLI_neighborhood: formData.get("neighborhood") as string,
       CLI_additional_directions: formData.get("additionalDirections") as string,
       CLI_observations: formData.get("observations") as string,
-      CLI_isperson: formData.get("isPerson") === "on",
+      CLI_isperson: identificationType as GPAClient["CLI_identificationtype"] !== "entity",
     }
     console.log("New client", newClient)
-
+    try {
+      const response = await fetch("/api/clients", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newClient),
+      })
+      if (!response.ok) {
+        throw new Error("Error creating client")
+      }
+      toast({
+        title: "Client registered",
+        description: "The client was created successfully."
+      })
+      const data = await response.json()
+      const registeredClient:GPAClient = data.client;
+      console.log("Registered user", registeredClient)
+      router.push("/clientes")
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "There was a problem creating the client."
+      })
+      console.error("API error:", error)
+      // Maneja el error (mostrar mensaje, etc.)
+    }
     setLoading(false)
-    router.push("/clientes")
   }
 
   return (
@@ -258,6 +282,17 @@ export default function NewClientPage() {
                       id="additionalDirections"
                       name="additionalDirections"
                       placeholder="Direcciones adicionales..."
+                      className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[100px]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="observations" className="text-[#2e4600] font-medium">
+                      Observaciones
+                    </Label>
+                    <Textarea
+                      id="observations"
+                      name="observations"
+                      placeholder="Observaciones..."
                       className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[100px]"
                     />
                   </div>
