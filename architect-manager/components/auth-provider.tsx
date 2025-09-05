@@ -2,18 +2,21 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
-interface User {
-  id: string
+export interface User {
+  id: number
+  active: boolean
   name: string
+  flastname: string
+  slastname: string
+  picture: string
+  roleid: number
   email: string
-  avatar: string
-  role: "admin" | "user"
 }
 
 interface AuthContextType {
   user: User | null
   isAdmin: boolean
-  login: (email: string, password: string) => Promise<boolean>
+  login: (user: User) => Promise<boolean>
   logout: () => void
   toggleAdminMode: () => void
 }
@@ -37,28 +40,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (user: User): Promise<boolean> => {
     // Simulación de login
-    if (email && password) {
-      const mockUser: User = {
-        id: "1",
-        name: "Juan Arquitecto",
-        email: email,
-        avatar: "/placeholder.svg?height=40&width=40",
-        role: "user",
-      }
-      setUser(mockUser)
-      localStorage.setItem("user", JSON.stringify(mockUser))
+    if (user) {
+      setUser(user)
+      setIsAdmin(user.roleid === 1)
+      //localStorage.setItem("user", JSON.stringify(mockUser))
+      console.log("usuario: ", user)
       return true
     }
     return false
   }
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null)
     setIsAdmin(false)
-    localStorage.removeItem("user")
-    localStorage.removeItem("adminMode")
+    try {
+      const response = await fetch("/api/auth/logout",{
+        method:"POST",
+        headers: {
+          "Content-Type": "application/json",
+        }
+      })
+      if(!response.ok){
+        console.log("Error closing session")
+      }
+    } catch {
+
+    }
   }
 
   const toggleAdminMode = () => {
