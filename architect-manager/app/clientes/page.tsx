@@ -10,38 +10,6 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Search, Edit, Eye, Phone, Mail, Users } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { GPAClient } from '@/models/GPA_client';
-const mockclients = [
-  {
-    id: 1,
-    nombre: "María González",
-    email: "maria@email.com",
-    telefono: "+1234567890",
-    empresa: "Constructora ABC",
-    proyectos: 3,
-    estado: "activo",
-    fechaRegistro: "2024-01-15",
-  },
-  {
-    id: 2,
-    nombre: "Carlos Rodríguez",
-    email: "carlos@email.com",
-    telefono: "+1234567891",
-    empresa: "Inmobiliaria XYZ",
-    proyectos: 1,
-    estado: "activo",
-    fechaRegistro: "2024-02-20",
-  },
-  {
-    id: 3,
-    nombre: "Ana Martínez",
-    email: "ana@email.com",
-    telefono: "+1234567892",
-    empresa: "Desarrollo Urbano",
-    proyectos: 2,
-    estado: "inactivo",
-    fechaRegistro: "2024-01-10",
-  },
-]
 
 export default function clientsPage() {
   const { isAdmin } = useAuth()
@@ -83,7 +51,7 @@ export default function clientsPage() {
 
               {isAdmin && (
                 <div className="flex gap-3">
-                  <Link href="/clients/nuevo">
+                  <Link href="/clientes/nuevo">
                     <Button size="lg" className="btn-primary">
                       <Plus className="mr-2 h-5 w-5" />
                       Nuevo Cliente
@@ -96,11 +64,11 @@ export default function clientsPage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <div className="card-modern p-6 text-center bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{/*filteredClients.filter(c => c.estado === 'activo').length*/}</div>
-                <div className="text-sm text-green-700 dark:text-green-300 font-medium">Clientes Activos</div>
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{filteredClients.filter(c => c.CLI_isperson).length}</div>
+                <div className="text-sm text-green-700 dark:text-green-300 font-medium">Personas Cliente</div>
               </div>
               <div className="card-modern p-6 text-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{/*filteredClients.reduce((acc, c) => acc + c.proyectos, 0)*/}</div>
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{filteredClients.reduce((acc, c) => acc + c.CLI_projects_amount, 0) }</div>
                 <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Proyectos</div>
               </div>
               <div className="card-modern p-6 text-center bg-gradient-to-br from-primary-lighter/50 to-primary-light/30 border-primary-light/30">
@@ -124,7 +92,7 @@ export default function clientsPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="search"
-                      placeholder="Buscar por nombre, email o empresa..."
+                      placeholder="Buscar por nombre, email o número de cédula..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="input-modern pl-10"
@@ -183,8 +151,8 @@ export default function clientsPage() {
                             {client.CLI_name.charAt(0)}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-lg text-primary-dark">{client.CLI_name}</h3>
-                            <p className="text-sm text-muted-foreground">{client.CLI_canton}</p>
+                            <h3 className="font-semibold text-lg text-primary-dark">{client.CLI_name+" "+client.CLI_f_lastname+" "+client.CLI_s_lastname}</h3>
+                            <p className="text-sm text-muted-foreground">{client.CLI_identification}</p>
                           </div>
                         </div>
                         <div className={`status-${client.CLI_civil_status}`}>
@@ -208,20 +176,20 @@ export default function clientsPage() {
                       <div className="flex items-center justify-between py-3 px-4 bg-muted/30 rounded-lg">
                         <span className="text-sm font-medium">Proyectos</span>
                         <Badge className="gradient-secondary text-primary-dark">
-                          {/*client.proyectos*/}
+                          {client.CLI_projects_amount}
                         </Badge>
                       </div>
 
                       {/* Actions */}
                       <div className="flex gap-2 pt-2">
-                        <Link href={`/clients/${client.CLI_id}`} className="flex-1">
+                        <Link href={`/clientes/${client.CLI_id}`} className="flex-1">
                           <Button variant="outline" size="sm" className="w-full btn-ghost">
                             <Eye className="mr-2 h-4 w-4" />
                             Ver
                           </Button>
                         </Link>
                         {isAdmin && (
-                          <Link href={`/clients/${client.CLI_id}/editar`} className="flex-1">
+                          <Link href={`/clientes/${client.CLI_id}/editar`} className="flex-1">
                             <Button variant="outline" size="sm" className="w-full btn-secondary">
                               <Edit className="mr-2 h-4 w-4" />
                               Editar

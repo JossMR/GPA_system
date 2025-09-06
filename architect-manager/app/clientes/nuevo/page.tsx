@@ -63,6 +63,7 @@ export default function NewClientPage() {
       CLI_additional_directions: formData.get("additionalDirections") as string,
       CLI_observations: formData.get("observations") as string,
       CLI_isperson: identificationType as GPAClient["CLI_identificationtype"] !== "entity",
+      CLI_projects_amount: 0
     }
     console.log("New client", newClient)
     try {
