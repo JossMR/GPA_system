@@ -29,35 +29,6 @@ function formatDate(dateString: string) {
   const min = String(date.getMinutes()).padStart(2, '0');
   return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
 }
-const mockUsuarios = [
-  {
-    id: 1,
-    nombre: "Juan Arquitecto",
-    email: "juan@arquitecto.com",
-    rol: "admin",
-    estado: "activo",
-    fechaCreacion: "2024-01-15",
-    ultimoAcceso: "2024-12-13",
-  },
-  {
-    id: 2,
-    nombre: "María Diseñadora",
-    email: "maria@diseño.com",
-    rol: "usuario",
-    estado: "activo",
-    fechaCreacion: "2024-02-20",
-    ultimoAcceso: "2024-12-12",
-  },
-  {
-    id: 3,
-    nombre: "Carlos Supervisor",
-    email: "carlos@supervisor.com",
-    rol: "usuario",
-    estado: "inactivo",
-    fechaCreacion: "2024-01-10",
-    ultimoAcceso: "2024-11-15",
-  },
-]
 
 export default function UsersPage() {
   const router = useRouter()
@@ -96,13 +67,13 @@ export default function UsersPage() {
       user.ROL_name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  useEffect(() => {
       const fetchUsers = async () => {
         const response = await fetch("/api/users")
         const data = await response.json()
         const requestedUsers: GPAUser[] = data.users
         setUsers(requestedUsers)
       }
+      useEffect(() => {
       fetchUsers()
     }, [])
 
@@ -112,17 +83,23 @@ export default function UsersPage() {
         const data = await response.json();
         const requestedRoles: GPARole[] = data.roles
         setRoles(requestedRoles);
+        if (requestedRoles.length > 0) {
+          setSelectedRoleId(String(requestedRoles[0].ROL_id));
+        }
       };
       fetchRoles();
     }, []);
 
   const handleEdit = (user: any) => {
     setSelectedUser(user)
+    setSelectedRoleId(String(user.USR_role_id))
+    setSelectedState(user.USR_active === 1)
     setIsDialogOpen(true)
   }
 
   const handleNew = () => {
     setSelectedUser(null)
+    setSelectedRoleId(String(roles[0]?.ROL_id || ""))
     setIsDialogOpen(true)
   }
 
@@ -132,42 +109,47 @@ export default function UsersPage() {
     )
   }
 
+  const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
     setLoading(true)
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    const newUser = {
+    const userData = {
       USR_name: formData.get("name") as string,
       USR_f_lastname: formData.get("f_lastname") as string,
       USR_s_lastname: formData.get("s_lastname") as string,
       USR_email: formData.get("email") as string,
       USR_active: selectedState ? 1 : 0,
       USR_role_id: Number(selectedRoleId),
-      ROL_name: selectedRole?.ROL_name || ""
+      ROL_name: selectedRole?.ROL_name || "",
+      ...(selectedUser && { USR_id: selectedUser.USR_id })
     };
-    console.log("New user data:", newUser);
-    try {
-      const response = await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newUser),
-      })
-      if (!response.ok) {
-        throw new Error("Error creating user")
-      }
-      
-      const data = await response.json()
-      const registeredUser:GPAUser = data.user;
-      console.log("Registered user", registeredUser)
-      setIsDialogOpen(false)
-      router.push("/usuarios")
-    } catch (error) {
-      console.error("API error:", error)
-      // Maneja el error (mostrar mensaje, etc.)
+    console.log("User Data to submit:", userData);
+    
+    // if editing, include the user ID
+  if (selectedUser) {
+    userData["USR_id"] = selectedUser.USR_id;
+  }
+
+  try {
+    const response = await fetch("/api/users", {
+      method: selectedUser ? "PUT" : "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    });
+    if (!response.ok) {
+      throw new Error(selectedUser ? "Error updating user" : "Error creating user");
     }
-    setLoading(false)
+    const data = await response.json();
+    setIsDialogOpen(false);
+    await fetchUsers();
+    router.push("/usuarios");
+  } catch (error) {
+    console.error("API error:", error);
+  }
+  setLoading(false);
   }
 
   return (
@@ -184,7 +166,7 @@ export default function UsersPage() {
           </Button>
         </div>
 
-        {/* Estadísticas */}
+        {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
@@ -226,7 +208,7 @@ export default function UsersPage() {
           </Card>
         </div>
 
-        {/* Filtros */}
+        {/* Filters */}
         <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
@@ -250,7 +232,7 @@ export default function UsersPage() {
           </CardContent>
         </Card>
 
-        {/* Tabla de Usuarios */}
+        {/* User List */}
         <Card>
           <CardHeader>
             <CardTitle>Lista de Usuarios ({filteredUsers.length})</CardTitle>
@@ -334,7 +316,7 @@ export default function UsersPage() {
           </CardContent>
         </Card>
 
-        {/* Dialog para Crear/Editar Usuario */}
+        {/* Dialog for Creating/Editing User */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -347,15 +329,15 @@ export default function UsersPage() {
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Nombre</Label>
-                  <Input id="name" name="name" defaultValue={selectedUser?.nombre || ""} placeholder="Nombre" />
+                  <Input id="name" name="name" defaultValue={selectedUser?.USR_name || ""} placeholder="Nombre" required/>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="f_lastname">Primer Apellido</Label>
-                  <Input id="f_lastname" name="f_lastname" defaultValue={selectedUser?.pApellido || ""} placeholder="Primer Apellido" />
+                  <Input id="f_lastname" name="f_lastname" defaultValue={selectedUser?.USR_f_lastname || ""} placeholder="Primer Apellido" required/>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="s_lastname">Segundo Apellido</Label>
-                  <Input id="s_lastname" name="s_lastname" defaultValue={selectedUser?.sApellido || ""} placeholder="Segundo Apellido" />
+                  <Input id="s_lastname" name="s_lastname" defaultValue={selectedUser?.USR_s_lastname || ""} placeholder="Segundo Apellido" required/>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
@@ -363,8 +345,9 @@ export default function UsersPage() {
                     id="email"
                     name="email"
                     type="email"
-                    defaultValue={selectedUser?.email || ""}
+                    defaultValue={selectedUser?.USR_email || ""}
                     placeholder="email@ejemplo.com"
+                    required
                   />
                 </div>
                 <div className="grid gap-2">

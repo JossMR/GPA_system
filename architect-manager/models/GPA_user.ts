@@ -15,7 +15,8 @@ export function validateRequiredFields(user: GPAUser): boolean {
         user.USR_role_id && 
         user.USR_email && 
         user.USR_name && 
-        user.USR_active &&
+        user.USR_active !== null &&
+        user.USR_active !== undefined &&
         user.USR_f_lastname && 
         user.USR_s_lastname
     );
