@@ -16,9 +16,9 @@ import { useAuth } from "@/components/auth-provider"
 import { GPAUser } from "@/models/GPA_user"
 import { GPARole } from "@/models/GPA_role"
 import { useRouter } from "next/navigation"
-import { set } from "react-hook-form"
+import { useToast } from "@/hooks/use-toast"
 
-// Función para formatear fecha a dd/mm/yyyy hh:mm
+// Function to format date as DD/MM/YYYY HH:MM
 function formatDate(dateString: string) {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -42,8 +42,9 @@ export default function UsersPage() {
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
   const [selectedState, setSelectedState] = useState<boolean>(true);
   const selectedRole = roles.find(r => r.ROL_id === Number(selectedRoleId));
+  const { toast } = useToast();
 
-  // Redirigir si no es admin
+  // Redirect if not admin
   if (!isAdmin) {
     return (
       <MainLayout>
@@ -67,6 +68,7 @@ export default function UsersPage() {
       user.ROL_name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Fetch users from API
       const fetchUsers = async () => {
         const response = await fetch("/api/users")
         const data = await response.json()
@@ -77,6 +79,7 @@ export default function UsersPage() {
       fetchUsers()
     }, [])
 
+    // Fetch roles for the select dropdown
   useEffect(() => {
       const fetchRoles = async () => {
         const response = await fetch("/api/roles");
@@ -90,6 +93,7 @@ export default function UsersPage() {
       fetchRoles();
     }, []);
 
+    // Handlers for dialog open/close and form submission
   const handleEdit = (user: any) => {
     setSelectedUser(user)
     setSelectedRoleId(String(user.USR_role_id))
@@ -166,6 +170,11 @@ export default function UsersPage() {
     }
     const data = await response.json();
     setIsDialogOpen(false);
+    toast({
+        title: "Guardado exitoso",
+        description: "El usuario fue guardado exitosamente.",
+       // variant: "success"
+      })
     await fetchUsers();
     router.push("/usuarios");
   } catch (error) {
@@ -243,7 +252,7 @@ export default function UsersPage() {
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder="Buscar por nombre o email..."
+                    placeholder="Buscar por nombre, apellidos o rol..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-8"

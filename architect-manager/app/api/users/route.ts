@@ -106,7 +106,7 @@ export async function PUT(req: NextRequest) {
         { status: 400 }
       );
     }
-    // Actualizar el usuario en la base de datos
+    // Update the user in the database
     await executeTransaction([
       {
         query: `UPDATE gpa_users SET 
