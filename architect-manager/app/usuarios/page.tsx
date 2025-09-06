@@ -15,6 +15,8 @@ import { Plus, Search, Edit, UserCheck, UserX, Mail, Calendar } from "lucide-rea
 import { useAuth } from "@/components/auth-provider"
 import { GPAUser } from "@/models/GPA_user"
 import { GPARole } from "@/models/GPA_role"
+import { useRouter } from "next/navigation"
+import { set } from "react-hook-form"
 
 // Función para formatear fecha a dd/mm/yyyy hh:mm
 function formatDate(dateString: string) {
@@ -58,12 +60,17 @@ const mockUsuarios = [
 ]
 
 export default function UsersPage() {
+  const router = useRouter()
   const { isAdmin } = useAuth()
   const [users, setUsers] = useState<GPAUser[]>([]);
   const [roles, setRoles] = useState<GPARole[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
+  const [loading, setLoading] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedRoleId, setSelectedRoleId] = useState<string>("");
+  const [selectedState, setSelectedState] = useState<boolean>(true);
+  const selectedRole = roles.find(r => r.ROL_id === Number(selectedRoleId));
 
   // Redirigir si no es admin
   if (!isAdmin) {
@@ -123,6 +130,44 @@ export default function UsersPage() {
     setUsers((prev) =>
       prev.map((u) => (u.USR_id === userId ? { ...u, USR_active: u.USR_active === 1 ? 0 : 1 } : u)),
     )
+  }
+
+    setLoading(true)
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+
+    const newUser = {
+      USR_name: formData.get("name") as string,
+      USR_f_lastname: formData.get("f_lastname") as string,
+      USR_s_lastname: formData.get("s_lastname") as string,
+      USR_email: formData.get("email") as string,
+      USR_active: selectedState ? 1 : 0,
+      USR_role_id: Number(selectedRoleId),
+      ROL_name: selectedRole?.ROL_name || ""
+    };
+    console.log("New user data:", newUser);
+    try {
+      const response = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newUser),
+      })
+      if (!response.ok) {
+        throw new Error("Error creating user")
+      }
+      
+      const data = await response.json()
+      const registeredUser:GPAUser = data.user;
+      console.log("Registered user", registeredUser)
+      setIsDialogOpen(false)
+      router.push("/usuarios")
+    } catch (error) {
+      console.error("API error:", error)
+      // Maneja el error (mostrar mensaje, etc.)
+    }
+    setLoading(false)
   }
 
   return (
@@ -298,56 +343,71 @@ export default function UsersPage() {
                 {selectedUser ? "Modifica los datos del usuario existente" : "Ingresa los datos del nuevo usuario"}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="nombre">Nombre</Label>
-                <Input id="nombre" defaultValue={selectedUser?.nombre || ""} placeholder="Nombre" />
+            <form onSubmit={handleSaveUser}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Nombre</Label>
+                  <Input id="name" name="name" defaultValue={selectedUser?.nombre || ""} placeholder="Nombre" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="f_lastname">Primer Apellido</Label>
+                  <Input id="f_lastname" name="f_lastname" defaultValue={selectedUser?.pApellido || ""} placeholder="Primer Apellido" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s_lastname">Segundo Apellido</Label>
+                  <Input id="s_lastname" name="s_lastname" defaultValue={selectedUser?.sApellido || ""} placeholder="Segundo Apellido" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    defaultValue={selectedUser?.email || ""}
+                    placeholder="email@ejemplo.com"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="role">Rol</Label>
+                  <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem key={role.ROL_id} value={String(role.ROL_id)}>
+                          {role.ROL_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch name="state" id="state" defaultChecked={selectedState} onCheckedChange={setSelectedState} />
+                  <Label htmlFor="state">Usuario activo</Label>
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="pApellido">Primer Apellido</Label>
-                <Input id="pApellido" defaultValue={selectedUser?.pApellido || ""} placeholder="Primer Apellido" />
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                type="submit"
+                disabled={loading}
+                className="bg-primary-medium hover:bg-primary-dark">
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                    {selectedUser ? "Actualizar" : "Crear"}
+                    </>
+                  )}
+                </Button>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="sApellido">Segundo Apellido</Label>
-                <Input id="sApellido" defaultValue={selectedUser?.sApellido || ""} placeholder="Segundo Apellido" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  defaultValue={selectedUser?.email || ""}
-                  placeholder="email@ejemplo.com"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="rol">Rol</Label>
-                <Select defaultValue={selectedUser?.rol || "usuario"}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map((role) => (
-                      <SelectItem key={role.ROL_name} value={role.ROL_name.toString()}>
-                        {role.ROL_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch id="estado" defaultChecked={selectedUser?.estado === "activo" || !selectedUser} />
-                <Label htmlFor="estado">Usuario activo</Label>
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button className="bg-primary-medium hover:bg-primary-dark" onClick={() => setIsDialogOpen(false)}>
-                {selectedUser ? "Actualizar" : "Crear"}
-              </Button>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
