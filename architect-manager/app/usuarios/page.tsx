@@ -103,10 +103,32 @@ export default function UsersPage() {
     setIsDialogOpen(true)
   }
 
-  const toggleUserStatus = (userId: number) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.USR_id === userId ? { ...u, USR_active: u.USR_active === 1 ? 0 : 1 } : u)),
-    )
+  const toggleUserStatus = async (userId: number) => {
+    const user = users.find(u => u.USR_id === userId);
+    if (!user) return;
+
+    const updatedUser = {
+      USR_id: user.USR_id,
+      USR_name: user.USR_name,
+      USR_f_lastname: user.USR_f_lastname,
+      USR_s_lastname: user.USR_s_lastname,
+      USR_email: user.USR_email,
+      USR_active: user.USR_active === 1 ? 0 : 1,
+      USR_role_id: user.USR_role_id,
+      ROL_name: user.ROL_name
+    };
+
+    try {
+      const response = await fetch("/api/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedUser),
+      });
+      if (!response.ok) throw new Error("Error updating user status");
+      await fetchUsers();
+    } catch (error) {
+      console.error("API error:", error);
+    }
   }
 
   const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
