@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect,useState } from "react"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,20 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search, Edit, UserCheck, UserX, Mail, Calendar } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { GPAUser } from "@/models/GPA_user"
+import { GPARole } from "@/models/GPA_role"
 
+// Función para formatear fecha a dd/mm/yyyy hh:mm
+function formatDate(dateString: string) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  const hh = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
 const mockUsuarios = [
   {
     id: 1,
@@ -44,11 +57,12 @@ const mockUsuarios = [
   },
 ]
 
-export default function UsuariosPage() {
+export default function UsersPage() {
   const { isAdmin } = useAuth()
-  const [usuarios, setUsuarios] = useState(mockUsuarios)
+  const [users, setUsers] = useState<GPAUser[]>([]);
+  const [roles, setRoles] = useState<GPARole[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedUsuario, setSelectedUsuario] = useState<any>(null)
+  const [selectedUser, setSelectedUser] = useState<any>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   // Redirigir si no es admin
@@ -67,25 +81,47 @@ export default function UsuariosPage() {
     )
   }
 
-  const filteredUsuarios = usuarios.filter(
-    (usuario) =>
-      usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      usuario.email.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredUsers = users.filter(
+    (user) =>
+      user.USR_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.USR_f_lastname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.USR_s_lastname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.ROL_name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleEdit = (usuario: any) => {
-    setSelectedUsuario(usuario)
+  useEffect(() => {
+      const fetchUsers = async () => {
+        const response = await fetch("/api/users")
+        const data = await response.json()
+        const requestedUsers: GPAUser[] = data.users
+        setUsers(requestedUsers)
+      }
+      fetchUsers()
+    }, [])
+
+  useEffect(() => {
+      const fetchRoles = async () => {
+        const response = await fetch("/api/roles");
+        const data = await response.json();
+        const requestedRoles: GPARole[] = data.roles
+        setRoles(requestedRoles);
+      };
+      fetchRoles();
+    }, []);
+
+  const handleEdit = (user: any) => {
+    setSelectedUser(user)
     setIsDialogOpen(true)
   }
 
   const handleNew = () => {
-    setSelectedUsuario(null)
+    setSelectedUser(null)
     setIsDialogOpen(true)
   }
 
-  const toggleUsuarioEstado = (usuarioId: number) => {
-    setUsuarios((prev) =>
-      prev.map((u) => (u.id === usuarioId ? { ...u, estado: u.estado === "activo" ? "inactivo" : "activo" } : u)),
+  const toggleUserStatus = (userId: number) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.USR_id === userId ? { ...u, USR_active: u.USR_active === 1 ? 0 : 1 } : u)),
     )
   }
 
@@ -110,7 +146,7 @@ export default function UsuariosPage() {
               <CardTitle className="text-sm font-medium">Total Usuarios</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{usuarios.length}</div>
+              <div className="text-2xl font-bold">{users.length}</div>
             </CardContent>
           </Card>
           <Card>
@@ -119,7 +155,7 @@ export default function UsuariosPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {usuarios.filter((u) => u.estado === "activo").length}
+                {users.filter((u) => u.USR_active === 1).length}
               </div>
             </CardContent>
           </Card>
@@ -129,7 +165,7 @@ export default function UsuariosPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary-medium">
-                {usuarios.filter((u) => u.rol === "admin").length}
+                {users.filter((u) => u.ROL_name === "admin").length}
               </div>
             </CardContent>
           </Card>
@@ -139,7 +175,7 @@ export default function UsuariosPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {usuarios.filter((u) => u.rol === "usuario").length}
+                {users.filter((u) => u.ROL_name === "usuario").length}
               </div>
             </CardContent>
           </Card>
@@ -172,7 +208,7 @@ export default function UsuariosPage() {
         {/* Tabla de Usuarios */}
         <Card>
           <CardHeader>
-            <CardTitle>Lista de Usuarios ({filteredUsuarios.length})</CardTitle>
+            <CardTitle>Lista de Usuarios ({filteredUsers.length})</CardTitle>
             <CardDescription>Todos los usuarios registrados en el sistema</CardDescription>
           </CardHeader>
           <CardContent>
@@ -180,7 +216,7 @@ export default function UsuariosPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Usuario</TableHead>
-                  <TableHead>Contacto</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Rol</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Fechas</TableHead>
@@ -188,39 +224,38 @@ export default function UsuariosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsuarios.map((usuario) => (
-                  <TableRow key={usuario.id} className="animate-fade-in">
+                {filteredUsers.map((user) => (
+                  <TableRow key={user.USR_id} className="animate-fade-in">
                     <TableCell>
                       <div>
-                        <div className="font-medium">{usuario.nombre}</div>
-                        <div className="text-sm text-muted-foreground">ID: {usuario.id}</div>
+                        <div className="font-medium">{user.USR_name + " " + user.USR_f_lastname + " " + user.USR_s_lastname}</div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center text-sm">
                         <Mail className="mr-1 h-3 w-3" />
-                        {usuario.email}
+                        {user.USR_email}
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={usuario.rol === "admin" ? "default" : "secondary"}
-                        className={usuario.rol === "admin" ? "bg-primary-medium" : ""}
+                        variant={user.ROL_name === "admin" ? "default" : "secondary"}
+                        className={user.ROL_name === "admin" ? "bg-primary-medium" : ""}
                       >
-                        {usuario.rol === "admin" ? "Administrador" : "Usuario"}
+                        {user.ROL_name === "admin" ? "Administrador" : "Usuario"}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <Switch
-                          checked={usuario.estado === "activo"}
-                          onCheckedChange={() => toggleUsuarioEstado(usuario.id)}
+                          checked={user.USR_active === 1}
+                          onCheckedChange={() => user.USR_id !== undefined && toggleUserStatus(user.USR_id)}
                         />
                         <Badge
-                          variant={usuario.estado === "activo" ? "default" : "secondary"}
-                          className={usuario.estado === "activo" ? "bg-green-500" : ""}
+                          variant={user.USR_active === 1 ? "default" : "secondary"}
+                          className={user.USR_active === 1 ? "bg-green-500" : ""}
                         >
-                          {usuario.estado}
+                          {user.USR_active === 1 ? "activo" : "inactivo"}
                         </Badge>
                       </div>
                     </TableCell>
@@ -228,18 +263,18 @@ export default function UsuariosPage() {
                       <div className="space-y-1">
                         <div className="flex items-center text-sm">
                           <Calendar className="mr-1 h-3 w-3" />
-                          Creado: {usuario.fechaCreacion}
+                          Creado: {formatDate(user.USR_creation_date ?? "")}
                         </div>
-                        <div className="text-xs text-muted-foreground">Último acceso: {usuario.ultimoAcceso}</div>
+                        <div className="text-xs text-muted-foreground">Último acceso: {formatDate(user.USR_last_access_date ?? "")}</div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(usuario)}>
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => toggleUsuarioEstado(usuario.id)}>
-                          {usuario.estado === "activo" ? (
+                        <Button variant="ghost" size="sm" onClick={() => user.USR_id !== undefined && toggleUserStatus(user.USR_id)}>
+                          {user.USR_active === 1 ? (
                             <UserX className="h-4 w-4 text-red-500" />
                           ) : (
                             <UserCheck className="h-4 w-4 text-green-500" />
@@ -258,39 +293,50 @@ export default function UsuariosPage() {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>{selectedUsuario ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
+              <DialogTitle>{selectedUser ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
               <DialogDescription>
-                {selectedUsuario ? "Modifica los datos del usuario" : "Ingresa los datos del nuevo usuario"}
+                {selectedUser ? "Modifica los datos del usuario existente" : "Ingresa los datos del nuevo usuario"}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="nombre">Nombre completo</Label>
-                <Input id="nombre" defaultValue={selectedUsuario?.nombre || ""} placeholder="Nombre del usuario" />
+                <Label htmlFor="nombre">Nombre</Label>
+                <Input id="nombre" defaultValue={selectedUser?.nombre || ""} placeholder="Nombre" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="pApellido">Primer Apellido</Label>
+                <Input id="pApellido" defaultValue={selectedUser?.pApellido || ""} placeholder="Primer Apellido" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="sApellido">Segundo Apellido</Label>
+                <Input id="sApellido" defaultValue={selectedUser?.sApellido || ""} placeholder="Segundo Apellido" />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  defaultValue={selectedUsuario?.email || ""}
+                  defaultValue={selectedUser?.email || ""}
                   placeholder="email@ejemplo.com"
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="rol">Rol</Label>
-                <Select defaultValue={selectedUsuario?.rol || "usuario"}>
+                <Select defaultValue={selectedUser?.rol || "usuario"}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona un rol" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="usuario">Usuario</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
+                    {roles.map((role) => (
+                      <SelectItem key={role.ROL_name} value={role.ROL_name.toString()}>
+                        {role.ROL_name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch id="estado" defaultChecked={selectedUsuario?.estado === "activo" || !selectedUsuario} />
+                <Switch id="estado" defaultChecked={selectedUser?.estado === "activo" || !selectedUser} />
                 <Label htmlFor="estado">Usuario activo</Label>
               </div>
             </div>
@@ -299,7 +345,7 @@ export default function UsuariosPage() {
                 Cancelar
               </Button>
               <Button className="bg-primary-medium hover:bg-primary-dark" onClick={() => setIsDialogOpen(false)}>
-                {selectedUsuario ? "Actualizar" : "Crear"}
+                {selectedUser ? "Actualizar" : "Crear"}
               </Button>
             </div>
           </DialogContent>
