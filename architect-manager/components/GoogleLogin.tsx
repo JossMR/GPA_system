@@ -57,6 +57,22 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
         setLoading(false)
         return
       }
+      // Update last access date
+    try {
+      const response2 =await fetch("/api/auth/login", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          USR_id: data.user.id,
+        }),
+      })
+      if (!response2.ok) {
+        throw new Error("Error updating last access date");
+      }
+    } catch (error) {
+    console.error("API error:", error);
+    }
+
       console.log(data.message)
       // Authentication successful, update user context
       const user: User = {
