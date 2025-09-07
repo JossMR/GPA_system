@@ -28,8 +28,8 @@ export default function RootLayout({
           disableTransitionOnChange={false}
           storageKey="architect-theme"
         >
-          <Toaster/>
           <AuthProvider>{children}</AuthProvider>
+          <Toaster/>
         </ThemeProvider>
       </body>
     </html>

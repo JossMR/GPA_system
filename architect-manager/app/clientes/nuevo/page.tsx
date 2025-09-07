@@ -23,7 +23,7 @@ import {
 import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-select"
 import { PhoneInput } from "@/components/ui/phone-input"
 import type { GPAClient } from "@/models/GPA_client"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 
 export default function NewClientPage() {
   const { isAdmin } = useAuth()
@@ -65,7 +65,6 @@ export default function NewClientPage() {
       CLI_isperson: identificationType as GPAClient["CLI_identificationtype"] !== "entity",
       CLI_projects_amount: 0
     }
-    console.log("New client", newClient)
     try {
       const response = await fetch("/api/clients", {
         method: "POST",
@@ -75,23 +74,27 @@ export default function NewClientPage() {
         body: JSON.stringify(newClient),
       })
       if (!response.ok) {
-        throw new Error("Error creating client")
+        // Obtener el mensaje de error de la respuesta
+        const errorData = await response.json()
+        const errorMessage = errorData.error || "Error creating client"
+        throw new Error(errorMessage)
       }
       toast({
-        title: "Client registered",
-        description: "The client was created successfully."
+        title: "Cliente Registrado",
+        description: "El cliente fue registrado correctamente",
+        variant: "success"
       })
       const data = await response.json()
       const registeredClient:GPAClient = data.client;
       console.log("Registered user", registeredClient)
       router.push("/clientes")
     } catch (error) {
+      console.error(error instanceof Error ? error.message : "There was a problem creating the client.")
       toast({
         title: "Error",
-        description: "There was a problem creating the client."
+        description: "Ocurrió un error al guardar el cliente.",
+        variant: "success"
       })
-      console.error("API error:", error)
-      // Maneja el error (mostrar mensaje, etc.)
     }
     setLoading(false)
   }

@@ -19,16 +19,16 @@ const countryCodes = [
 ]
 
 export function PhoneInput({ value, onChange }: { value?: string, onChange?: (val: string) => void }) {
-  const [countryCode, setCountryCode] = useState("+506")
-  const [phone, setPhone] = useState("")
-
+  const [countryCode, setCountryCode] = useState(value?.split("-")[0]||"+506")
+  const [phone, setPhone] = useState(value?.split("-")[1]||"")
+  
   const handlePhoneChange = (val: string) => {
     setPhone(val)
-    onChange?.(`${countryCode}${val}`)
+    onChange?.(`${countryCode}${"-"}${val}`)
   }
   const handleCodeChange = (val: string) => {
     setCountryCode(val)
-    onChange?.(`${val}${phone}`)
+    onChange?.(`${val}${"-"}${phone}`)
   }
 
   return (

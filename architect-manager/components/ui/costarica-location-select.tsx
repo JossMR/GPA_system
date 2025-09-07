@@ -355,8 +355,6 @@ export function CostaRicaLocationSelect(
   setDistrict: (val: string) => void
   }
 ) {
-
-
   // Get cantons for selected province
   const cantons = province ? Object.keys(data[province]) : []
   // Get districts for selected canton
@@ -379,8 +377,9 @@ export function CostaRicaLocationSelect(
         >
           <SelectTrigger
             id="province"
-            name="province"
-            className="border-[#a2c523]/30 focus:border-[#486b00] rounded px-3 py-2 w-full"
+            className={`border-[#a2c523]/30 focus:border-[#486b00] rounded px-3 py-2 w-full ${
+              !province ? ' border-yellow-400 ring-2 ring-yellow-400/50' : ''
+            }`}
           >
             <SelectValue placeholder="Selecciona una provincia" />
           </SelectTrigger>
@@ -390,7 +389,31 @@ export function CostaRicaLocationSelect(
             ))}
           </SelectContent>
         </Select>
+        {!province && (
+          <p className="text-yellow-600 text-sm font-medium">
+            ⚠️ Debes elegir una provincia
+          </p>
+        )}
+        {/* Input oculto para validación */}
+        <input 
+          name="province"
+          onChange={() => {}}
+          type="text" 
+          value={province}
+          required
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            opacity: 0,
+            height: 0,
+            width: 0,
+            pointerEvents: 'none'
+          }}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
       </div>
+
       {/* Canton */}
       <div className="space-y-2">
         <Label htmlFor="canton" className="text-[#2e4600] font-medium">
@@ -406,8 +429,9 @@ export function CostaRicaLocationSelect(
         >
           <SelectTrigger
             id="canton"
-            name="canton"
-            className="border-[#a2c523]/30 focus:border-[#486b00] rounded px-3 py-2 w-full"
+            className={`border-[#a2c523]/30 focus:border-[#486b00] rounded px-3 py-2 w-full ${
+              province && !canton ? 'border-yellow-400 ring-2 ring-yellow-400/50' : ''
+            } ${!province ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <SelectValue placeholder={province ? "Selecciona un cantón" : "Selecciona provincia primero"} />
           </SelectTrigger>
@@ -417,11 +441,35 @@ export function CostaRicaLocationSelect(
             ))}
           </SelectContent>
         </Select>
+        {province && !canton && (
+          <p className="text-yellow-600 text-sm font-medium">
+            ⚠️ Debes elegir un cantón
+          </p>
+        )}
+        {/* Input oculto para validación */}
+        <input 
+          name="canton"
+          onChange={() => {}}
+          type="text" 
+          value={canton}
+          required
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            opacity: 0,
+            height: 0,
+            width: 0,
+            pointerEvents: 'none'
+          }}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
       </div>
+
       {/* District */}
       <div className="space-y-2">
         <Label htmlFor="district" className="text-[#2e4600] font-medium">
-          District
+          Distrito
         </Label>
         <Select
           value={district}
@@ -430,8 +478,9 @@ export function CostaRicaLocationSelect(
         >
           <SelectTrigger
             id="district"
-            name="district"
-            className="border-[#a2c523]/30 focus:border-[#486b00] rounded px-3 py-2 w-full"
+            className={`border-[#a2c523]/30 focus:border-[#486b00] rounded px-3 py-2 w-full ${
+              canton && !district ? 'border-yellow-400 ring-2 ring-yellow-400/50' : ''
+            } ${!canton ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <SelectValue placeholder={canton ? "Selecciona un distrito" : "Selecciona cantón primero"} />
           </SelectTrigger>
@@ -441,6 +490,29 @@ export function CostaRicaLocationSelect(
             ))}
           </SelectContent>
         </Select>
+        {canton && !district && (
+          <p className="text-yellow-600 text-sm font-medium">
+            ⚠️ Debes elegir un distrito
+          </p>
+        )}
+        {/* Input oculto para validación */}
+        <input 
+          name="district"
+          onChange={() => {}}
+          type="text" 
+          value={district}
+          required
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            opacity: 0,
+            height: 0,
+            width: 0,
+            pointerEvents: 'none'
+          }}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
       </div>
     </div>
   )

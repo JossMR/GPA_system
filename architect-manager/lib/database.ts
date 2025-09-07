@@ -9,9 +9,11 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  // Estas opciones son específicas del pool, no de conexiones individuales
   acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true
+  // timeout se reemplaza por estas opciones más específicas:
+  idleTimeout: 900000, // 15 minutos
+  // reconnect no es necesario con pools modernos
 };
 
 // Pool de conexiones (más eficiente que conexiones individuales)
