@@ -15,4 +15,5 @@ export interface GPAClient {
   CLI_canton?: string
   CLI_district?: string
   CLI_neighborhood?: string
+  CLI_projects_amount: number
 }

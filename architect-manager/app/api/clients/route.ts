@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
     try {
-        const newClient = await request.json();
+        const newClient:GPAClient = await request.json();
         if (!newClient) {
             return NextResponse.json(
                 { error: "Client data not received for registration." },
@@ -118,8 +118,10 @@ export async function GET(request: NextRequest) {
                 CLI_province,
                 CLI_canton,
                 CLI_district,
-                CLI_neighborhood
-            FROM gpa_clients`
+                CLI_neighborhood,
+                count(gpa_p.PRJ_id) as CLI_projects_amount
+            FROM gpa_clients gpa_c LEFT JOIN gpa_projects gpa_p on gpa_c.CLI_id=gpa_p.PRJ_client_id 
+            GROUP BY gpa_c.CLI_id`
         );
         return NextResponse.json({
             message: "Clients requested succesfully",
