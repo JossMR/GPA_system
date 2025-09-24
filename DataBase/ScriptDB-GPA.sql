@@ -119,7 +119,6 @@ CREATE TABLE GPA_Projects
   PRJ_completion_date Date,
   PRJ_logbook_number Varchar(50),
   PRJ_logbook_close_date Date,
-  PRJ_category_id Int NOT NULL,
   PRJ_type_id Int NOT NULL,
   PRJ_state Enum('Document Collection','Technical Inspection','Document Review','Plans and Budget','Entity Review','APC and Permits','Disbursement','Under Construction','Completed','Logbook Closed','Rejected','Professional Withdrawal','Conditioned') DEFAULT 'Document Collection',
   PRJ_final_price Decimal(12,2),
@@ -141,7 +140,7 @@ CREATE TABLE GPA_Documents
   DOC_name Varchar(200),
   DOC_file_path Text,
   DOC_upload_date Timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  DOC_filetype_id Int,
+  DOC_filetype_id Int NOT NULL,
   PRIMARY KEY (DOC_id)
 )
 ;
@@ -171,9 +170,9 @@ CREATE TABLE GPA_Observations
 )
 ;
 
--- Table GPA_FileType
+-- Table GPA_FileTypes
 
-CREATE TABLE GPA_FileType
+CREATE TABLE GPA_FileTypes
 (
   FTP_id Int NOT NULL AUTO_INCREMENT,
   FTP_name Varchar(50) NOT NULL,
@@ -195,6 +194,18 @@ CREATE TABLE GPA_Additions
 )
 ;
 
+-- Table GPA_ProjectsXGPA_Categories
+
+CREATE TABLE GPA_ProjectsXGPA_Categories
+(
+  PRJ_id Int,
+  CAT_id Int
+)
+;
+
+ALTER TABLE GPA_ProjectsXGPA_Categories ADD PRIMARY KEY (PRJ_id, CAT_id)
+;
+
 -- Create foreign keys (relationships) section -------------------------------------------------
 
 ALTER TABLE GPA_Users ADD CONSTRAINT fk_GPA_Roles_GPA_Users_0 FOREIGN KEY (USR_role_id) REFERENCES GPA_Roles (ROL_id) ON DELETE RESTRICT ON UPDATE RESTRICT
@@ -204,9 +215,6 @@ ALTER TABLE GPA_ClientDelinquency ADD CONSTRAINT fk_GPA_Clients_GPA_ClientDelinq
 ;
 
 ALTER TABLE GPA_Projects ADD CONSTRAINT fk_GPA_Clients_GPA_Projects_0 FOREIGN KEY (PRJ_client_id) REFERENCES GPA_Clients (CLI_id) ON DELETE RESTRICT ON UPDATE RESTRICT
-;
-
-ALTER TABLE GPA_Projects ADD CONSTRAINT fk_GPA_Categories_GPA_Projects_1 FOREIGN KEY (PRJ_category_id) REFERENCES GPA_Categories (CAT_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ;
 
 ALTER TABLE GPA_Projects ADD CONSTRAINT fk_GPA_Types_GPA_Projects_2 FOREIGN KEY (PRJ_type_id) REFERENCES GPA_Types (TYP_id) ON DELETE RESTRICT ON UPDATE RESTRICT
@@ -224,9 +232,15 @@ ALTER TABLE GPA_Observations ADD CONSTRAINT fk_GPA_Projects_GPA_Observation_0 FO
 ALTER TABLE GPA_Payments ADD CONSTRAINT fk_GPA_Projects_GPA_Payments_0 FOREIGN KEY (PAY_project_id) REFERENCES GPA_Projects (PRJ_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ;
 
-ALTER TABLE GPA_Documents ADD CONSTRAINT fk_GPA_Documents_GPA_FileType_0 FOREIGN KEY (DOC_filetype_id) REFERENCES GPA_FileType (FTP_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+ALTER TABLE GPA_Documents ADD CONSTRAINT fk_GPA_Documents_GPA_FileType_0 FOREIGN KEY (DOC_filetype_id) REFERENCES GPA_FileTypes (FTP_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ;
 
 ALTER TABLE GPA_Additions ADD CONSTRAINT fk_GPA_Projects_GPA_Addition_0 FOREIGN KEY (ATN_project_id) REFERENCES GPA_Projects (PRJ_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_ProjectsXGPA_Categories ADD CONSTRAINT fk_GPA_Categories_GPA_Projects_1 FOREIGN KEY (PRJ_id) REFERENCES GPA_Projects (PRJ_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_ProjectsXGPA_Categories ADD CONSTRAINT fk_GPA_Categories_GPA_Projects_2 FOREIGN KEY (CAT_id) REFERENCES GPA_Categories (CAT_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ;
 
