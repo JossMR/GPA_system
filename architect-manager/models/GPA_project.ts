@@ -1,3 +1,10 @@
+import { GPAcategory } from './GPA_category'
+import { GPAtype } from './GPA_type'
+import { GPAObservation } from './GPA_observation'
+import { GPAFileType } from './GPA_filetype'
+import { GPADocument } from './GPA_document'
+import { GPAPayment } from './GPA_payment'
+
 export interface GPAProject {
   PRJ_id?: number
   PRJ_client_id: number
@@ -31,4 +38,10 @@ export interface GPAProject {
   PRJ_canton?: string
   PRJ_district?: string
   PRJ_neighborhood?: string
+  
+  categories?: GPAcategory[]
+  type?: GPAtype
+  observations?: GPAObservation[]
+  documents?: GPADocument[]
+  payments?: GPAPayment[]
 }

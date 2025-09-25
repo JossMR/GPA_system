@@ -1,23 +1,14 @@
 import mysql from 'mysql2/promise';
 
-// Configuración de la conexión a la base de datos
-const dbConfig = {
+// Configuración ultra-básica para evitar ANY warnings de MySQL2
+const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'GPA',
-  waitForConnections: true,
+  // SOLO las opciones más básicas para evitar warnings
   connectionLimit: 10,
-  queueLimit: 0,
-  // Estas opciones son específicas del pool, no de conexiones individuales
-  acquireTimeout: 60000,
-  // timeout se reemplaza por estas opciones más específicas:
-  idleTimeout: 900000, // 15 minutos
-  // reconnect no es necesario con pools modernos
-};
-
-// Pool de conexiones (más eficiente que conexiones individuales)
-const pool = mysql.createPool(dbConfig);
+});
 
 // Función para obtener una conexión del pool
 export async function getConnection() {
@@ -30,8 +21,25 @@ export async function getConnection() {
   }
 }
 
-// Función para ejecutar consultas de forma segura
+// Función para ejecutar consultas de forma segura usando el pool directamente
 export async function executeQuery<T = any>(
+  query: string, 
+  params: any[] = []
+): Promise<T> {
+  try {
+    // Usar el pool directamente evita warnings de configuración en conexiones individuales
+    const [results] = await pool.execute(query, params);
+    return results as T;
+  } catch (error) {
+    console.error('Error ejecutando consulta:', error);
+    console.error('Query:', query);
+    console.error('Params:', params);
+    throw error;
+  }
+}
+
+// Función alternativa que usa conexiones del pool (para casos específicos)
+export async function executeQueryWithConnection<T = any>(
   query: string, 
   params: any[] = []
 ): Promise<T> {
@@ -42,6 +50,8 @@ export async function executeQuery<T = any>(
     return results as T;
   } catch (error) {
     console.error('Error ejecutando consulta:', error);
+    console.error('Query:', query);
+    console.error('Params:', params);
     throw error;
   } finally {
     connection.release(); // Importante: liberar la conexión
