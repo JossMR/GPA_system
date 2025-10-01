@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
 import { GPAProject, getLocalMySQLDateTime } from '@/models/GPA_project'
+import { GPAClient } from '@/models/GPA_client'
+import { GPAcategory } from '@/models/GPA_category'
 
 async function fetchProjectRelatedData(projectId: number, request: NextRequest) {
   try {
     const baseUrl = new URL(request.url).origin
-    
+
     const [categoriesRes, observationsRes, documentsRes, paymentsRes] = await Promise.all([
       fetch(`${baseUrl}/api/categories?project_id=${projectId}`, {
         headers: { 'Content-Type': 'application/json' }
@@ -47,14 +49,38 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const includeRelated = searchParams.get('include') === 'all'
-    
+
     const projectsQuery = `
       SELECT * FROM GPA_Projects
       ORDER BY PRJ_entry_date DESC
     `
-    
+
     let projects = await executeQuery(projectsQuery) as GPAProject[]
-    
+
+    await Promise.all(projects.map(async (project, index) => {
+      // Fetch type of the project
+      const typeRes = await fetch(`${new URL(request.url).origin}/api/types`, {
+      headers: { 'Content-Type': 'application/json' }
+      });
+      const typeData = typeRes.ok ? await typeRes.json() : null;
+      project.type = typeData;
+
+      // Fetch user name owner of the project
+      const clientRes = await fetch(`${new URL(request.url).origin}/api/clients/${project?.PRJ_client_id}`, {
+      headers: { 'Content-Type': 'application/json' }
+      });
+      const clientJson = clientRes.ok ? await clientRes.json() : null;
+      const clientData = clientJson ? clientJson.client as GPAClient : null;
+      project.client_name = clientData?.CLI_name;
+
+      // Fetch categories names of the project
+      const categoriesRes = await fetch(`${new URL(request.url).origin}/api/categories?project_id=${project.PRJ_id}`, {
+      headers: { 'Content-Type': 'application/json' }
+      });
+      const categoriesData = categoriesRes.ok ? await categoriesRes.json() as GPAcategory[] : null;
+      project.categories_names = [];
+      categoriesData?.forEach((category) => { project.categories_names?.push(category.CAT_name) });
+    }));
     if (!includeRelated) {
       return NextResponse.json(projects, { status: 200 })
     }
@@ -66,7 +92,7 @@ export async function GET(request: NextRequest) {
             headers: { 'Content-Type': 'application/json' }
           });
           const typeData = typeRes.ok ? await typeRes.json() : null;
-          
+
           const relatedData = await fetchProjectRelatedData(project.PRJ_id, request)
           return {
             ...project,
@@ -77,8 +103,9 @@ export async function GET(request: NextRequest) {
         return project
       })
     )
-    projects= projectsWithRelatedData
-    return NextResponse.json({projects}, { status: 200 })
+    projects = projectsWithRelatedData
+
+    return NextResponse.json({ projects }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
@@ -150,7 +177,7 @@ export async function POST(request: NextRequest) {
       PRJ_neighborhood
     ]) as any
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Project created successfully',
       projectId: result.insertId
     }, { status: 201 })

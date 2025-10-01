@@ -95,6 +95,7 @@ export async function GET(
     const categoriesData = categoriesRes.ok ? await categoriesRes.json() as GPAcategory[] : null;
     project.categories_names=[]
     categoriesData?.forEach((category,index)=>{project.categories_names?.push(category.CAT_name)})
+    
     if (includeRelated) {
       // Get all related data using main API endpoints
       const relatedData = await fetchProjectRelatedData(projectId, request)
