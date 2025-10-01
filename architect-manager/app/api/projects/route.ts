@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
-import { GPAProject } from '@/models/GPA_project'
+import { GPAProject, getLocalMySQLDateTime } from '@/models/GPA_project'
 
 // Helper function to fetch project related data using main API endpoints
 async function fetchProjectRelatedData(projectId: number, request: NextRequest) {
@@ -105,7 +105,6 @@ export async function POST(request: NextRequest) {
       PRJ_area_m2,
       PRJ_additional_directions,
       PRJ_budget,
-      PRJ_entry_date,
       PRJ_completion_date,
       PRJ_logbook_number,
       PRJ_logbook_close_date,
@@ -143,7 +142,7 @@ export async function POST(request: NextRequest) {
       PRJ_area_m2,
       PRJ_additional_directions,
       PRJ_budget,
-      PRJ_entry_date,
+      getLocalMySQLDateTime(),
       PRJ_completion_date,
       PRJ_logbook_number,
       PRJ_logbook_close_date,
