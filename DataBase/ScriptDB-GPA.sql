@@ -127,6 +127,7 @@ CREATE TABLE GPA_Projects
   PRJ_canton Text,
   PRJ_district Text,
   PRJ_neighborhood Text,
+  PRJ_start_contruction_date Date,
   PRIMARY KEY (PRJ_id)
 )
 ;
