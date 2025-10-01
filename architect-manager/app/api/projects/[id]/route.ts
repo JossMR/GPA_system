@@ -2,45 +2,40 @@ import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
 import { GPAProject } from '@/models/GPA_project'
 
-// Helper function to make internal API calls
+// Helper function to make API calls to main endpoints
 async function fetchProjectRelatedData(projectId: number, request: NextRequest) {
   try {
     const baseUrl = new URL(request.url).origin
     
-    // Create promises for all related data fetches using internal endpoints
-    const [categoriesRes, typesRes, observationsRes, documentsRes, paymentsRes] = await Promise.all([
-      fetch(`${baseUrl}/api/projects/${projectId}/categories`, {
+    // Create promises for all related data fetches using main API endpoints
+    const [categoriesRes, observationsRes, documentsRes, paymentsRes] = await Promise.all([
+      fetch(`${baseUrl}/api/categories?project_id=${projectId}`, {
         headers: { 'Content-Type': 'application/json' }
       }),
-      fetch(`${baseUrl}/api/projects/${projectId}/types`, {
+      fetch(`${baseUrl}/api/observations?project_id=${projectId}`, {
         headers: { 'Content-Type': 'application/json' }
       }),
-      fetch(`${baseUrl}/api/projects/${projectId}/observations`, {
+      fetch(`${baseUrl}/api/documents?project_id=${projectId}`, {
         headers: { 'Content-Type': 'application/json' }
       }),
-      fetch(`${baseUrl}/api/projects/${projectId}/documents`, {
-        headers: { 'Content-Type': 'application/json' }
-      }),
-      fetch(`${baseUrl}/api/projects/${projectId}/payments`, {
+      fetch(`${baseUrl}/api/payments?project_id=${projectId}`, {
         headers: { 'Content-Type': 'application/json' }
       })
     ])
 
     const categories = categoriesRes.ok ? await categoriesRes.json() : []
-    const type = typesRes.ok ? await typesRes.json() : []
     const observations = observationsRes.ok ? await observationsRes.json() : []
     const documents = documentsRes.ok ? await documentsRes.json() : []
     const payments = paymentsRes.ok ? await paymentsRes.json() : []
 
     return {
       categories,
-      type: type[0] || undefined,
       observations,
       documents,
       payments
     }
   } catch (error) {
-    console.error('Error fetching project related data via API calls:', error)
+    console.error('Error fetching project related data via main API endpoints:', error)
     return {
       categories: [],
       types: undefined,
@@ -79,9 +74,14 @@ export async function GET(
     }
 
     let project = projects[0]
-
+    const typeRes = await fetch(`${new URL(request.url).origin}/api/types`, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    const typeData = typeRes.ok ? await typeRes.json() : null;
+    project.type = typeData;
+    
     if (includeRelated) {
-      // Get all related data using internal API calls
+      // Get all related data using main API endpoints
       const relatedData = await fetchProjectRelatedData(projectId, request)
       project = {
         ...project,

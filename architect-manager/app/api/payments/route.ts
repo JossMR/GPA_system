@@ -35,28 +35,27 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const body = await request.json() as Partial<GPAPayment>
     
-    const {
-      PAY_amount_due,
-      PAY_amount_paid = 0,
-      PAY_due_date,
-      PAY_payment_date,
-      PAY_description,
-      PAY_project_id
-    } = body
-    
-    // Basic validations
-    if (!PAY_amount_due || PAY_amount_due <= 0) {
+    if (!body.PAY_amount_due || body.PAY_amount_due <= 0) {
       return NextResponse.json({ error: 'Amount due is required and must be positive' }, { status: 400 })
     }
     
-    if (!PAY_due_date) {
+    if (!body.PAY_due_date) {
       return NextResponse.json({ error: 'Due date is required' }, { status: 400 })
     }
     
-    if (!PAY_project_id) {
+    if (!body.PAY_project_id) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 })
+    }
+    
+    const paymentData: Omit<GPAPayment, 'PAY_id'> = {
+      PAY_amount_due: body.PAY_amount_due,
+      PAY_amount_paid: body.PAY_amount_paid ?? 0,
+      PAY_due_date: body.PAY_due_date,
+      PAY_payment_date: body.PAY_payment_date || undefined,
+      PAY_description: body.PAY_description || undefined,
+      PAY_project_id: body.PAY_project_id
     }
     
     const insertQuery = `
@@ -71,12 +70,12 @@ export async function POST(request: NextRequest) {
     `
     
     const result = await executeQuery(insertQuery, [
-      PAY_amount_due,
-      PAY_amount_paid,
-      PAY_due_date,
-      PAY_payment_date || null,
-      PAY_description || null,
-      PAY_project_id
+      paymentData.PAY_amount_due,
+      paymentData.PAY_amount_paid,
+      paymentData.PAY_due_date,
+      paymentData.PAY_payment_date || null,
+      paymentData.PAY_description || null,
+      paymentData.PAY_project_id
     ]) as any
     
     return NextResponse.json({ 
