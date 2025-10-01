@@ -2,12 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
 import { GPAProject, getLocalMySQLDateTime } from '@/models/GPA_project'
 
-// Helper function to fetch project related data using main API endpoints
 async function fetchProjectRelatedData(projectId: number, request: NextRequest) {
   try {
     const baseUrl = new URL(request.url).origin
     
-    // Create promises for all related data fetches using main API endpoints
     const [categoriesRes, observationsRes, documentsRes, paymentsRes] = await Promise.all([
       fetch(`${baseUrl}/api/categories?project_id=${projectId}`, {
         headers: { 'Content-Type': 'application/json' }
@@ -23,7 +21,6 @@ async function fetchProjectRelatedData(projectId: number, request: NextRequest) 
       })
     ])
 
-    // Parse responses, handle errors gracefully
     const categories = categoriesRes.ok ? await categoriesRes.json() : []
     const observations = observationsRes.ok ? await observationsRes.json() : []
     const documents = documentsRes.ok ? await documentsRes.json() : []
@@ -51,24 +48,20 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const includeRelated = searchParams.get('include') === 'all'
     
-    // Get all projects basic information
     const projectsQuery = `
       SELECT * FROM GPA_Projects
       ORDER BY PRJ_entry_date DESC
     `
     
-    const projects = await executeQuery(projectsQuery) as GPAProject[]
+    let projects = await executeQuery(projectsQuery) as GPAProject[]
     
     if (!includeRelated) {
-      // Return projects without related data
       return NextResponse.json(projects, { status: 200 })
     }
 
-    // Include related data for each project using main API endpoints
     const projectsWithRelatedData = await Promise.all(
       projects.map(async (project) => {
         if (project.PRJ_id) {
-          // Get types data separately
           const typeRes = await fetch(`${new URL(request.url).origin}/api/types`, {
             headers: { 'Content-Type': 'application/json' }
           });
@@ -84,8 +77,8 @@ export async function GET(request: NextRequest) {
         return project
       })
     )
-
-    return NextResponse.json(projectsWithRelatedData, { status: 200 })
+    projects= projectsWithRelatedData
+    return NextResponse.json({projects}, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)

@@ -44,6 +44,8 @@ export interface GPAProject {
   observations?: GPAObservation[]
   documents?: GPADocument[]
   payments?: GPAPayment[]
+  client_name?: string
+  categories_names?: string[]
 }
 
 export function getLocalMySQLDateTime() {

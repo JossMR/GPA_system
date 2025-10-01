@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
 import { GPAProject } from '@/models/GPA_project'
+import { GPAClient } from '@/models/GPA_client'
+import { GPAcategory } from '@/models/GPA_category'
 
 // Helper function to make API calls to main endpoints
 async function fetchProjectRelatedData(projectId: number, request: NextRequest) {
@@ -79,7 +81,20 @@ export async function GET(
       });
     const typeData = typeRes.ok ? await typeRes.json() : null;
     project.type = typeData;
-    
+
+    const clientRes = await fetch(`${new URL(request.url).origin}/api/clients/${project?.PRJ_client_id}`, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    const clientJson = clientRes.ok ? await clientRes.json() : null;
+    const clientData = clientJson ? clientJson.client as GPAClient : null;
+    project.client_name = clientData?.CLI_name;
+
+    const categoriesRes = await fetch(`${new URL(request.url).origin}/api/categories?project_id=${project.PRJ_id}`, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    const categoriesData = categoriesRes.ok ? await categoriesRes.json() as GPAcategory[] : null;
+    project.categories_names=[]
+    categoriesData?.forEach((category,index)=>{project.categories_names?.push(category.CAT_name)})
     if (includeRelated) {
       // Get all related data using main API endpoints
       const relatedData = await fetchProjectRelatedData(projectId, request)
@@ -89,7 +104,7 @@ export async function GET(
       }
     }
 
-    return NextResponse.json(project, { status: 200 })
+    return NextResponse.json({project}, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
