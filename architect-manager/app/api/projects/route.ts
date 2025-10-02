@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     await Promise.all(projects.map(async (project, index) => {
       // Fetch type of the project
-      const typeRes = await fetch(`${new URL(request.url).origin}/api/types`, {
+      const typeRes = await fetch(`${new URL(request.url).origin}/api/types/${project.PRJ_type_id}}`, {
         headers: { 'Content-Type': 'application/json' }
       });
       const typeData = typeRes.ok ? await typeRes.json() : null;
