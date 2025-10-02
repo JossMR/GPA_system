@@ -12,17 +12,22 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Upload, FileText, CheckCircle, AlertCircle, Download, Trash2, File } from "lucide-react";
 
 interface FileInfo {
+    docId: number;
     fileName: string;
     filePath: string;
+    documentName: string;
     fileSize: number;
     uploadDate: string;
     lastModified: string;
+    filetypeId?: number;
+    filetypeName?: string;
 }
 
 export default function TestFiles() {
     const [projects, setProjects] = useState<GPAProject[]>([])
     const [selectedProjectId, setSelectedProjectId] = useState<string>("")
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
+    const [documentName, setDocumentName] = useState<string>("")
     const [projectFiles, setProjectFiles] = useState<FileInfo[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [isLoadingFiles, setIsLoadingFiles] = useState(false)
@@ -88,15 +93,18 @@ export default function TestFiles() {
         const file = event.target.files?.[0]
         if (file) {
             setSelectedFile(file)
+            // Auto-fill document name with file name (without extension)
+            const nameWithoutExtension = file.name.replace(/\.[^/.]+$/, "")
+            setDocumentName(nameWithoutExtension)
             setUploadStatus({ type: null, message: '' })
         }
     }
 
     const handleUpload = async () => {
-        if (!selectedFile || !selectedProjectId) {
+        if (!selectedFile || !selectedProjectId || !documentName.trim()) {
             setUploadStatus({
                 type: 'error',
-                message: 'Por favor selecciona un proyecto y un archivo'
+                message: 'Por favor selecciona un proyecto, un archivo y proporciona un nombre para el documento'
             })
             return
         }
@@ -105,6 +113,7 @@ export default function TestFiles() {
             setIsLoading(true)
             const formData = new FormData()
             formData.append('file', selectedFile)
+            formData.append('documentName', documentName.trim())
 
             const response = await fetch(`/api/upload/${selectedProjectId}`, {
                 method: 'POST',
@@ -116,9 +125,10 @@ export default function TestFiles() {
             if (response.ok) {
                 setUploadStatus({
                     type: 'success',
-                    message: `Archivo subido exitosamente: ${result.fileName}`
+                    message: `Documento "${result.documentName}" subido exitosamente`
                 })
                 setSelectedFile(null)
+                setDocumentName("")
                 // Reset file input
                 const fileInput = document.getElementById('file-input') as HTMLInputElement
                 if (fileInput) fileInput.value = ''
@@ -128,25 +138,25 @@ export default function TestFiles() {
             } else {
                 setUploadStatus({
                     type: 'error',
-                    message: result.error || 'Error al subir el archivo'
+                    message: result.error || 'Error al subir el documento'
                 })
             }
         } catch (error) {
             console.error("Upload error:", error)
             setUploadStatus({
                 type: 'error',
-                message: 'Error de conexión al subir el archivo'
+                message: 'Error de conexión al subir el documento'
             })
         } finally {
             setIsLoading(false)
         }
     }
 
-    const handleDownload = (filePath: string, fileName: string) => {
+    const handleDownload = (filePath: string, fileName: string, documentName?: string) => {
         // Crear enlace de descarga
         const link = document.createElement('a')
         link.href = filePath + '?download=true'
-        link.download = fileName
+        link.download = documentName || fileName
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
@@ -285,10 +295,26 @@ export default function TestFiles() {
                             )}
                         </div>
 
+                        {/* Nombre del Documento */}
+                        <div className="space-y-2">
+                            <Label htmlFor="document-name">Nombre del Documento</Label>
+                            <Input
+                                id="document-name"
+                                type="text"
+                                value={documentName}
+                                onChange={(e) => setDocumentName(e.target.value)}
+                                placeholder="Ej: Planos arquitectónicos, Presupuesto inicial, etc."
+                                disabled={isLoading || !selectedFile}
+                            />
+                            <div className="text-xs text-muted-foreground">
+                                Este nombre se usará para identificar el documento en la base de datos
+                            </div>
+                        </div>
+
                         {/* Botón de Subida */}
                         <Button
                             onClick={handleUpload}
-                            disabled={isLoading || !selectedFile || !selectedProjectId}
+                            disabled={isLoading || !selectedFile || !selectedProjectId || !documentName.trim()}
                             className="w-full"
                         >
                             {isLoading ? (
@@ -299,7 +325,7 @@ export default function TestFiles() {
                             ) : (
                                 <>
                                     <Upload className="h-4 w-4 mr-2" />
-                                    Subir Archivo
+                                    Subir Documento
                                 </>
                             )}
                         </Button>
@@ -363,11 +389,19 @@ export default function TestFiles() {
                                                             <File className="h-8 w-8 text-blue-500 flex-shrink-0" />
                                                             <div className="flex-1 min-w-0">
                                                                 <p className="text-sm font-medium truncate">
-                                                                    {file.fileName}
+                                                                    {file.documentName}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground truncate">
+                                                                    Archivo: {file.fileName}
                                                                 </p>
                                                                 <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                                                                     <span>{formatFileSize(file.fileSize)}</span>
                                                                     <span>Subido: {formatDate(file.uploadDate)}</span>
+                                                                    {file.filetypeName && (
+                                                                        <span className="bg-muted px-2 py-1 rounded">
+                                                                            {file.filetypeName.toUpperCase()}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -375,7 +409,7 @@ export default function TestFiles() {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => handleDownload(file.filePath, file.fileName)}
+                                                                onClick={() => handleDownload(file.filePath, file.fileName, file.documentName)}
                                                                 className="h-8 w-8 p-0"
                                                             >
                                                                 <Download className="h-4 w-4" />

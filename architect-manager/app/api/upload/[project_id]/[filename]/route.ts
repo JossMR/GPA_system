@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { readFile, stat, unlink } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
+import { executeQuery } from '@/lib/database'
 
 export async function GET(
   request: NextRequest,
@@ -21,11 +22,23 @@ export async function GET(
       return NextResponse.json({ error: 'Filename is required' }, { status: 400 })
     }
 
-    // Construct file path
-    const filePath = path.join(process.cwd(), 'public', 'uploads', 'projects', projectId, filename)
+    // Find document in database by filename and project
+    const documentQuery = `
+      SELECT DOC_id, DOC_name, DOC_file_path, DOC_upload_date
+      FROM GPA_Documents 
+      WHERE DOC_project_id = ? AND DOC_file_path LIKE ?
+    `
+    const documents = await executeQuery(documentQuery, [projectIdNum, `%${filename}`]) as any[]
+    
+    if (documents.length === 0) {
+      return NextResponse.json({ error: 'Document not found in database' }, { status: 404 })
+    }
+
+    const document = documents[0]
+    const filePath = path.join(process.cwd(), 'public', document.DOC_file_path)
     
     if (!existsSync(filePath)) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Physical file not found' }, { status: 404 })
     }
 
     // Get file stats
@@ -64,10 +77,12 @@ export async function GET(
     const headers: HeadersInit = {
       'Content-Type': contentType,
       'Content-Length': stats.size.toString(),
+      'X-Document-Name': document.DOC_name,
+      'X-Document-ID': document.DOC_id.toString(),
     }
 
     if (download) {
-      headers['Content-Disposition'] = `attachment; filename="${filename}"`
+      headers['Content-Disposition'] = `attachment; filename="${document.DOC_name || filename}"`
     }
 
     return new NextResponse(fileBuffer as unknown as BodyInit, {
@@ -102,26 +117,42 @@ export async function DELETE(
       return NextResponse.json({ error: 'Filename is required' }, { status: 400 })
     }
 
-    // Construct file path
-    const filePath = path.join(process.cwd(), 'public', 'uploads', 'projects', projectId, filename)
+    // Find document in database by filename and project
+    const documentQuery = `
+      SELECT DOC_id, DOC_name, DOC_file_path
+      FROM GPA_Documents 
+      WHERE DOC_project_id = ? AND DOC_file_path LIKE ?
+    `
+    const documents = await executeQuery(documentQuery, [projectIdNum, `%${filename}`]) as any[]
     
-    if (!existsSync(filePath)) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 })
+    if (documents.length === 0) {
+      return NextResponse.json({ error: 'Document not found in database' }, { status: 404 })
     }
 
-    // Delete file
-    await unlink(filePath)
+    const document = documents[0]
+    const filePath = path.join(process.cwd(), 'public', document.DOC_file_path)
+    
+    // Delete physical file if it exists
+    if (existsSync(filePath)) {
+      await unlink(filePath)
+    }
+
+    // Delete document record from database
+    const deleteQuery = 'DELETE FROM GPA_Documents WHERE DOC_id = ?'
+    await executeQuery(deleteQuery, [document.DOC_id])
 
     return NextResponse.json({
-      message: 'File deleted successfully',
+      message: 'Document deleted successfully',
+      documentId: document.DOC_id,
+      documentName: document.DOC_name,
       fileName: filename,
       projectId: projectIdNum
     }, { status: 200 })
 
   } catch (error) {
-    console.error('Error deleting file:', error)
+    console.error('Error deleting document:', error)
     return NextResponse.json(
-      { error: 'Failed to delete file' },
+      { error: 'Failed to delete document' },
       { status: 500 }
     )
   }

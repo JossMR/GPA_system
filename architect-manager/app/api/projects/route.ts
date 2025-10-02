@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       categoriesData?.forEach((category) => { project.categories_names?.push(category.CAT_name) });
     }));
     if (!includeRelated) {
-      return NextResponse.json(projects, { status: 200 })
+      return NextResponse.json({projects}, { status: 200 })
     }
 
     const projectsWithRelatedData = await Promise.all(
