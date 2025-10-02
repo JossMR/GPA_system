@@ -45,7 +45,7 @@ export default function TestFiles() {
                 console.log("Projects data:", data)
                 
                 // El endpoint devuelve directamente el array de proyectos
-                const projectsArray: GPAProject[] = Array.isArray(data) ? data : []
+                const projectsArray: GPAProject[] = Array.isArray(data.projects) ? data.projects : []
                 setProjects(projectsArray)
             } catch (error) {
                 console.error("Error fetching projects:", error)
