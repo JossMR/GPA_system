@@ -60,29 +60,29 @@ export async function GET(request: NextRequest) {
     await Promise.all(projects.map(async (project, index) => {
       // Fetch type of the project
       const typeRes = await fetch(`${new URL(request.url).origin}/api/types`, {
-      headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' }
       });
       const typeData = typeRes.ok ? await typeRes.json() : null;
       project.type = typeData;
 
       // Fetch user name owner of the project
       const clientRes = await fetch(`${new URL(request.url).origin}/api/clients/${project?.PRJ_client_id}`, {
-      headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' }
       });
       const clientJson = clientRes.ok ? await clientRes.json() : null;
       const clientData = clientJson ? clientJson.client as GPAClient : null;
-      project.client_name = clientData?.CLI_name;
+      project.client_name = clientData?.CLI_name + " " + clientData?.CLI_f_lastname + " " + clientData?.CLI_s_lastname;
 
       // Fetch categories names of the project
       const categoriesRes = await fetch(`${new URL(request.url).origin}/api/categories?project_id=${project.PRJ_id}`, {
-      headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' }
       });
       const categoriesData = categoriesRes.ok ? await categoriesRes.json() as GPAcategory[] : null;
       project.categories_names = [];
       categoriesData?.forEach((category) => { project.categories_names?.push(category.CAT_name) });
     }));
     if (!includeRelated) {
-      return NextResponse.json({projects}, { status: 200 })
+      return NextResponse.json({ projects }, { status: 200 })
     }
 
     const projectsWithRelatedData = await Promise.all(
