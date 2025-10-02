@@ -38,7 +38,7 @@ export interface GPAProject {
   PRJ_canton?: string
   PRJ_district?: string
   PRJ_neighborhood?: string
-  PRJ_start_contruction_date?: string | Date
+  PRJ_start_construction_date?: string | Date
 
   categories?: GPAcategory[]
   type?: GPAtype
