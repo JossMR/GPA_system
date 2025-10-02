@@ -127,7 +127,7 @@ export default function ProjectsPage() {
             <CardContent>
               <div className="text-2xl font-bold flex">
                 <p>₡</p>
-                {Number(projects?.reduce((sum, p) => sum + (p.PRJ_budget ?? 0), 0)).toLocaleString()}
+                {projects?.reduce((sum, p) => sum + Number(p.PRJ_budget ?? 0), 0).toLocaleString("es-CR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </CardContent>
           </Card>
