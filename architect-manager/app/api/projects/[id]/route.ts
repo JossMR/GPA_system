@@ -8,7 +8,7 @@ import { GPAcategory } from '@/models/GPA_category'
 async function fetchProjectRelatedData(projectId: number, request: NextRequest) {
   try {
     const baseUrl = new URL(request.url).origin
-    
+
     // Create promises for all related data fetches using main API endpoints
     const [categoriesRes, observationsRes, documentsRes, paymentsRes] = await Promise.all([
       fetch(`${baseUrl}/api/categories?project_id=${projectId}`, {
@@ -55,7 +55,7 @@ export async function GET(
   try {
     const resolvedParams = await params;
     const projectId = parseInt(resolvedParams.id)
-    
+
     if (isNaN(projectId)) {
       return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
     }
@@ -68,34 +68,34 @@ export async function GET(
       SELECT * FROM GPA_Projects 
       WHERE PRJ_id = ?
     `
-    
+
     const projects = await executeQuery(projectQuery, [projectId]) as GPAProject[]
-    
+
     if (projects.length === 0) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
     let project = projects[0]
     const typeRes = await fetch(`${new URL(request.url).origin}/api/types`, {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      headers: { 'Content-Type': 'application/json' }
+    });
     const typeData = typeRes.ok ? await typeRes.json() : null;
     project.type = typeData;
 
     const clientRes = await fetch(`${new URL(request.url).origin}/api/clients/${project?.PRJ_client_id}`, {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      headers: { 'Content-Type': 'application/json' }
+    });
     const clientJson = clientRes.ok ? await clientRes.json() : null;
     const clientData = clientJson ? clientJson.client as GPAClient : null;
-    project.client_name = clientData?.CLI_name;
+    project.client_name = clientData?.CLI_name + " " + clientData?.CLI_f_lastname + " " + clientData?.CLI_s_lastname;
 
     const categoriesRes = await fetch(`${new URL(request.url).origin}/api/categories?project_id=${project.PRJ_id}`, {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      headers: { 'Content-Type': 'application/json' }
+    });
     const categoriesData = categoriesRes.ok ? await categoriesRes.json() as GPAcategory[] : null;
-    project.categories_names=[]
-    categoriesData?.forEach((category,index)=>{project.categories_names?.push(category.CAT_name)})
-    
+    project.categories_names = []
+    categoriesData?.forEach((category, index) => { project.categories_names?.push(category.CAT_name) })
+
     if (includeRelated) {
       // Get all related data using main API endpoints
       const relatedData = await fetchProjectRelatedData(projectId, request)
@@ -105,7 +105,7 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({project}, { status: 200 })
+    return NextResponse.json({ project }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
@@ -123,7 +123,7 @@ export async function PUT(
   try {
     const resolvedParams = await params;
     const projectId = parseInt(resolvedParams.id)
-    
+
     if (isNaN(projectId)) {
       return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
     }
@@ -213,7 +213,7 @@ export async function DELETE(
   try {
     const resolvedParams = await params;
     const projectId = parseInt(resolvedParams.id)
-    
+
     if (isNaN(projectId)) {
       return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
     }
