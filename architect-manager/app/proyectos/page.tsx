@@ -22,6 +22,8 @@ const stateLabels = {
   "Entity Review": "Revisión de Entidad Financiera",
   "APC and Permits": "APC y Permisos",
   "Disbursement": "Desembolso",
+  "Under Construction": "En Construcción",
+  "Completed": "Completado",
   "Logbook Closed": "Bitácora Cerrada",
   "Rejected": "Rechazado",
   "Professional Withdrawal": "Retiro Profesional",
