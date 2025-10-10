@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DocumentManager } from "@/components/document-manager"
 import { ArrowLeft, Save, Building, Calendar, DollarSign, MapPin, FileText } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-select"
 
 const mockClientes = [
   { id: 1, nombre: "María González" },
@@ -36,6 +37,9 @@ export default function NuevoProyectoPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [documents, setDocuments] = useState<Document[]>([])
+  const [province, setProvince] = useState("")
+  const [canton, setCanton] = useState("")
+  const [district, setDistrict] = useState("")
 
   if (!isAdmin) {
     router.push("/proyectos")
@@ -84,92 +88,129 @@ export default function NuevoProyectoPage() {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="nombre" className="text-[#2e4600] font-medium">
-                        Nombre del proyecto *
+                      <Label htmlFor="caseNumber" className="text-[#2e4600] font-medium">
+                        Número de caso *
                       </Label>
                       <Input
-                        id="nombre"
-                        placeholder="Ej: Villa Moderna"
+                        id="caseNumber"
+                        placeholder="Ej: 1256"
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="cliente" className="text-[#2e4600] font-medium">
-                        Cliente *
+                      <Label htmlFor="area" className="text-[#2e4600] font-medium">
+                        Área en m2 *
                       </Label>
-                      <Select required>
-                        <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
-                          <SelectValue placeholder="Seleccionar cliente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {mockClientes.map((cliente) => (
-                            <SelectItem key={cliente.id} value={cliente.id.toString()}>
-                              {cliente.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="categoria" className="text-[#2e4600] font-medium">
-                        Categoría *
-                      </Label>
-                      <Select required>
-                        <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
-                          <SelectValue placeholder="Tipo de proyecto" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="residencial">Residencial</SelectItem>
-                          <SelectItem value="comercial">Comercial</SelectItem>
-                          <SelectItem value="industrial">Industrial</SelectItem>
-                          <SelectItem value="sustentable">Sustentable</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        id="area"
+                        placeholder="Ej: 22"
+                        className="border-[#a2c523]/30 focus:border-[#486b00]"
+                        required
+                      />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="estado" className="text-[#2e4600] font-medium">
-                        Estado inicial
+                      <Label htmlFor="state" className="text-[#2e4600] font-medium">
+                        Estado
                       </Label>
-                      <Select defaultValue="planificacion">
+                      <Select defaultValue="document_Collection">
                         <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="planificacion">Planificación</SelectItem>
-                          <SelectItem value="en_progreso">En Progreso</SelectItem>
-                          <SelectItem value="pausado">Pausado</SelectItem>
+                          <SelectItem value="document_Collection">Recolección de Documentos</SelectItem>
+                          <SelectItem value="technical_Inspection">Inspección Técnica</SelectItem>
+                          <SelectItem value="document_Review">Revisión de Documentos</SelectItem>
+                          <SelectItem value="plans_Budget">Planos y Presupuesto</SelectItem>
+                          <SelectItem value="entity_Review">Revisión de Entidad Financiera</SelectItem>
+                          <SelectItem value="APC_Permits">APC y Permisos</SelectItem>
+                          <SelectItem value="disbursement">Desembolso</SelectItem>
+                          <SelectItem value="under_Construction">En Construcción</SelectItem>
+                          <SelectItem value="completed">Completado</SelectItem>
+                          <SelectItem value="logbook_Closed">Bitácora Cerrada</SelectItem>
+                          <SelectItem value="rejected">Rechazado</SelectItem>
+                          <SelectItem value="professional_Withdrawal">Retiro Profesional</SelectItem>
+                          <SelectItem value="conditioned">Condicionado</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="ubicacion" className="text-[#2e4600] font-medium">
-                      Ubicación del proyecto
+                    <Label className="text-[#2e4600] font-medium">
+                      Ubicación *
+                    </Label>
+                    <CostaRicaLocationSelect
+                      province={province}
+                      setProvince={setProvince}
+                      canton={canton}
+                      setCanton={setCanton}
+                      district={district}
+                      setDistrict={setDistrict} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="neighborhood" className="text-[#2e4600] font-medium">
+                      Barrio
                     </Label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-[#486b00]" />
                       <Input
-                        id="ubicacion"
-                        placeholder="Dirección completa del proyecto"
+                        id="neighborhood"
+                        placeholder="Ej: Santa Cecília"
                         className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
                       />
                     </div>
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="descripcion" className="text-[#2e4600] font-medium">
-                      Descripción del proyecto
+                    <Label htmlFor="additional_Directions" className="text-[#2e4600] font-medium">
+                      Direcciones adicionales
                     </Label>
                     <Textarea
-                      id="descripcion"
-                      placeholder="Describe los detalles y características del proyecto..."
+                      id="additional_Directions"
+                      placeholder="Direcciones adicionales para llegar al sitio"
+                      className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[120px]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="completion_Date" className="text-[#2e4600] font-medium">
+                        Fecha de conclusión
+                      </Label>
+                      <Input
+                        id="completion_Date"
+                        type="date"
+                        className="border-[#a2c523]/30 focus:border-[#486b00]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="logbook_Number" className="text-[#2e4600] font-medium">
+                        Número de bitácora
+                      </Label>
+                      <Input
+                        id="logbook_Number"
+                        placeholder="Ej: 22"
+                        className="border-[#a2c523]/30 focus:border-[#486b00]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="logbook_Close_Date" className="text-[#2e4600] font-medium">
+                        Fecha de cierre de bitácora
+                      </Label>
+                      <Input
+                        id="logbook_Close_Date"
+                        type="date"
+                        className="border-[#a2c523]/30 focus:border-[#486b00]"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="notes" className="text-[#2e4600] font-medium">
+                      Notas Adicionales
+                    </Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Notas adicionales sobre el proyecto"
                       className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[120px]"
                     />
                   </div>
@@ -190,7 +231,7 @@ export default function NuevoProyectoPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="presupuesto" className="text-[#2e4600] font-medium">
-                      Presupuesto total *
+                      Presupuesto Inicial
                     </Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-[#7d4427]" />
@@ -204,46 +245,16 @@ export default function NuevoProyectoPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="anticipo" className="text-[#2e4600] font-medium">
-                      Anticipo inicial
-                    </Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-[#7d4427]" />
-                      <Input
-                        id="anticipo"
-                        type="number"
-                        placeholder="30000"
-                        className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fechaInicio" className="text-[#2e4600] font-medium">
-                      Fecha de inicio *
+                    <Label htmlFor="start_Construction_Date" className="text-[#2e4600] font-medium">
+                      Fecha de inicio de construcción
                     </Label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-[#7d4427]" />
                       <Input
-                        id="fechaInicio"
+                        id="start_Construction_Date"
                         type="date"
                         className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
                         required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fechaEntrega" className="text-[#2e4600] font-medium">
-                      Fecha estimada de entrega
-                    </Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-[#7d4427]" />
-                      <Input
-                        id="fechaEntrega"
-                        type="date"
-                        className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
                       />
                     </div>
                   </div>
@@ -328,20 +339,40 @@ export default function NuevoProyectoPage() {
               <CardContent className="p-4">
                 <div className="text-sm space-y-3">
                   <div className="flex items-center justify-between">
-                    <span>1. Planificación</span>
-                    <span className="text-[#a2c523]">0%</span>
+                    <span>Recolección de documentos</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>2. Diseño</span>
-                    <span className="text-muted-foreground">0%</span>
+                    <span>Inspección técnica</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>3. Construcción</span>
-                    <span className="text-muted-foreground">0%</span>
+                    <span>Revisión de documentos</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>4. Finalización</span>
-                    <span className="text-muted-foreground">0%</span>
+                    <span>Planos y presupuesto</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Revisión de la entidad Financiera</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>APC y permisos de construcción</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>En construcción</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Completado</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Bitácora cerrada</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Rechazado</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Retiro profesional</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Condicionado</span>
                   </div>
                 </div>
               </CardContent>
