@@ -128,7 +128,6 @@ export async function POST(request: NextRequest) {
       PRJ_completion_date,
       PRJ_logbook_number,
       PRJ_logbook_close_date,
-      PRJ_category_id,
       PRJ_type_id,
       PRJ_state,
       PRJ_final_price,
@@ -136,45 +135,45 @@ export async function POST(request: NextRequest) {
       PRJ_province,
       PRJ_canton,
       PRJ_district,
-      PRJ_neighborhood
+      PRJ_neighborhood,
+      PRJ_start_construction_date
     } = body
 
     // Validate required fields
-    if (!PRJ_client_id || !PRJ_case_number || !PRJ_category_id || !PRJ_type_id || !PRJ_state) {
+    if (!PRJ_client_id || !PRJ_case_number || !PRJ_type_id || !PRJ_state) {
       return NextResponse.json(
-        { error: 'Required fields: client_id, case_number, category_id, type_id, state' },
+        { error: 'Required fields: client_id, case_number, type_id, state' },
         { status: 400 }
       )
     }
-
     const insertQuery = `
       INSERT INTO GPA_Projects (
         PRJ_client_id, PRJ_case_number, PRJ_area_m2, PRJ_additional_directions,
         PRJ_budget, PRJ_entry_date, PRJ_completion_date, PRJ_logbook_number,
-        PRJ_logbook_close_date, PRJ_category_id, PRJ_type_id, PRJ_state,
-        PRJ_final_price, PRJ_notes, PRJ_province, PRJ_canton, PRJ_district, PRJ_neighborhood
+        PRJ_logbook_close_date, PRJ_type_id, PRJ_state,
+        PRJ_final_price, PRJ_notes, PRJ_province, PRJ_canton, PRJ_district, PRJ_neighborhood, PRJ_start_construction_date
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
 
     const result = await executeQuery(insertQuery, [
       PRJ_client_id,
       PRJ_case_number,
-      PRJ_area_m2,
-      PRJ_additional_directions,
-      PRJ_budget,
+      PRJ_area_m2?.toString() || null,
+      PRJ_additional_directions || null,
+      PRJ_budget?.toString() || null,
       getLocalMySQLDateTime(),
-      PRJ_completion_date,
-      PRJ_logbook_number,
-      PRJ_logbook_close_date,
-      PRJ_category_id,
+      PRJ_completion_date?.toString() || null,
+      PRJ_logbook_number?.toString() || null,
+      PRJ_logbook_close_date?.toString() || null,
       PRJ_type_id,
       PRJ_state,
-      PRJ_final_price,
-      PRJ_notes,
-      PRJ_province,
-      PRJ_canton,
-      PRJ_district,
-      PRJ_neighborhood
+      PRJ_final_price?.toString() || null,
+      PRJ_notes?.toString() || null,
+      PRJ_province?.toString() || null,
+      PRJ_canton?.toString() || null,
+      PRJ_district?.toString() || null,
+      PRJ_neighborhood?.toString() || null,
+      PRJ_start_construction_date?.toString() || null
     ]) as any
 
     return NextResponse.json({

@@ -16,7 +16,6 @@ export interface GPAProject {
   PRJ_completion_date?: string | Date
   PRJ_logbook_number?: string
   PRJ_logbook_close_date?: string | Date
-  PRJ_category_id: number
   PRJ_type_id: number
   PRJ_state: 
     | 'Document Collection'

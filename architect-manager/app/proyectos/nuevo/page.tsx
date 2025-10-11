@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,6 +18,8 @@ import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-sele
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { GPAClient } from '@/models/GPA_client'
 import { ClientSelector } from "@/components/client-selector"
+import { GPAProject } from "@/models/GPA_project"
+import { useToast } from "@/hooks/use-toast"
 
 
 interface Document {
@@ -38,33 +40,85 @@ export default function NewProjectPage() {
   const [province, setProvince] = useState("")
   const [canton, setCanton] = useState("")
   const [district, setDistrict] = useState("")
+  const [state, setState] = useState<GPAProject["PRJ_state"]>("Document Collection")
   const [clientDialogOpen, setClientDialogOpen] = useState(false)
   const [clientSelected, setClientSelected] = useState<number | null>(null)
   const [clientSelectedObj, setClientSelectedObj] = useState<GPAClient | null>(null)
   const [clients, setClients] = useState<GPAClient[]>([])
   const [clientsLoading, setClientsLoading] = useState(false)
   const [clientError, setClientError] = useState<string | null>(null)
+  const { toast } = useToast()
+  const clientFieldRef = useRef<HTMLDivElement>(null)
 
   if (!isAdmin) {
     router.push("/proyectos")
     return null
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setClientError(null)
-    if (!clientSelectedObj) {
-      setClientError("⚠️ Debe seleccionar un cliente")
-      return
-    }
     setLoading(true)
 
-    // Simular guardado
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const formData = new FormData(e.currentTarget)
 
-    console.log("Documentos adjuntos:", documents)
+    if (!clientSelectedObj) {
+      setClientError("⚠️ Debe seleccionar un cliente")
+      setLoading(false)
+      clientFieldRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+      return
+    }
+
+    const newProject: GPAProject = {
+      PRJ_case_number: formData.get("caseNumber") as string,
+      PRJ_area_m2: formData.get("area") ? Number(formData.get("area")) : undefined,
+      PRJ_state: state as GPAProject["PRJ_state"],
+      PRJ_budget: formData.get("budget") ? Number(formData.get("budget")) : undefined,
+      PRJ_start_construction_date: formData.get("startConstructionDate") ? formData.get("startConstructionDate") as string : undefined,
+      PRJ_completion_date: formData.get("completionDate") ? formData.get("completionDate") as string : undefined,
+      PRJ_province: province,
+      PRJ_canton: canton,
+      PRJ_district: district,
+      PRJ_neighborhood: formData.get("neighborhood") as string,
+      PRJ_additional_directions: formData.get("additionalDirections") as string,
+      PRJ_notes: formData.get("notes") as string,
+      PRJ_type_id: 1, // Temporalmente fijo,
+      PRJ_logbook_close_date: formData.get("logbookCloseDate") ? formData.get("logbookCloseDate") as string : undefined,
+      PRJ_logbook_number: formData.get("logbookNumber") as string,
+      PRJ_client_id: clientSelectedObj?.CLI_id ?? 0
+    }
+    try {
+      const response = await fetch("/api/projects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newProject),
+      })
+      if (!response.ok) {
+        // Obtener el mensaje de error de la respuesta
+        const errorData = await response.json()
+        const errorMessage = errorData.error || "Error creating project"
+        throw new Error(errorMessage)
+      }
+      toast({
+        title: "Proyecto Registrado",
+        description: "El proyecto fue registrado correctamente",
+        variant: "success"
+      })
+      const data = await response.json()
+      const registeredProject: GPAProject = data.project;
+      console.log("Registered project", registeredProject)
+      router.push("/proyectos")
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : "There was a problem creating the project.")
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al guardar el proyecto.",
+        variant: "success"
+      })
+    }
     setLoading(false)
-    router.push("/proyectos")
   }
 
   useEffect(() => {
@@ -101,20 +155,21 @@ export default function NewProjectPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div>
           {/* Formulario Principal */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Información Básica */}
-            <Card className="card-hover border-[#a2c523]/20">
-              <CardHeader className="gradient-primary text-white rounded-t-lg">
-                <CardTitle className="flex items-center">
-                  <Building className="mr-2 h-5 w-5" />
-                  Información del Proyecto
-                </CardTitle>
-                <CardDescription className="text-white/80">Datos básicos del proyecto arquitectónico</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Información Básica */}
+              <Card className="card-hover border-[#a2c523]/20">
+                <CardHeader className="gradient-primary text-white rounded-t-lg">
+                  <CardTitle className="flex items-center">
+                    <Building className="mr-2 h-5 w-5" />
+                    Información del Proyecto
+                  </CardTitle>
+                  <CardDescription className="text-white/80">Datos básicos del proyecto arquitectónico</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6 space-y-6">
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="caseNumber" className="text-[#2e4600] font-medium">
@@ -122,6 +177,7 @@ export default function NewProjectPage() {
                       </Label>
                       <Input
                         id="caseNumber"
+                        name="caseNumber"
                         placeholder="Ej: 1256"
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                         required
@@ -133,46 +189,47 @@ export default function NewProjectPage() {
                       </Label>
                       <Input
                         id="area"
-                        placeholder="Ej: 22"
+                        name="area"
+                        placeholder="Ej: 22.5"
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
-                        required
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="state" className="text-[#2e4600] font-medium">
                         Estado
                       </Label>
-                      <Select defaultValue="document_Collection">
+                      <Select defaultValue="document_Collection"
+                        value={state}
+                        onValueChange={(value) => setState(value as GPAProject["PRJ_state"])}>
                         <SelectTrigger id="state" className="border-[#a2c523]/30 focus:border-[#486b00]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="document_Collection">Recolección de Documentos</SelectItem>
-                          <SelectItem value="technical_Inspection">Inspección Técnica</SelectItem>
-                          <SelectItem value="document_Review">Revisión de Documentos</SelectItem>
-                          <SelectItem value="plans_Budget">Planos y Presupuesto</SelectItem>
-                          <SelectItem value="entity_Review">Revisión de Entidad Financiera</SelectItem>
-                          <SelectItem value="APC_Permits">APC y Permisos</SelectItem>
-                          <SelectItem value="disbursement">Desembolso</SelectItem>
-                          <SelectItem value="under_Construction">En Construcción</SelectItem>
-                          <SelectItem value="completed">Completado</SelectItem>
-                          <SelectItem value="logbook_Closed">Bitácora Cerrada</SelectItem>
-                          <SelectItem value="rejected">Rechazado</SelectItem>
-                          <SelectItem value="professional_Withdrawal">Retiro Profesional</SelectItem>
-                          <SelectItem value="conditioned">Condicionado</SelectItem>
+                          <SelectItem value="Document Collection">Recolección de Documentos</SelectItem>
+                          <SelectItem value="Technical Inspection">Inspección Técnica</SelectItem>
+                          <SelectItem value="Document Review">Revisión de Documentos</SelectItem>
+                          <SelectItem value="Plans and Budget">Planos y Presupuesto</SelectItem>
+                          <SelectItem value="Entity Review">Revisión de Entidad Financiera</SelectItem>
+                          <SelectItem value="APC and Permits">APC y Permisos</SelectItem>
+                          <SelectItem value="Disbursement">Desembolso</SelectItem>
+                          <SelectItem value="Under Construction">En Construcción</SelectItem>
+                          <SelectItem value="Completed">Completado</SelectItem>
+                          <SelectItem value="Logbook Closed">Bitácora Cerrada</SelectItem>
+                          <SelectItem value="Rejected">Rechazado</SelectItem>
+                          <SelectItem value="Professional Withdrawal">Retiro Profesional</SelectItem>
+                          <SelectItem value="Conditioned">Condicionado</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                   {/* --- CAMPO CLIENTE Y BOTÓN --- */}
-                  <div className="space-y-2">
+                  <div className="space-y-2" ref={clientFieldRef}>
                     <Label className="text-[#2e4600] font-medium">Cliente *</Label>
                     <div
-                      className={`flex gap-0 rounded-md overflow-hidden border ${
-                        clientError
-                          ? "border-yellow-400 ring-2 ring-yellow-400/50"
-                          : "border-[#a2c523]/30 focus-within:border-[#486b00]"
-                      } bg-gray-100 dark:bg-[#232d1c]`}
+                      className={`flex gap-0 rounded-md overflow-hidden border ${clientError
+                        ? "border-yellow-400 ring-2 ring-yellow-400/50"
+                        : "border-[#a2c523]/30 focus-within:border-[#486b00]"
+                        } bg-gray-100 dark:bg-[#232d1c]`}
                     >
                       <Input
                         value={
@@ -197,27 +254,10 @@ export default function NewProjectPage() {
                     </div>
                     {!clientSelectedObj && (
                       <p className="text-yellow-600 text-sm font-medium">
-                        ⚠️ Debes seleccionar un cliente
+                        ⚠️ Debe seleccionar un cliente
                       </p>
                     )}
-                    {/* Input oculto para validación nativa si lo necesitas */}
-                    <input
-                      name="cliente"
-                      type="text"
-                      value={clientSelectedObj ? clientSelectedObj.CLI_id ?? "" : ""}
-                      required
-                      style={{
-                        position: 'absolute',
-                        left: '-9999px',
-                        opacity: 0,
-                        height: 0,
-                        width: 0,
-                        pointerEvents: 'none'
-                      }}
-                      tabIndex={-1}
-                      aria-hidden="true"
-                      readOnly
-                    />
+
                   </div>
                   {/* --- FIN CAMPO CLIENTE Y BOTÓN --- */}
                   <div className="space-y-2">
@@ -240,48 +280,53 @@ export default function NewProjectPage() {
                       <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-[#486b00]" />
                       <Input
                         id="neighborhood"
+                        name="neighborhood"
                         placeholder="Ej: Santa Cecília"
                         className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="additional_Directions" className="text-[#2e4600] font-medium">
+                    <Label htmlFor="additionalDirections" className="text-[#2e4600] font-medium">
                       Direcciones adicionales
                     </Label>
                     <Textarea
-                      id="additional_Directions"
+                      id="additionalDirections"
+                      name="additionalDirections"
                       placeholder="Direcciones adicionales para llegar al sitio"
                       className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[120px]"
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="completion_Date" className="text-[#2e4600] font-medium">
+                      <Label htmlFor="completionDate" className="text-[#2e4600] font-medium">
                         Fecha de conclusión
                       </Label>
                       <Input
-                        id="completion_Date"
+                        id="completionDate"
+                        name="completionDate"
                         type="date"
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="logbook_Number" className="text-[#2e4600] font-medium">
+                      <Label htmlFor="logbookNumber" className="text-[#2e4600] font-medium">
                         Número de bitácora
                       </Label>
                       <Input
-                        id="logbook_Number"
+                        id="logbookNumber"
+                        name="logbookNumber"
                         placeholder="Ej: 22"
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="logbook_Close_Date" className="text-[#2e4600] font-medium">
+                      <Label htmlFor="logbookCloseDate" className="text-[#2e4600] font-medium">
                         Fecha de cierre de bitácora
                       </Label>
                       <Input
-                        id="logbook_Close_Date"
+                        id="logbookCloseDate"
+                        name="logbookCloseDate"
                         type="date"
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                       />
@@ -293,203 +338,204 @@ export default function NewProjectPage() {
                     </Label>
                     <Textarea
                       id="notes"
+                      name="notes"
                       placeholder="Notas adicionales sobre el proyecto"
                       className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[120px]"
                     />
                   </div>
-                </form>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Información Financiera */}
-            <Card className="card-hover border-[#7d4427]/20">
-              <CardHeader className="gradient-accent text-white rounded-t-lg">
-                <CardTitle className="flex items-center">
-                  <DollarSign className="mr-2 h-5 w-5" />
-                  Información Financiera
-                </CardTitle>
-                <CardDescription className="text-white/80">Presupuesto y detalles económicos</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="budget" className="text-[#2e4600] font-medium">
-                      Presupuesto Inicial
-                    </Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-[#7d4427]" />
-                      <Input
-                        id="budget"
-                        type="number"
-                        placeholder="150000"
-                        className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="start_Construction_Date" className="text-[#2e4600] font-medium">
-                      Fecha de inicio de construcción
-                    </Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-[#7d4427]" />
-                      <Input
-                        id="start_Construction_Date"
-                        type="date"
-                        className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Gestión de Documentos */}
-            <DocumentManager
-              documents={documents}
-              onDocumentsChange={setDocuments}
-              canEdit={true}
-              showUpload={true}
-              title="Documentos del Proyecto"
-            />
-
-            {/* Botones de Acción */}
-            <div className="flex justify-end space-x-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-                className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="gradient-primary text-white hover:opacity-90"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Creando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Crear Proyecto
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Panel Lateral */}
-          <div className="space-y-6">
-            <Card className="border-[#c9e077]/30">
-              <CardHeader>
-                <CardTitle className="text-[#2e4600] flex items-center">
-                  <FileText className="mr-2 h-5 w-5" />
-                  Documentos Requeridos
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 space-y-3">
-                <div className="text-sm space-y-2">
-                  <p className="flex items-center">
-                    <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
-                    Planos arquitectónicos
-                  </p>
-                  <p className="flex items-center">
-                    <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
-                    Permisos de construcción
-                  </p>
-                  <p className="flex items-center">
-                    <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
-                    Estudio de suelos
-                  </p>
-                  <p className="flex items-center">
-                    <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
-                    Contrato firmado
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-[#7d4427]/20">
-              <CardHeader className="bg-[#7d4427]/10 rounded-t-lg">
-                <CardTitle className="text-[#7d4427]">Fases del Proyecto</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="text-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span>Recolección de documentos</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Inspección técnica</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Revisión de documentos</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Planos y presupuesto</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Revisión de la entidad Financiera</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>APC y permisos de construcción</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>En construcción</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Completado</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Bitácora cerrada</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Rechazado</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Retiro profesional</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Condicionado</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Resumen de documentos */}
-            {documents.length > 0 && (
-              <Card className="border-[#486b00]/20">
-                <CardHeader>
-                  <CardTitle className="text-[#486b00]">Documentos Adjuntos</CardTitle>
+              {/* Información Financiera */}
+              <Card className="card-hover border-[#7d4427]/20">
+                <CardHeader className="gradient-accent text-white rounded-t-lg">
+                  <CardTitle className="flex items-center">
+                    <DollarSign className="mr-2 h-5 w-5" />
+                    Información Financiera
+                  </CardTitle>
+                  <CardDescription className="text-white/80">Presupuesto y detalles económicos</CardDescription>
                 </CardHeader>
-                <CardContent className="p-4">
-                  <div className="text-sm space-y-2">
-                    <div className="flex justify-between">
-                      <span>Total de archivos:</span>
-                      <span className="font-medium">{documents.length}</span>
+                <CardContent className="p-6 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="budget" className="text-[#2e4600] font-medium">
+                        Presupuesto Inicial
+                      </Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-[#7d4427]" />
+                        <Input
+                          id="budget"
+                          name="budget"
+                          type="number"
+                          placeholder="150000"
+                          className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
+                        />
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Planos:</span>
-                      <span className="font-medium">{documents.filter((d) => d.category === "plano").length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Fotografías:</span>
-                      <span className="font-medium">{documents.filter((d) => d.category === "foto").length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Contratos:</span>
-                      <span className="font-medium">{documents.filter((d) => d.category === "contrato").length}</span>
+                    <div className="space-y-2">
+                      <Label htmlFor="startConstructionDate" className="text-[#2e4600] font-medium">
+                        Fecha de inicio de construcción
+                      </Label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-[#7d4427]" />
+                        <Input
+                          id="startConstructionDate"
+                          name="startConstructionDate"
+                          type="date"
+                          className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            )}
-          </div>
+
+              {/* Gestión de Documentos */}
+              <DocumentManager
+                documents={documents}
+                onDocumentsChange={setDocuments}
+                canEdit={true}
+                showUpload={true}
+                title="Documentos del Proyecto"
+              />
+
+              {/* Botones de Acción */}
+              <div className="flex justify-end space-x-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                  className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="gradient-primary text-white hover:opacity-90"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Creando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Crear Proyecto
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Panel Lateral */}
+            <div className="space-y-6">
+              <Card className="border-[#c9e077]/30">
+                <CardHeader>
+                  <CardTitle className="text-[#2e4600] flex items-center">
+                    <FileText className="mr-2 h-5 w-5" />
+                    Documentos Requeridos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 space-y-3">
+                  <div className="text-sm space-y-2">
+                    <p className="flex items-center">
+                      <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
+                      Planos arquitectónicos
+                    </p>
+                    <p className="flex items-center">
+                      <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
+                      Permisos de construcción
+                    </p>
+                    <p className="flex items-center">
+                      <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
+                      Estudio de suelos
+                    </p>
+                    <p className="flex items-center">
+                      <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
+                      Contrato firmado
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-[#7d4427]/20">
+                <CardHeader className="bg-[#7d4427]/10 rounded-t-lg">
+                  <CardTitle className="text-[#7d4427]">Fases del Proyecto</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="text-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span>Recolección de documentos</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Inspección técnica</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Revisión de documentos</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Planos y presupuesto</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Revisión de la entidad Financiera</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>APC y permisos de construcción</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>En construcción</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Completado</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Bitácora cerrada</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Rechazado</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Retiro profesional</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Condicionado</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Resumen de documentos */}
+              {documents.length > 0 && (
+                <Card className="border-[#486b00]/20">
+                  <CardHeader>
+                    <CardTitle className="text-[#486b00]">Documentos Adjuntos</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span>Total de archivos:</span>
+                        <span className="font-medium">{documents.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Planos:</span>
+                        <span className="font-medium">{documents.filter((d) => d.category === "plano").length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Fotografías:</span>
+                        <span className="font-medium">{documents.filter((d) => d.category === "foto").length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Contratos:</span>
+                        <span className="font-medium">{documents.filter((d) => d.category === "contrato").length}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </form>
         </div>
 
         {/* Modal para seleccionar cliente */}
@@ -502,7 +548,7 @@ export default function NewProjectPage() {
           }}
           selectedId={clientSelected}
         />
-      </div>
-    </MainLayout>
+      </div >
+    </MainLayout >
   )
 }
