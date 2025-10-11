@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,12 +15,9 @@ import { DocumentManager } from "@/components/document-manager"
 import { ArrowLeft, Save, Building, Calendar, DollarSign, MapPin, FileText } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { GPAClient } from '@/models/GPA_client'
 
-const mockClientes = [
-  { id: 1, nombre: "María González" },
-  { id: 2, nombre: "Carlos Rodríguez" },
-  { id: 3, nombre: "Ana Martínez" },
-]
 
 interface Document {
   id: string
@@ -40,6 +37,12 @@ export default function NuevoProyectoPage() {
   const [province, setProvince] = useState("")
   const [canton, setCanton] = useState("")
   const [district, setDistrict] = useState("")
+  const [clienteDialogOpen, setClienteDialogOpen] = useState(false)
+  const [clienteFiltro, setClienteFiltro] = useState("")
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<number | null>(null)
+  const [clienteSeleccionadoObj, setClienteSeleccionadoObj] = useState<GPAClient | null>(null)
+  const [clientes, setClientes] = useState<GPAClient[]>([])
+  const [clientesLoading, setClientesLoading] = useState(false)
 
   if (!isAdmin) {
     router.push("/proyectos")
@@ -57,6 +60,32 @@ export default function NuevoProyectoPage() {
     setLoading(false)
     router.push("/proyectos")
   }
+
+  useEffect(() => {
+    const fetchClientes = async () => {
+      setClientesLoading(true)
+      try {
+        const response = await fetch("/api/clients")
+        const data = await response.json()
+        const requestedClients: GPAClient[] = data.clients
+        setClientes(requestedClients)
+      } catch (error) {
+        setClientes([])
+      } finally {
+        setClientesLoading(false)
+      }
+    }
+    if (clienteDialogOpen) fetchClientes()
+  }, [clienteDialogOpen])
+
+  // Filtrar clientes por nombre o cédula
+  const clientesFiltrados = clientes.filter(
+    (c) =>
+      c.CLI_name.toLowerCase().includes(clienteFiltro.toLowerCase()) ||
+      c.CLI_f_lastname?.toLowerCase().includes(clienteFiltro.toLowerCase()) ||
+      c.CLI_s_lastname?.toLowerCase().includes(clienteFiltro.toLowerCase()) ||
+      c.CLI_identification.toLowerCase().includes(clienteFiltro.toLowerCase())
+  )
 
   return (
     <MainLayout>
@@ -88,6 +117,35 @@ export default function NuevoProyectoPage() {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* --- CAMPO CLIENTE Y BOTÓN --- */}
+                  <div className="space-y-2">
+                    <Label className="text-[#2e4600] font-medium">Cliente *</Label>
+                    <div
+                      className="flex gap-0 rounded-md overflow-hidden border border-[#a2c523]/30 focus-within:border-[#486b00] bg-gray-100 dark:bg-[#232d1c]"
+                    >
+                      <Input
+                        value={
+                          clienteSeleccionadoObj
+                            ? `${clienteSeleccionadoObj.CLI_name} ${clienteSeleccionadoObj.CLI_f_lastname ?? ""} ${clienteSeleccionadoObj.CLI_s_lastname ?? ""} - ${clienteSeleccionadoObj.CLI_identification}`
+                            : ""
+                        }
+                        placeholder="Seleccione un cliente"
+                        readOnly
+                        className="border-none focus:ring-0 focus-visible:ring-0 bg-transparent text-foreground placeholder:text-muted-foreground rounded-none"
+                        tabIndex={-1}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setClienteDialogOpen(true)}
+                        className="rounded-none border-l border-[#a2c523]/30 bg-gray-200 dark:bg-[#2e3a23] hover:bg-[#c9e077]/30 dark:hover:bg-[#384d2b] text-foreground"
+                        style={{ minWidth: 100 }}
+                      >
+                        Agregar
+                      </Button>
+                    </div>
+                  </div>
+                  {/* --- FIN CAMPO CLIENTE Y BOTÓN --- */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="caseNumber" className="text-[#2e4600] font-medium">
@@ -408,6 +466,78 @@ export default function NuevoProyectoPage() {
             )}
           </div>
         </div>
+
+        {/* Modal para seleccionar cliente */}
+        <Dialog open={clienteDialogOpen} onOpenChange={setClienteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Seleccionar Cliente</DialogTitle>
+            </DialogHeader>
+            <div className="mb-4">
+              <Input
+                placeholder="Filtrar por nombre o cédula"
+                value={clienteFiltro}
+                onChange={e => setClienteFiltro(e.target.value)}
+                className="mb-2 text-[#2e4600] dark:text-[#c9e077] placeholder:text-muted-foreground"
+              />
+              <div className="overflow-x-auto max-h-64">
+                <table className="min-w-full text-sm border">
+                  <thead>
+                    <tr className="bg-gray-100 dark:bg-[#232d1c]">
+                      <th className="px-3 py-2 border text-[#2e4600] dark:text-[#c9e077]">Nombre</th>
+                      <th className="px-3 py-2 border text-[#2e4600] dark:text-[#c9e077]">Apellidos</th>
+                      <th className="px-3 py-2 border text-[#2e4600] dark:text-[#c9e077]">Cédula</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clientesLoading ? (
+                      <tr>
+                        <td colSpan={3} className="text-center py-4 text-muted-foreground">
+                          Cargando clientes...
+                        </td>
+                      </tr>
+                    ) : clientesFiltrados.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="text-center py-4 text-muted-foreground">
+                          No hay clientes que coincidan.
+                        </td>
+                      </tr>
+                    ) : (
+                      clientesFiltrados
+                        .filter((c) => typeof c.CLI_id === "number")
+                        .map((c) => (
+                          <tr
+                            key={c.CLI_id}
+                            onClick={() => {
+                              setClienteSeleccionado(c.CLI_id!)
+                              setClienteSeleccionadoObj(c)
+                              setClienteDialogOpen(false)
+                            }}
+                            className={
+                              "cursor-pointer transition-colors " +
+                              (clienteSeleccionado === c.CLI_id
+                                ? "bg-[#e6f4d7] dark:bg-[#384d2b]"
+                                : "hover:bg-[#f5fbe9] dark:hover:bg-[#2e3a23]") +
+                              " text-[#2e4600] dark:text-[#c9e077]"
+                            }
+                          >
+                            <td className="px-3 py-2 border">{c.CLI_name}</td>
+                            <td className="px-3 py-2 border">{`${c.CLI_f_lastname ?? ""} ${c.CLI_s_lastname ?? ""}`.trim()}</td>
+                            <td className="px-3 py-2 border">{c.CLI_identification}</td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setClienteDialogOpen(false)}>
+                Cerrar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   )
