@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { GPAClient } from '@/models/GPA_client'
@@ -46,6 +46,9 @@ export function ClientSelector({ open, onOpenChange, onSelect, selectedId }: Cli
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Seleccionar Cliente</DialogTitle>
+          <DialogDescription>
+            Seleccione un cliente de la lista o filtre por nombre o cédula.
+          </DialogDescription>
         </DialogHeader>
         <div className="mb-4">
           <Input

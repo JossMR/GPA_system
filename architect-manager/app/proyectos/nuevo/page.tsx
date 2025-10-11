@@ -143,7 +143,7 @@ export default function NewProjectPage() {
                         Estado
                       </Label>
                       <Select defaultValue="document_Collection">
-                        <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                        <SelectTrigger id="state" className="border-[#a2c523]/30 focus:border-[#486b00]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -313,13 +313,13 @@ export default function NewProjectPage() {
               <CardContent className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="presupuesto" className="text-[#2e4600] font-medium">
+                    <Label htmlFor="budget" className="text-[#2e4600] font-medium">
                       Presupuesto Inicial
                     </Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-[#7d4427]" />
                       <Input
-                        id="presupuesto"
+                        id="budget"
                         type="number"
                         placeholder="150000"
                         className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
