@@ -17,6 +17,7 @@ import { useAuth } from "@/components/auth-provider"
 import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { GPAClient } from '@/models/GPA_client'
+import { ClientSelector } from "@/components/client-selector"
 
 
 interface Document {
@@ -29,7 +30,7 @@ interface Document {
   url?: string
 }
 
-export default function NuevoProyectoPage() {
+export default function NewProjectPage() {
   const { isAdmin } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -37,12 +38,12 @@ export default function NuevoProyectoPage() {
   const [province, setProvince] = useState("")
   const [canton, setCanton] = useState("")
   const [district, setDistrict] = useState("")
-  const [clienteDialogOpen, setClienteDialogOpen] = useState(false)
-  const [clienteFiltro, setClienteFiltro] = useState("")
-  const [clienteSeleccionado, setClienteSeleccionado] = useState<number | null>(null)
-  const [clienteSeleccionadoObj, setClienteSeleccionadoObj] = useState<GPAClient | null>(null)
-  const [clientes, setClientes] = useState<GPAClient[]>([])
-  const [clientesLoading, setClientesLoading] = useState(false)
+  const [clientDialogOpen, setClientDialogOpen] = useState(false)
+  const [clientSelected, setClientSelected] = useState<number | null>(null)
+  const [clientSelectedObj, setClientSelectedObj] = useState<GPAClient | null>(null)
+  const [clients, setClients] = useState<GPAClient[]>([])
+  const [clientsLoading, setClientsLoading] = useState(false)
+  const [clientError, setClientError] = useState<string | null>(null)
 
   if (!isAdmin) {
     router.push("/proyectos")
@@ -51,6 +52,11 @@ export default function NuevoProyectoPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setClientError(null)
+    if (!clientSelectedObj) {
+      setClientError("⚠️ Debe seleccionar un cliente")
+      return
+    }
     setLoading(true)
 
     // Simular guardado
@@ -62,30 +68,22 @@ export default function NuevoProyectoPage() {
   }
 
   useEffect(() => {
-    const fetchClientes = async () => {
-      setClientesLoading(true)
+    const fetchClients = async () => {
+      setClientsLoading(true)
       try {
         const response = await fetch("/api/clients")
         const data = await response.json()
         const requestedClients: GPAClient[] = data.clients
-        setClientes(requestedClients)
+        setClients(requestedClients)
       } catch (error) {
-        setClientes([])
+        setClients([])
       } finally {
-        setClientesLoading(false)
+        setClientsLoading(false)
       }
     }
-    if (clienteDialogOpen) fetchClientes()
-  }, [clienteDialogOpen])
+    if (clientDialogOpen) fetchClients()
+  }, [clientDialogOpen])
 
-  // Filtrar clientes por nombre o cédula
-  const clientesFiltrados = clientes.filter(
-    (c) =>
-      c.CLI_name.toLowerCase().includes(clienteFiltro.toLowerCase()) ||
-      c.CLI_f_lastname?.toLowerCase().includes(clienteFiltro.toLowerCase()) ||
-      c.CLI_s_lastname?.toLowerCase().includes(clienteFiltro.toLowerCase()) ||
-      c.CLI_identification.toLowerCase().includes(clienteFiltro.toLowerCase())
-  )
 
   return (
     <MainLayout>
@@ -117,35 +115,6 @@ export default function NuevoProyectoPage() {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* --- CAMPO CLIENTE Y BOTÓN --- */}
-                  <div className="space-y-2">
-                    <Label className="text-[#2e4600] font-medium">Cliente *</Label>
-                    <div
-                      className="flex gap-0 rounded-md overflow-hidden border border-[#a2c523]/30 focus-within:border-[#486b00] bg-gray-100 dark:bg-[#232d1c]"
-                    >
-                      <Input
-                        value={
-                          clienteSeleccionadoObj
-                            ? `${clienteSeleccionadoObj.CLI_name} ${clienteSeleccionadoObj.CLI_f_lastname ?? ""} ${clienteSeleccionadoObj.CLI_s_lastname ?? ""} - ${clienteSeleccionadoObj.CLI_identification}`
-                            : ""
-                        }
-                        placeholder="Seleccione un cliente"
-                        readOnly
-                        className="border-none focus:ring-0 focus-visible:ring-0 bg-transparent text-foreground placeholder:text-muted-foreground rounded-none"
-                        tabIndex={-1}
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => setClienteDialogOpen(true)}
-                        className="rounded-none border-l border-[#a2c523]/30 bg-gray-200 dark:bg-[#2e3a23] hover:bg-[#c9e077]/30 dark:hover:bg-[#384d2b] text-foreground"
-                        style={{ minWidth: 100 }}
-                      >
-                        Agregar
-                      </Button>
-                    </div>
-                  </div>
-                  {/* --- FIN CAMPO CLIENTE Y BOTÓN --- */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="caseNumber" className="text-[#2e4600] font-medium">
@@ -195,6 +164,62 @@ export default function NuevoProyectoPage() {
                       </Select>
                     </div>
                   </div>
+                  {/* --- CAMPO CLIENTE Y BOTÓN --- */}
+                  <div className="space-y-2">
+                    <Label className="text-[#2e4600] font-medium">Cliente *</Label>
+                    <div
+                      className={`flex gap-0 rounded-md overflow-hidden border ${
+                        clientError
+                          ? "border-yellow-400 ring-2 ring-yellow-400/50"
+                          : "border-[#a2c523]/30 focus-within:border-[#486b00]"
+                      } bg-gray-100 dark:bg-[#232d1c]`}
+                    >
+                      <Input
+                        value={
+                          clientSelectedObj
+                            ? `${clientSelectedObj.CLI_name} ${clientSelectedObj.CLI_f_lastname ?? ""} ${clientSelectedObj.CLI_s_lastname ?? ""} - ${clientSelectedObj.CLI_identification}`
+                            : ""
+                        }
+                        placeholder="Seleccione un cliente"
+                        readOnly
+                        className="border-none focus:ring-0 focus-visible:ring-0 bg-transparent text-foreground placeholder:text-muted-foreground rounded-none cursor-not-allowed select-none"
+                        tabIndex={-1}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setClientDialogOpen(true)}
+                        className="rounded-none border-l border-[#a2c523]/30 bg-gray-200 dark:bg-[#2e3a23] hover:bg-[#c9e077]/30 dark:hover:bg-[#384d2b] text-foreground"
+                        style={{ minWidth: 100 }}
+                      >
+                        Seleccionar
+                      </Button>
+                    </div>
+                    {!clientSelectedObj && (
+                      <p className="text-yellow-600 text-sm font-medium">
+                        ⚠️ Debes seleccionar un cliente
+                      </p>
+                    )}
+                    {/* Input oculto para validación nativa si lo necesitas */}
+                    <input
+                      name="cliente"
+                      type="text"
+                      value={clientSelectedObj ? clientSelectedObj.CLI_id ?? "" : ""}
+                      required
+                      style={{
+                        position: 'absolute',
+                        left: '-9999px',
+                        opacity: 0,
+                        height: 0,
+                        width: 0,
+                        pointerEvents: 'none'
+                      }}
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      readOnly
+                    />
+                  </div>
+                  {/* --- FIN CAMPO CLIENTE Y BOTÓN --- */}
                   <div className="space-y-2">
                     <Label className="text-[#2e4600] font-medium">
                       Ubicación *
@@ -468,76 +493,15 @@ export default function NuevoProyectoPage() {
         </div>
 
         {/* Modal para seleccionar cliente */}
-        <Dialog open={clienteDialogOpen} onOpenChange={setClienteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Seleccionar Cliente</DialogTitle>
-            </DialogHeader>
-            <div className="mb-4">
-              <Input
-                placeholder="Filtrar por nombre o cédula"
-                value={clienteFiltro}
-                onChange={e => setClienteFiltro(e.target.value)}
-                className="mb-2 text-[#2e4600] dark:text-[#c9e077] placeholder:text-muted-foreground"
-              />
-              <div className="overflow-x-auto max-h-64">
-                <table className="min-w-full text-sm border">
-                  <thead>
-                    <tr className="bg-gray-100 dark:bg-[#232d1c]">
-                      <th className="px-3 py-2 border text-[#2e4600] dark:text-[#c9e077]">Nombre</th>
-                      <th className="px-3 py-2 border text-[#2e4600] dark:text-[#c9e077]">Apellidos</th>
-                      <th className="px-3 py-2 border text-[#2e4600] dark:text-[#c9e077]">Cédula</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {clientesLoading ? (
-                      <tr>
-                        <td colSpan={3} className="text-center py-4 text-muted-foreground">
-                          Cargando clientes...
-                        </td>
-                      </tr>
-                    ) : clientesFiltrados.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="text-center py-4 text-muted-foreground">
-                          No hay clientes que coincidan.
-                        </td>
-                      </tr>
-                    ) : (
-                      clientesFiltrados
-                        .filter((c) => typeof c.CLI_id === "number")
-                        .map((c) => (
-                          <tr
-                            key={c.CLI_id}
-                            onClick={() => {
-                              setClienteSeleccionado(c.CLI_id!)
-                              setClienteSeleccionadoObj(c)
-                              setClienteDialogOpen(false)
-                            }}
-                            className={
-                              "cursor-pointer transition-colors " +
-                              (clienteSeleccionado === c.CLI_id
-                                ? "bg-[#e6f4d7] dark:bg-[#384d2b]"
-                                : "hover:bg-[#f5fbe9] dark:hover:bg-[#2e3a23]") +
-                              " text-[#2e4600] dark:text-[#c9e077]"
-                            }
-                          >
-                            <td className="px-3 py-2 border">{c.CLI_name}</td>
-                            <td className="px-3 py-2 border">{`${c.CLI_f_lastname ?? ""} ${c.CLI_s_lastname ?? ""}`.trim()}</td>
-                            <td className="px-3 py-2 border">{c.CLI_identification}</td>
-                          </tr>
-                        ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setClienteDialogOpen(false)}>
-                Cerrar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ClientSelector
+          open={clientDialogOpen}
+          onOpenChange={setClientDialogOpen}
+          onSelect={(client) => {
+            setClientSelected(client.CLI_id!)
+            setClientSelectedObj(client)
+          }}
+          selectedId={clientSelected}
+        />
       </div>
     </MainLayout>
   )
