@@ -15,12 +15,13 @@ import { DocumentManager } from "@/components/document-manager"
 import { ArrowLeft, Save, Building, Calendar, DollarSign, MapPin, FileText } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { GPAClient } from '@/models/GPA_client'
 import { ClientSelector } from "@/components/client-selector"
 import { GPAProject } from "@/models/GPA_project"
 import { useToast } from "@/hooks/use-toast"
 import { ProjectTypeManager } from "@/components/projectTypeManager"
+import { Category, ProjectCategoryTags } from "@/components/projectCategoryTags"
 
 
 interface Document {
@@ -51,6 +52,64 @@ export default function NewProjectPage() {
   const { toast } = useToast()
   const clientFieldRef = useRef<HTMLDivElement>(null)
   const [projectTypeId, setProjectTypeId] = useState<number | null>(null)
+  const [assignedCategories, setAssignedCategories] = useState<Category[]>([])
+  const [catDialogOpen, setCatDialogOpen] = useState(false)
+  const [filter, setFilter] = useState("")
+  const [newCat, setNewCat] = useState("")
+  const [allCategories, setAllCategories] = useState<Category[]>([])
+
+  // Función para quitar una categoría
+  const handleRemoveCategory = (id: number) => {
+    setAssignedCategories(cats => cats.filter(c => c.id !== id))
+  }
+
+  // Asignar categoría existente
+  const handleAssignCategory = (cat: Category) => {
+    setAssignedCategories(cats => [...cats, cat])
+    setCatDialogOpen(false)
+    setFilter("")
+  }
+
+  const handleCreateCategory = async (name: string) => {
+    setLoading(true)
+    try {
+      const response = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ CAT_name: name }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        toast({
+          title: "Error",
+          description: data.error || "Ocurrió un error al crear la categoría.",
+          variant: "destructive"
+        })
+        setLoading(false)
+        return
+      }
+      const newCatObj: Category = {
+        id: data.categoryId,
+        name,
+      }
+      setAllCategories(cats => [...cats, newCatObj])
+      setAssignedCategories(cats => [...cats, newCatObj])
+      setNewCat("")
+      setFilter("")
+      toast({
+        title: "Categoría creada",
+        description: "La categoría fue creada correctamente.",
+        variant: "success"
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al crear la categoría.",
+        variant: "destructive"
+      })
+    }
+    setLoading(false)
+  }
 
   if (!isAdmin) {
     router.push("/proyectos")
@@ -145,6 +204,30 @@ export default function NewProjectPage() {
     if (clientDialogOpen) fetchClients()
   }, [clientDialogOpen])
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch("/api/categories")
+        const data = await response.json()
+        // Ajusta el mapeo según tu modelo real
+        const categories: Category[] = data.map((cat: any) => ({
+          id: cat.CAT_id,
+          name: cat.CAT_name,
+        }))
+        setAllCategories(categories)
+      } catch {
+        setAllCategories([])
+      }
+    }
+    fetchCategories()
+  }, [])
+
+
+  // Categorías disponibles para asignar (filtradas)
+  const assignedIds = assignedCategories.map(c => c.id)
+  const available = allCategories.filter(
+    c => !assignedIds.includes(c.id) && c.name.toLowerCase().includes(filter.toLowerCase())
+  )
 
   return (
     <MainLayout>
@@ -230,43 +313,113 @@ export default function NewProjectPage() {
                     </div>
                   </div>
                   {/* --- CAMPO CLIENTE Y BOTÓN --- */}
-                    <div className="space-y-2" ref={clientFieldRef}>
-                      <Label className="text-[#2e4600] font-medium">Cliente *</Label>
-                      <div
-                        className={`flex gap-0 rounded-md overflow-hidden border ${clientError
-                          ? "border-yellow-400 ring-2 ring-yellow-400/50"
-                          : "border-[#a2c523]/30 focus-within:border-[#486b00]"
-                          } bg-gray-100 dark:bg-[#232d1c]`}
+                  <div className="space-y-2" ref={clientFieldRef}>
+                    <Label className="text-[#2e4600] font-medium">Cliente *</Label>
+                    <div
+                      className={`flex gap-0 rounded-md overflow-hidden border ${clientError
+                        ? "border-yellow-400 ring-2 ring-yellow-400/50"
+                        : "border-[#a2c523]/30 focus-within:border-[#486b00]"
+                        } bg-gray-100 dark:bg-[#232d1c]`}
+                    >
+                      <Input
+                        value={
+                          clientSelectedObj
+                            ? `${clientSelectedObj.CLI_name} ${clientSelectedObj.CLI_f_lastname ?? ""} ${clientSelectedObj.CLI_s_lastname ?? ""} - ${clientSelectedObj.CLI_identification}`
+                            : ""
+                        }
+                        placeholder="Seleccione un cliente"
+                        readOnly
+                        className="border-none focus:ring-0 focus-visible:ring-0 bg-transparent text-foreground placeholder:text-muted-foreground rounded-none cursor-not-allowed select-none"
+                        tabIndex={-1}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setClientDialogOpen(true)}
+                        className="rounded-none border-l border-[#a2c523]/30 bg-gray-200 dark:bg-[#2e3a23] hover:bg-[#c9e077]/30 dark:hover:bg-[#384d2b] text-foreground"
+                        style={{ minWidth: 100 }}
                       >
-                        <Input
-                          value={
-                            clientSelectedObj
-                              ? `${clientSelectedObj.CLI_name} ${clientSelectedObj.CLI_f_lastname ?? ""} ${clientSelectedObj.CLI_s_lastname ?? ""} - ${clientSelectedObj.CLI_identification}`
-                              : ""
-                          }
-                          placeholder="Seleccione un cliente"
-                          readOnly
-                          className="border-none focus:ring-0 focus-visible:ring-0 bg-transparent text-foreground placeholder:text-muted-foreground rounded-none cursor-not-allowed select-none"
-                          tabIndex={-1}
-                        />
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={() => setClientDialogOpen(true)}
-                          className="rounded-none border-l border-[#a2c523]/30 bg-gray-200 dark:bg-[#2e3a23] hover:bg-[#c9e077]/30 dark:hover:bg-[#384d2b] text-foreground"
-                          style={{ minWidth: 100 }}
-                        >
-                          Seleccionar
-                        </Button>
-                      </div>
-                      {!clientSelectedObj && (
-                        <p className="text-yellow-600 text-sm font-medium">
-                          ⚠️ Debe seleccionar un cliente
-                        </p>
-                      )}
+                        Seleccionar
+                      </Button>
                     </div>
+                    {!clientSelectedObj && (
+                      <p className="text-yellow-600 text-sm font-medium">
+                        ⚠️ Debe seleccionar un cliente
+                      </p>
+                    )}
+                  </div>
                   {/* --- FIN CAMPO CLIENTE Y BOTÓN --- */}
                   <ProjectTypeManager value={projectTypeId} onChange={setProjectTypeId} />
+
+                  {/* --- BLOQUE DE CATEGORÍAS --- */}
+                  <div className="space-y-2">
+                    <Label className="text-[#2e4600] font-medium">Categorías asignadas</Label>
+                    <ProjectCategoryTags
+                      categories={assignedCategories}
+                      onRemove={handleRemoveCategory}
+                      onAddClick={() => setCatDialogOpen(true)}
+                    />
+                  </div>
+                  {/* Diálogo para seleccionar/agregar categorías */}
+                  <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Agregar categoría al proyecto</DialogTitle>
+                        <DialogDescription>
+                          Selecciona una categoría existente o crea una nueva para asignar al proyecto.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-3">
+                        <Input
+                          placeholder="Buscar categoría..."
+                          value={filter}
+                          onChange={e => setFilter(e.target.value)}
+                        />
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {available.length === 0 && (
+                            <div className="text-muted-foreground text-sm">No hay categorías disponibles.</div>
+                          )}
+                          {available.map(cat => (
+                            <div
+                              key={cat.id}
+                              className="flex justify-between items-center px-2 py-1 rounded cursor-pointer
+                              hover:bg-[#eaf5d1] hover:text-[#2e4600] dark:hover:bg-[#384d2b] dark:hover:text-[#eaf5d1] transition-colors"
+                              onClick={() => handleAssignCategory(cat)}
+                            >
+                              <span>{cat.name}</span>
+                              <Button size="sm" variant="ghost" className="text-[#486b00]">Agregar</Button>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="border-t pt-2 mt-2">
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Nueva categoría"
+                              value={newCat}
+                              onChange={e => setNewCat(e.target.value)}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                if (newCat.trim()) {
+                                  handleCreateCategory(newCat.trim())
+                                }
+                              }}
+                            >
+                              Crear
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setCatDialogOpen(false)}>
+                          Cerrar
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  {/* --- FIN BLOQUE DE CATEGORÍAS --- */}
+
                   <div className="space-y-2">
                     <Label className="text-[#2e4600] font-medium">
                       Ubicación *
