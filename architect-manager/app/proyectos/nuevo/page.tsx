@@ -20,6 +20,7 @@ import { GPAClient } from '@/models/GPA_client'
 import { ClientSelector } from "@/components/client-selector"
 import { GPAProject } from "@/models/GPA_project"
 import { useToast } from "@/hooks/use-toast"
+import { ProjectTypeManager } from "@/components/projectTypeManager"
 
 
 interface Document {
@@ -49,6 +50,7 @@ export default function NewProjectPage() {
   const [clientError, setClientError] = useState<string | null>(null)
   const { toast } = useToast()
   const clientFieldRef = useRef<HTMLDivElement>(null)
+  const [projectTypeId, setProjectTypeId] = useState<number | null>(null)
 
   if (!isAdmin) {
     router.push("/proyectos")
@@ -62,10 +64,15 @@ export default function NewProjectPage() {
 
     const formData = new FormData(e.currentTarget)
 
-    if (!clientSelectedObj) {
-      setClientError("⚠️ Debe seleccionar un cliente")
+    if (!clientSelectedObj || typeof clientSelectedObj.CLI_id !== "number") {
+      setClientError("⚠️ Debe seleccionar un cliente válido")
       setLoading(false)
       clientFieldRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+      return
+    }
+
+    if (!projectTypeId) {
+      setLoading(false)
       return
     }
 
@@ -82,10 +89,10 @@ export default function NewProjectPage() {
       PRJ_neighborhood: formData.get("neighborhood") as string,
       PRJ_additional_directions: formData.get("additionalDirections") as string,
       PRJ_notes: formData.get("notes") as string,
-      PRJ_type_id: 1, // Temporalmente fijo,
+      PRJ_type_id: projectTypeId!,
+      PRJ_client_id: clientSelectedObj.CLI_id,
       PRJ_logbook_close_date: formData.get("logbookCloseDate") ? formData.get("logbookCloseDate") as string : undefined,
       PRJ_logbook_number: formData.get("logbookNumber") as string,
-      PRJ_client_id: clientSelectedObj?.CLI_id ?? 0
     }
     try {
       const response = await fetch("/api/projects", {
@@ -223,43 +230,43 @@ export default function NewProjectPage() {
                     </div>
                   </div>
                   {/* --- CAMPO CLIENTE Y BOTÓN --- */}
-                  <div className="space-y-2" ref={clientFieldRef}>
-                    <Label className="text-[#2e4600] font-medium">Cliente *</Label>
-                    <div
-                      className={`flex gap-0 rounded-md overflow-hidden border ${clientError
-                        ? "border-yellow-400 ring-2 ring-yellow-400/50"
-                        : "border-[#a2c523]/30 focus-within:border-[#486b00]"
-                        } bg-gray-100 dark:bg-[#232d1c]`}
-                    >
-                      <Input
-                        value={
-                          clientSelectedObj
-                            ? `${clientSelectedObj.CLI_name} ${clientSelectedObj.CLI_f_lastname ?? ""} ${clientSelectedObj.CLI_s_lastname ?? ""} - ${clientSelectedObj.CLI_identification}`
-                            : ""
-                        }
-                        placeholder="Seleccione un cliente"
-                        readOnly
-                        className="border-none focus:ring-0 focus-visible:ring-0 bg-transparent text-foreground placeholder:text-muted-foreground rounded-none cursor-not-allowed select-none"
-                        tabIndex={-1}
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => setClientDialogOpen(true)}
-                        className="rounded-none border-l border-[#a2c523]/30 bg-gray-200 dark:bg-[#2e3a23] hover:bg-[#c9e077]/30 dark:hover:bg-[#384d2b] text-foreground"
-                        style={{ minWidth: 100 }}
+                    <div className="space-y-2" ref={clientFieldRef}>
+                      <Label className="text-[#2e4600] font-medium">Cliente *</Label>
+                      <div
+                        className={`flex gap-0 rounded-md overflow-hidden border ${clientError
+                          ? "border-yellow-400 ring-2 ring-yellow-400/50"
+                          : "border-[#a2c523]/30 focus-within:border-[#486b00]"
+                          } bg-gray-100 dark:bg-[#232d1c]`}
                       >
-                        Seleccionar
-                      </Button>
+                        <Input
+                          value={
+                            clientSelectedObj
+                              ? `${clientSelectedObj.CLI_name} ${clientSelectedObj.CLI_f_lastname ?? ""} ${clientSelectedObj.CLI_s_lastname ?? ""} - ${clientSelectedObj.CLI_identification}`
+                              : ""
+                          }
+                          placeholder="Seleccione un cliente"
+                          readOnly
+                          className="border-none focus:ring-0 focus-visible:ring-0 bg-transparent text-foreground placeholder:text-muted-foreground rounded-none cursor-not-allowed select-none"
+                          tabIndex={-1}
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => setClientDialogOpen(true)}
+                          className="rounded-none border-l border-[#a2c523]/30 bg-gray-200 dark:bg-[#2e3a23] hover:bg-[#c9e077]/30 dark:hover:bg-[#384d2b] text-foreground"
+                          style={{ minWidth: 100 }}
+                        >
+                          Seleccionar
+                        </Button>
+                      </div>
+                      {!clientSelectedObj && (
+                        <p className="text-yellow-600 text-sm font-medium">
+                          ⚠️ Debe seleccionar un cliente
+                        </p>
+                      )}
                     </div>
-                    {!clientSelectedObj && (
-                      <p className="text-yellow-600 text-sm font-medium">
-                        ⚠️ Debe seleccionar un cliente
-                      </p>
-                    )}
-
-                  </div>
                   {/* --- FIN CAMPO CLIENTE Y BOTÓN --- */}
+                  <ProjectTypeManager value={projectTypeId} onChange={setProjectTypeId} />
                   <div className="space-y-2">
                     <Label className="text-[#2e4600] font-medium">
                       Ubicación *
