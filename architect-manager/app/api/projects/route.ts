@@ -136,7 +136,8 @@ export async function POST(request: NextRequest) {
       PRJ_canton,
       PRJ_district,
       PRJ_neighborhood,
-      PRJ_start_construction_date
+      PRJ_start_construction_date,
+      categories
     } = body
 
     // Validate required fields
@@ -176,9 +177,23 @@ export async function POST(request: NextRequest) {
       PRJ_start_construction_date?.toString() || null
     ]) as any
 
+    const projectId = result.insertId
+
+    // Assign categories if provided
+    if (Array.isArray(categories) && categories.length > 0) {
+      for (const cat of categories) {
+        if (cat.CAT_id) {
+          await executeQuery(
+            'INSERT INTO GPA_ProjectsXGPA_Categories (PRJ_id, CAT_id) VALUES (?, ?)',
+            [projectId, cat.CAT_id]
+          )
+        }
+      }
+    }
+
     return NextResponse.json({
       message: 'Project created successfully',
-      projectId: result.insertId
+      projectId
     }, { status: 201 })
 
   } catch (error) {

@@ -96,6 +96,9 @@ export async function GET(
     project.categories_names = []
     categoriesData?.forEach((category, index) => { project.categories_names?.push(category.CAT_name) })
 
+    project.categories = []
+    categoriesData?.forEach((category, index) => { project.categories?.push(category) })
+
     if (includeRelated) {
       // Get all related data using main API endpoints
       const relatedData = await fetchProjectRelatedData(projectId, request)
