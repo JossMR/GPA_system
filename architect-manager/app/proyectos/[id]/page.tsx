@@ -35,6 +35,17 @@ const tipoObservacionColors = {
   cambio: "bg-blue-500",
   problema: "bg-red-500",
 }
+const mockProyecto = {
+  presupuesto: 150000,
+}
+const costosExtra = [
+  { descripcion: "Permiso municipal", monto: 5000 },
+  { descripcion: "Estudio de suelos", monto: 3500 },
+]
+const pagos = [
+  { descripcion: "Anticipo", monto: 20000 },
+  { descripcion: "Segundo pago", monto: 15000 },
+]
 
 interface Document {
   id: string
@@ -262,6 +273,50 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Presupuesto Base:</span>
                     <span className="font-semibold">₡{(project.PRJ_budget ?? 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-[#486b00]/20">
+              <CardHeader>
+                <CardTitle className="text-[#486b00]">Resumen Financiero</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="text-sm space-y-3">
+                  <div className="flex justify-between">
+                    <span>Presupuesto base:</span>
+                    <span className="font-medium">${mockProyecto.presupuesto.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Costos extra:</span>
+                    <span className="font-medium text-[#7d4427]">
+                      +${costosExtra.reduce((sum, c) => sum + c.monto, 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <hr className="border-[#a2c523]/30" />
+                  <div className="flex justify-between">
+                    <span>Total presupuestado:</span>
+                    <span className="font-bold text-[#486b00]">
+                      ${(mockProyecto.presupuesto + costosExtra.reduce((sum, c) => sum + c.monto, 0)).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total pagado:</span>
+                    <span className="font-medium text-green-600">
+                      ${pagos.reduce((sum, p) => sum + p.monto, 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <hr className="border-[#a2c523]/30" />
+                  <div className="flex justify-between">
+                    <span>Saldo restante:</span>
+                    <span className="font-bold text-[#7d4427]">
+                      $
+                      {(
+                        mockProyecto.presupuesto +
+                        costosExtra.reduce((sum, c) => sum + c.monto, 0) -
+                        pagos.reduce((sum, p) => sum + p.monto, 0)
+                      ).toLocaleString()}
+                    </span>
                   </div>
                 </div>
               </CardContent>
