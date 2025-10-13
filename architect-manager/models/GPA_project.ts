@@ -45,6 +45,7 @@ export interface GPAProject {
   documents?: GPADocument[]
   payments?: GPAPayment[]
   client_name?: string
+  client_identification?: string
   categories_names?: string[]
 }
 

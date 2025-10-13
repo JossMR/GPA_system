@@ -37,17 +37,11 @@ const estadoColors = {
   pausado: "bg-red-500",
 }
 
-/*const estadoLabels = {
-  planificacion: "Planificación",
-  en_progreso: "En Progreso",
-  completado: "Completado",
-  pausado: "Pausado",
-}*/
-
 export default function ProjectsPage() {
   const { isAdmin } = useAuth()
   const [projects, setProjects] = useState<GPAProject[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
+  const [loading, setLoading] = useState(true)
 
   const filteredProjects = projects?.filter(
     (project) =>
@@ -56,17 +50,14 @@ export default function ProjectsPage() {
       project.type?.TYP_name?.toLowerCase().includes(searchTerm.toLowerCase()) 
   )
 
-  /*const handleEstadoChange = (projectId: number, nuevoEstado: string) => {
-    setProjects((prev) => prev.map((p) => (p.PRJ_id === projectId ? { ...p, estado: nuevoEstado } : p)))
-  }*/
-
   // Fetch projects from API
   const fetchProjects = async () => {
+    setLoading(true)
     const response = await fetch("/api/projects")
     const data = await response.json()
-    console.log("API response:", data)
     const requestedProjects: GPAProject[] = data.projects
     setProjects(requestedProjects)
+    setLoading(false)
   }
   useEffect(() => {
     fetchProjects()
@@ -90,7 +81,7 @@ export default function ProjectsPage() {
           )}
         </div>
 
-        {/* Estadísticas Rápidas */}
+        {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
@@ -133,7 +124,7 @@ export default function ProjectsPage() {
           </Card>
         </div>
 
-        {/* Filtros */}
+        {/* Filters */}
         <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
@@ -153,32 +144,20 @@ export default function ProjectsPage() {
                   />
                 </div>
               </div>
-              {/*<div className="w-48">
-                <Label htmlFor="estado">Estado</Label>
-                <Select value={estadoFilter} onValueChange={setEstadoFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos los estados</SelectItem>
-                    <SelectItem value="planificacion">Planificación</SelectItem>
-                    <SelectItem value="en_progreso">En Progreso</SelectItem>
-                    <SelectItem value="completado">Completado</SelectItem>
-                    <SelectItem value="pausado">Pausado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>*/}
             </div>
           </CardContent>
         </Card>
 
-        {/* Tabla de Proyectos */}
+        {/* Projects Table */}
         <Card>
           <CardHeader>
             <CardTitle>Lista de Proyectos</CardTitle>
             <CardDescription>Todos los proyectos registrados en el sistema</CardDescription>
           </CardHeader>
           <CardContent>
+            {loading ? (
+              <div className="py-8 text-center text-muted-foreground text-lg">Cargando datos...</div>
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -202,23 +181,6 @@ export default function ProjectsPage() {
                     <TableCell>{project.client_name}</TableCell>
                     <TableCell>{project.type?.TYP_name}</TableCell>
                     <TableCell>{stateLabels[project.PRJ_state] ?? project.PRJ_state}</TableCell>
-                    {/*<TableCell>
-                      <Select
-                        value={project.PRJ_state}
-                        onValueChange={(value) => handleEstadoChange(project.PRJ_id, value)}
-                        disabled={!isAdmin}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="planificacion">Planificación</SelectItem>
-                          <SelectItem value="en_progreso">En Progreso</SelectItem>
-                          <SelectItem value="completado">Completado</SelectItem>
-                          <SelectItem value="pausado">Pausado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>*/}
                     <TableCell>
                       <div className="space-y-1">
                         <div className="flex items-center text-sm">
@@ -232,7 +194,7 @@ export default function ProjectsPage() {
                           <Calendar className="mr-1 h-3 w-3" />
                           {project.PRJ_start_construction_date ? new Date(project.PRJ_start_construction_date).toLocaleDateString() : "N/A"}
                         </div>
-                        <div className="text-xs text-muted-foreground">Entrega: {project.PRJ_completion_date ? new Date(project.PRJ_completion_date).toLocaleDateString() : "N/A"}</div>
+                        <div className="text-xs text-muted-foreground">Conclusión: {project.PRJ_completion_date ? new Date(project.PRJ_completion_date).toLocaleDateString() : "N/A"}</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -255,6 +217,7 @@ export default function ProjectsPage() {
                 ))}
               </TableBody>
             </Table>
+            )}
           </CardContent>
         </Card>
       </div>

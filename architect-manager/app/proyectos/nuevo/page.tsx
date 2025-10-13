@@ -58,12 +58,12 @@ export default function NewProjectPage() {
   const [newCat, setNewCat] = useState("")
   const [allCategories, setAllCategories] = useState<Category[]>([])
 
-  // Función para quitar una categoría
+  // Delete assigned category
   const handleRemoveCategory = (id: number) => {
     setAssignedCategories(cats => cats.filter(c => c.id !== id))
   }
 
-  // Asignar categoría existente
+  // Assign existing category
   const handleAssignCategory = (cat: Category) => {
     setAssignedCategories(cats => [...cats, cat])
     setCatDialogOpen(false)
@@ -166,7 +166,7 @@ export default function NewProjectPage() {
         body: JSON.stringify(newProject),
       })
       if (!response.ok) {
-        // Obtener el mensaje de error de la respuesta
+        // get error message from response body or use a default one
         const errorData = await response.json()
         const errorMessage = errorData.error || "Error creating project"
         throw new Error(errorMessage)
@@ -213,7 +213,6 @@ export default function NewProjectPage() {
       try {
         const response = await fetch("/api/categories")
         const data = await response.json()
-        // Ajusta el mapeo según tu modelo real
         const categories: Category[] = data.map((cat: any) => ({
           id: cat.CAT_id,
           name: cat.CAT_name,
@@ -227,7 +226,7 @@ export default function NewProjectPage() {
   }, [])
 
 
-  // Categorías disponibles para asignar (filtradas)
+  // Available categories to assign (exclude already assigned and filter by name)
   const assignedIds = assignedCategories.map(c => c.id)
   const available = allCategories.filter(
     c => !assignedIds.includes(c.id) && c.name.toLowerCase().includes(filter.toLowerCase())
@@ -250,10 +249,10 @@ export default function NewProjectPage() {
         </div>
 
         <div>
-          {/* Formulario Principal */}
+          {/* Principal Information */}
           <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              {/* Información Básica */}
+              {/* Basic Information */}
               <Card className="card-hover border-[#a2c523]/20">
                 <CardHeader className="gradient-primary text-white rounded-t-lg">
                   <CardTitle className="flex items-center">
@@ -279,7 +278,7 @@ export default function NewProjectPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="area" className="text-[#2e4600] font-medium">
-                        Área en m2 *
+                        Área en m<sup>2</sup>
                       </Label>
                       <Input
                         id="area"
@@ -316,7 +315,7 @@ export default function NewProjectPage() {
                       </Select>
                     </div>
                   </div>
-                  {/* --- CAMPO CLIENTE Y BOTÓN --- */}
+                  {/* Assign Client */}
                   <div className="space-y-2" ref={clientFieldRef}>
                     <Label className="text-[#2e4600] font-medium">Cliente *</Label>
                     <div
@@ -352,10 +351,10 @@ export default function NewProjectPage() {
                       </p>
                     )}
                   </div>
-                  {/* --- FIN CAMPO CLIENTE Y BOTÓN --- */}
+                  {/*End Assign Client */}
                   <ProjectTypeManager value={projectTypeId} onChange={setProjectTypeId} />
 
-                  {/* --- BLOQUE DE CATEGORÍAS --- */}
+                  {/*Categories*/}
                   <div className="space-y-2">
                     <Label className="text-[#2e4600] font-medium">Categorías asignadas</Label>
                     <ProjectCategoryTags
@@ -364,7 +363,7 @@ export default function NewProjectPage() {
                       onAddClick={() => setCatDialogOpen(true)}
                     />
                   </div>
-                  {/* Diálogo para seleccionar/agregar categorías */}
+                  {/*Dialog for selecting/adding categories*/}
                   <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>
                     <DialogContent className="max-w-md">
                       <DialogHeader>
@@ -422,7 +421,7 @@ export default function NewProjectPage() {
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
-                  {/* --- FIN BLOQUE DE CATEGORÍAS --- */}
+                  {/*End Categories*/}
 
                   <div className="space-y-2">
                     <Label className="text-[#2e4600] font-medium">
@@ -510,7 +509,7 @@ export default function NewProjectPage() {
                 </CardContent>
               </Card>
 
-              {/* Información Financiera */}
+              {/*Financial Information*/}
               <Card className="card-hover border-[#7d4427]/20">
                 <CardHeader className="gradient-accent text-white rounded-t-lg">
                   <CardTitle className="flex items-center">
@@ -554,7 +553,7 @@ export default function NewProjectPage() {
                 </CardContent>
               </Card>
 
-              {/* Gestión de Documentos */}
+              {/* Document Management */}
               <DocumentManager
                 documents={documents}
                 onDocumentsChange={setDocuments}
@@ -563,7 +562,7 @@ export default function NewProjectPage() {
                 title="Documentos del Proyecto"
               />
 
-              {/* Botones de Acción */}
+              {/* Action Buttons */}
               <div className="flex justify-end space-x-4">
                 <Button
                   type="button"
@@ -593,7 +592,7 @@ export default function NewProjectPage() {
               </div>
             </div>
 
-            {/* Panel Lateral */}
+            {/* Sidebar Panel */}
             <div className="space-y-6">
               <Card className="border-[#c9e077]/30">
                 <CardHeader>
@@ -670,7 +669,7 @@ export default function NewProjectPage() {
                 </CardContent>
               </Card>
 
-              {/* Resumen de documentos */}
+              {/* Document Summary */}
               {documents.length > 0 && (
                 <Card className="border-[#486b00]/20">
                   <CardHeader>
@@ -702,7 +701,7 @@ export default function NewProjectPage() {
           </form>
         </div>
 
-        {/* Modal para seleccionar cliente */}
+        {/*Select Client modal*/}
         <ClientSelector
           open={clientDialogOpen}
           onOpenChange={setClientDialogOpen}

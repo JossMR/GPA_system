@@ -89,6 +89,8 @@ export async function GET(
     const clientData = clientJson ? clientJson.client as GPAClient : null;
     project.client_name = clientData?.CLI_name + " " + clientData?.CLI_f_lastname + " " + clientData?.CLI_s_lastname;
 
+    project.client_identification = clientData?.CLI_identification;
+    
     const categoriesRes = await fetch(`${new URL(request.url).origin}/api/categories?project_id=${project.PRJ_id}`, {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -96,7 +98,7 @@ export async function GET(
     project.categories_names = []
     categoriesData?.forEach((category, index) => { project.categories_names?.push(category.CAT_name) })
 
-    project.categories = []
+    
     categoriesData?.forEach((category, index) => { project.categories?.push(category) })
 
     if (includeRelated) {
