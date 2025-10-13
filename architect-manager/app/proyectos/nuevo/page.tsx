@@ -93,7 +93,6 @@ export default function NewProjectPage() {
         name,
       }
       setAllCategories(cats => [...cats, newCatObj])
-      setAssignedCategories(cats => [...cats, newCatObj])
       setNewCat("")
       setFilter("")
       toast({
