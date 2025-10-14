@@ -29,7 +29,21 @@ import {
 import { useAuth } from "@/components/auth-provider"
 import Link from "next/link"
 import { GPAProject } from "@/models/GPA_project"
-
+const estadoProyectoES: Record<string, string> = {
+  "Document Collection": "Recolección de Documentos",
+  "Technical Inspection": "Inspección Técnica",
+  "Document Review": "Revisión de Documentos",
+  "Plans and Budget": "Planos y Presupuesto",
+  "Entity Review": "Revisión de Entidad",
+  "APC and Permits": "APC y Permisos",
+  "Disbursement": "Desembolso",
+  "Under Construction": "En Construcción",
+  "Completed": "Completado",
+  "Logbook Closed": "Bitácora Cerrada",
+  "Rejected": "Rechazado",
+  "Professional Withdrawal": "Retiro Profesional",
+  "Conditioned": "Condicionado",
+}
 const tipoObservacionColors = {
   progreso: "bg-green-500",
   cambio: "bg-blue-500",
@@ -244,7 +258,9 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
                   <div>
                     <Label className="text-[#2e4600] font-medium">Estado</Label>
                     <div className="mt-2">
-                      <Badge className="bg-[#a2c523] text-white">{project.PRJ_state}</Badge>
+                      <Badge className="bg-[#a2c523] text-white">
+                        {estadoProyectoES[project.PRJ_state] || project.PRJ_state}
+                      </Badge>
                     </div>
                   </div>
                   <div>

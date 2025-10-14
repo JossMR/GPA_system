@@ -44,7 +44,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   // Principal states
   const [loading, setLoading] = useState(false)
   const [fetchingData, setFetchingData] = useState(true)
-  const [proyecto, setProyecto] = useState<GPAProject | null>(null)
+  const [project, setProject] = useState<GPAProject | null>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [pagos, setPagos] = useState<any[]>([])
   const [costosExtra, setCostosExtra] = useState<any[]>([])
@@ -79,7 +79,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         const response = await fetch(`/api/projects/${id}`)
         if (!response.ok) throw new Error("No se pudo cargar el proyecto")
         const data = await response.json()
-        setProyecto(data.project)
+        setProject(data.project)
         setProvince(data.project.PRJ_province ?? "")
         setCanton(data.project.PRJ_canton ?? "")
         setDistrict(data.project.PRJ_district ?? "")
@@ -262,7 +262,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     )
   }
 
-  if (!proyecto) return null
+  if (!project) return null
 
   // Submit para actualizar el proyecto
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -270,7 +270,6 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     setClientError(null)
     setLoading(true)
     const formData = new FormData(e.currentTarget)
-    // Validaciones igual que en "nuevo"
     if (!clientSelectedObj || typeof clientSelectedObj.CLI_id !== "number") {
       setClientError("⚠️ Debe seleccionar un cliente válido")
       setLoading(false)
@@ -283,7 +282,8 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     }
     // Construir objeto actualizado
     const updatedProject: GPAProject = {
-      ...proyecto,
+      ...project,
+      PRJ_entry_date: project.PRJ_entry_date ? String(project.PRJ_entry_date).substring(0, 10) : undefined,
       PRJ_case_number: formData.get("caseNumber") as string,
       PRJ_area_m2: formData.get("area") ? Number(formData.get("area")) : undefined,
       PRJ_state: state as GPAProject["PRJ_state"],
@@ -342,7 +342,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           </Button>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-[#2e4600] to-[#486b00] bg-clip-text text-transparent">
-              Editar Proyecto: {proyecto.PRJ_case_number}
+              Editar Proyecto: {project.PRJ_case_number}
             </h1>
             <p className="text-muted-foreground">Modifica los datos del proyecto</p>
           </div>
@@ -368,7 +368,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     <Input
                       id="caseNumber"
                       name="caseNumber"
-                      defaultValue={proyecto.PRJ_case_number ?? ""}
+                      defaultValue={project.PRJ_case_number ?? ""}
                       placeholder="Ej: 1256"
                       className="border-[#a2c523]/30 focus:border-[#486b00]"
                       required
@@ -381,7 +381,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     <Input
                       id="area"
                       name="area"
-                      defaultValue={proyecto.PRJ_area_m2 ?? ""}
+                      defaultValue={project.PRJ_area_m2 ?? ""}
                       placeholder="Ej: 22.5"
                       className="border-[#a2c523]/30 focus:border-[#486b00]"
                     />
@@ -540,7 +540,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     <Input
                       id="neighborhood"
                       name="neighborhood"
-                      defaultValue={proyecto.PRJ_neighborhood ?? ""}
+                      defaultValue={project.PRJ_neighborhood ?? ""}
                       placeholder="Ej: Santa Cecília"
                       className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
                     />
@@ -553,7 +553,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   <Textarea
                     id="additionalDirections"
                     name="additionalDirections"
-                    defaultValue={proyecto.PRJ_additional_directions ?? ""}
+                    defaultValue={project.PRJ_additional_directions ?? ""}
                     placeholder="Direcciones adicionales para llegar al sitio"
                     className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[120px]"
                   />
@@ -567,7 +567,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                       id="completionDate"
                       name="completionDate"
                       type="date"
-                      defaultValue={proyecto.PRJ_completion_date ? String(proyecto.PRJ_completion_date).substring(0, 10) : ""}
+                      defaultValue={project.PRJ_completion_date ? String(project.PRJ_completion_date).substring(0, 10) : ""}
                       className="border-[#a2c523]/30 focus:border-[#486b00]"
                     />
                   </div>
@@ -578,7 +578,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     <Input
                       id="logbookNumber"
                       name="logbookNumber"
-                      defaultValue={proyecto.PRJ_logbook_number ?? ""}
+                      defaultValue={project.PRJ_logbook_number ?? ""}
                       placeholder="Ej: 22"
                       className="border-[#a2c523]/30 focus:border-[#486b00]"
                     />
@@ -591,7 +591,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                       id="logbookCloseDate"
                       name="logbookCloseDate"
                       type="date"
-                      defaultValue={proyecto.PRJ_logbook_close_date ? String(proyecto.PRJ_logbook_close_date).substring(0, 10) : ""}
+                      defaultValue={project.PRJ_logbook_close_date ? String(project.PRJ_logbook_close_date).substring(0, 10) : ""}
                       className="border-[#a2c523]/30 focus:border-[#486b00]"
                     />
                   </div>
@@ -603,7 +603,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   <Textarea
                     id="notes"
                     name="notes"
-                    defaultValue={proyecto.PRJ_notes ?? ""}
+                    defaultValue={project.PRJ_notes ?? ""}
                     placeholder="Notas adicionales sobre el proyecto"
                     className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[120px]"
                   />
@@ -631,7 +631,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                       <Input
                         id="budget"
                         name="budget"
-                        defaultValue={proyecto.PRJ_budget ?? ""}
+                        defaultValue={project.PRJ_budget ?? ""}
                         placeholder="Ej: 150000.25"
                         className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
                       />
@@ -647,7 +647,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                         id="startConstructionDate"
                         name="startConstructionDate"
                         type="date"
-                        defaultValue={proyecto.PRJ_start_construction_date ? String(proyecto.PRJ_start_construction_date).substring(0, 10) : ""}
+                        defaultValue={project.PRJ_start_construction_date ? String(project.PRJ_start_construction_date).substring(0, 10) : ""}
                         className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
                       />
                     </div>
@@ -841,7 +841,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 <div className="text-sm space-y-3">
                   <div className="flex justify-between">
                     <span>Presupuesto base:</span>
-                    <span className="font-medium">₡{(proyecto.PRJ_budget ?? 0).toLocaleString()}</span>
+                    <span className="font-medium">₡{(project.PRJ_budget ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Costos extra:</span>
@@ -853,7 +853,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   <div className="flex justify-between">
                     <span>Total presupuestado:</span>
                     <span className="font-bold text-[#486b00]">
-                      ₡{((proyecto.PRJ_budget ?? 0) + costosExtra.reduce((sum, c) => sum + c.monto, 0)).toLocaleString()}
+                      ₡{((project.PRJ_budget ?? 0) + costosExtra.reduce((sum, c) => sum + c.monto, 0)).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -868,7 +868,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     <span className="font-bold text-[#7d4427]">
                       ₡
                       {(
-                        (proyecto.PRJ_budget ?? 0) +
+                        (project.PRJ_budget ?? 0) +
                         costosExtra.reduce((sum, c) => sum + c.monto, 0) -
                         pagos.reduce((sum, p) => sum + p.monto, 0)
                       ).toLocaleString()}
