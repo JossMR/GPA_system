@@ -105,8 +105,9 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
   if (loading) {
     return (
       <MainLayout>
-        <div className="container py-8 text-center">
-          <p>Cargando información del proyecto...</p>
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#486b00] mr-4" />
+          <span className="text-muted-foreground">Cargando información del proyecto...</span>
         </div>
       </MainLayout>
     )

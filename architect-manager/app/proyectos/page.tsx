@@ -1,6 +1,6 @@
 "use client"
 
-import { useState,useEffect } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -47,7 +47,7 @@ export default function ProjectsPage() {
     (project) =>
       project.PRJ_case_number.includes(searchTerm) ||
       project.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.type?.TYP_name?.toLowerCase().includes(searchTerm.toLowerCase()) 
+      project.type?.TYP_name?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   // Fetch projects from API
@@ -97,7 +97,7 @@ export default function ProjectsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {projects?.filter((p) => p.PRJ_state=== "Under Construction").length}
+                {projects?.filter((p) => p.PRJ_state === "Under Construction").length}
               </div>
             </CardContent>
           </Card>
@@ -156,67 +156,70 @@ export default function ProjectsPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="py-8 text-center text-muted-foreground text-lg">Cargando datos...</div>
+              <div className="flex justify-center items-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#486b00] mr-4" />
+                <span className="text-muted-foreground">Cargando información de proyectos...</span>
+              </div>
             ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Numero de Caso</TableHead>
-                  <TableHead>Nombre del Cliente</TableHead>
-                  <TableHead>Tipo de Proyecto</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Presupuesto</TableHead>
-                  <TableHead>Fechas</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProjects?.map((project) => (
-                  <TableRow key={project.PRJ_id} className="animate-fade-in">
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{project.PRJ_case_number}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{project.client_name}</TableCell>
-                    <TableCell>{project.type?.TYP_name}</TableCell>
-                    <TableCell>{stateLabels[project.PRJ_state] ?? project.PRJ_state}</TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm">
-                          ₡{(project.PRJ_budget ?? 0).toLocaleString()}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm">
-                          <Calendar className="mr-1 h-3 w-3" />
-                          {project.PRJ_start_construction_date ? new Date(project.PRJ_start_construction_date).toLocaleDateString() : "N/A"}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Conclusión: {project.PRJ_completion_date ? new Date(project.PRJ_completion_date).toLocaleDateString() : "N/A"}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/proyectos/${project.PRJ_id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        {isAdmin && (
-                          <Link href={`/proyectos/${project.PRJ_id}/editar`}>
-                            <Button variant="ghost" size="sm" className="hover:bg-[#c9e077]/20">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                        )}
-                      </div>
-                    </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Numero de Caso</TableHead>
+                    <TableHead>Nombre del Cliente</TableHead>
+                    <TableHead>Tipo de Proyecto</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Presupuesto</TableHead>
+                    <TableHead>Fechas</TableHead>
+                    <TableHead>Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredProjects?.map((project) => (
+                    <TableRow key={project.PRJ_id} className="animate-fade-in">
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{project.PRJ_case_number}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{project.client_name}</TableCell>
+                      <TableCell>{project.type?.TYP_name}</TableCell>
+                      <TableCell>{stateLabels[project.PRJ_state] ?? project.PRJ_state}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center text-sm">
+                            ₡{(project.PRJ_budget ?? 0).toLocaleString()}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center text-sm">
+                            <Calendar className="mr-1 h-3 w-3" />
+                            {project.PRJ_start_construction_date ? new Date(project.PRJ_start_construction_date).toLocaleDateString() : "N/A"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Conclusión: {project.PRJ_completion_date ? new Date(project.PRJ_completion_date).toLocaleDateString() : "N/A"}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/proyectos/${project.PRJ_id}`}>
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          {isAdmin && (
+                            <Link href={`/proyectos/${project.PRJ_id}/editar`}>
+                              <Button variant="ghost" size="sm" className="hover:bg-[#c9e077]/20">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
