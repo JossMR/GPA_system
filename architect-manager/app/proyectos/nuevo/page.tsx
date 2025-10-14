@@ -528,8 +528,7 @@ export default function NewProjectPage() {
                         <Input
                           id="budget"
                           name="budget"
-                          type="number"
-                          placeholder="150000"
+                          placeholder="Ej: 150000.25"
                           className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
                         />
                       </div>

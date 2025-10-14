@@ -34,7 +34,7 @@ const getStateColor = (state: string) => {
   return colors[state] || 'bg-gray-400'
 }
 
-export default function DetalleClientePage({ params }: { params: Promise<{ id: string }> }) {
+export default function EditClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { isAdmin } = useAuth()
   const router = useRouter()
   const [cliente, setCliente] = useState<GPAClient | null>(null)
