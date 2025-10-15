@@ -184,7 +184,7 @@ export default function NewProjectPage() {
       toast({
         title: "Error",
         description: "Ocurrió un error al guardar el proyecto.",
-        variant: "success"
+        variant: "destructive"
       })
     }
     setLoading(false)
@@ -528,8 +528,14 @@ export default function NewProjectPage() {
                         <Input
                           id="budget"
                           name="budget"
+                          type="text"
+                          inputMode="decimal"
                           placeholder="Ej: 150000.25"
-                          className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
+                          className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          style={{ MozAppearance: "textfield" }}
+                          pattern="^\d{1,10}(\.\d{0,2})?$"
+                          maxLength={13}
+                          title="Máximo 10 dígitos antes del punto y 2 después del punto decimal"
                         />
                       </div>
                     </div>
