@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,53 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus, Search, Edit, DollarSign, Calendar, CreditCard, Building, TrendingUp, Eye } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
-
-const mockPagos = [
-  {
-    id: 1,
-    fecha: "2024-12-10",
-    monto: 25000,
-    metodo: "transferencia",
-    proyecto: "Villa Moderna",
-    cliente: "María González",
-    numeroCaso: "VM-001",
-    detalle: "Pago inicial del proyecto",
-    estado: "completado",
-  },
-  {
-    id: 2,
-    fecha: "2024-12-08",
-    monto: 15000,
-    metodo: "cheque",
-    proyecto: "Casa Familiar",
-    cliente: "Ana Martínez",
-    numeroCaso: "CF-002",
-    detalle: "Segunda cuota",
-    estado: "completado",
-  },
-  {
-    id: 3,
-    fecha: "2024-12-15",
-    monto: 30000,
-    metodo: "efectivo",
-    proyecto: "Oficina Corporativa",
-    cliente: "Carlos Rodríguez",
-    numeroCaso: "OC-003",
-    detalle: "Pago por avance de obra",
-    estado: "pendiente",
-  },
-  {
-    id: 4,
-    fecha: "2024-12-05",
-    monto: 8000,
-    metodo: "tarjeta",
-    proyecto: "Villa Moderna",
-    cliente: "María González",
-    numeroCaso: "VM-004",
-    detalle: "Costo extra - Materiales premium",
-    estado: "completado",
-  },
-]
+import { GPAPayment } from "@/models/GPA_payment"
 
 const metodoPago = {
   transferencia: "Transferencia",
@@ -67,39 +21,86 @@ const metodoPago = {
   tarjeta: "Tarjeta",
 }
 
-const estadoColors = {
-  completado: "bg-green-500",
-  pendiente: "bg-yellow-500",
-  rechazado: "bg-red-500",
-}
-
 export default function PagosPage() {
   const { isAdmin } = useAuth()
-  const [pagos, setPagos] = useState(mockPagos)
+  const [payments, setPayments] = useState<GPAPayment[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [estadoFilter, setEstadoFilter] = useState("todos")
-  const [selectedPago, setSelectedPago] = useState<any>(null)
+  const [stateFilter, setStateFilter] = useState("todos")
+  const [selectedPayment, setSelectedPayment] = useState<any>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [sumLastDueAmount, setSumLastDueAmount] = useState(0)
 
-  const filteredPagos = pagos.filter((pago) => {
+  const stateLabels: Record<string, string> = {
+    "Document Collection": "Recepción de documentos",
+    "Technical Inspection": "Inspección técnica",
+    "Document Review": "Revisión de documentos",
+    "Plans and Budget": "Planos y presupuesto",
+    "Entity Review": "Revisión de entidad",
+    "APC and Permits": "APC y permisos",
+    "Disbursement": "Desembolso",
+    "Under Construction": "En construcción",
+    "Completed": "Completado",
+    "Logbook Closed": "Bitácora cerrada",
+    "Rejected": "Rechazado",
+    "Professional Withdrawal": "Retiro profesional",
+    "Conditioned": "Condicionado",
+  }
+
+  const lastPaymentsPerProject = new Map<number, GPAPayment>()
+
+  useEffect(() => {
+    async function fetchPayments() {
+      setLoading(true)
+      try {
+        const res = await fetch("/api/payments")
+        const data = await res.json()
+        const OrderedPayments = data.sort(
+          (a: any, b: any) => new Date(b.PAY_payment_date).getTime() - new Date(a.PAY_payment_date).getTime()
+        )
+        setPayments(OrderedPayments)
+      } catch (err) {
+        setPayments([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPayments()
+    payments.forEach((p) => {
+      const key = p.PAY_project_id
+      const prev = lastPaymentsPerProject.get(key)
+      if (
+        !prev ||
+        new Date(p.PAY_payment_date).getTime() > new Date(prev.PAY_payment_date).getTime()
+      ) {
+        lastPaymentsPerProject.set(key, p)
+      }
+    })
+    let lastDueAmount = 0
+    lastPaymentsPerProject.forEach((p) => {
+      lastDueAmount += p.PAY_amount_due || 0
+    })
+    setSumLastDueAmount(lastDueAmount)
+  }, [])
+
+  const filteredPayments = payments.filter((payment) => {
     const matchesSearch =
-      pago.proyecto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pago.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pago.numeroCaso.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesEstado = estadoFilter === "todos" || pago.estado === estadoFilter
-    return matchesSearch && matchesEstado
+      (payment.projectCaseNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (payment.projectClientName || "").toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesState = stateFilter === "todos" || (payment.projectState) === stateFilter
+    return matchesSearch && matchesState
   })
 
-  const totalIngresos = pagos.filter((p) => p.estado === "completado").reduce((sum, p) => sum + p.monto, 0)
-  const pagosPendientes = pagos.filter((p) => p.estado === "pendiente").reduce((sum, p) => sum + p.monto, 0)
+  const totalIngresos = payments.filter((p) => p.projectState === "completado").reduce((sum, p) => sum + p.PAY_amount_paid, 0)
+  const pagosPendientes = payments.filter((p) => p.projectState === "pendiente").reduce((sum, p) => sum + p.PAY_amount_due, 0)
 
-  const handleEdit = (pago: any) => {
-    setSelectedPago(pago)
+  const handleEdit = (payment: any) => {
+    setSelectedPayment(payment)
     setIsDialogOpen(true)
   }
 
   const handleNew = () => {
-    setSelectedPago(null)
+    setSelectedPayment(null)
     setIsDialogOpen(true)
   }
 
@@ -122,7 +123,7 @@ export default function PagosPage() {
         </div>
 
         {/* Estadísticas Financieras */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="card-hover border-[#a2c523]/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center">
@@ -131,7 +132,7 @@ export default function PagosPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">${totalIngresos.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-green-600">₡{totalIngresos.toLocaleString()}</div>
               <div className="flex items-center text-xs text-green-600 mt-1">
                 <TrendingUp className="mr-1 h-3 w-3" />
                 +12% este mes
@@ -147,9 +148,11 @@ export default function PagosPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">${pagosPendientes.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                ₡{sumLastDueAmount.toLocaleString()}
+              </div>
               <div className="text-xs text-muted-foreground mt-1">
-                {pagos.filter((p) => p.estado === "pendiente").length} pagos
+                {lastPaymentsPerProject.size} proyectos con saldos pendientes
               </div>
             </CardContent>
           </Card>
@@ -162,21 +165,8 @@ export default function PagosPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#7d4427]">{pagos.length}</div>
+              <div className="text-2xl font-bold text-[#7d4427]">{payments.length}</div>
               <div className="text-xs text-muted-foreground mt-1">Este mes</div>
-            </CardContent>
-          </Card>
-
-          <Card className="card-hover border-[#486b00]/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <Building className="mr-2 h-4 w-4 text-[#486b00]" />
-                Proyectos Activos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-[#486b00]">{new Set(pagos.map((p) => p.proyecto)).size}</div>
-              <div className="text-xs text-muted-foreground mt-1">Con pagos registrados</div>
             </CardContent>
           </Card>
         </div>
@@ -203,7 +193,7 @@ export default function PagosPage() {
               </div>
               <div className="w-48">
                 <Label htmlFor="estado">Estado</Label>
-                <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+                <Select value={stateFilter} onValueChange={setStateFilter}>
                   <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
                     <SelectValue placeholder="Filtrar por estado" />
                   </SelectTrigger>
@@ -222,72 +212,75 @@ export default function PagosPage() {
         {/* Tabla de Pagos */}
         <Card className="border-[#a2c523]/20">
           <CardHeader>
-            <CardTitle className="text-[#2e4600]">Historial de Pagos ({filteredPagos.length})</CardTitle>
+            <CardTitle className="text-[#2e4600]">Historial de Pagos ({filteredPayments.length})</CardTitle>
             <CardDescription>Todas las transacciones registradas en el sistema</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Proyecto</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead>Método</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPagos.map((pago, index) => (
-                  <TableRow key={pago.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                    <TableCell>
-                      <div className="flex items-center text-sm">
-                        <Calendar className="mr-1 h-3 w-3 text-[#486b00]" />
-                        {pago.fecha}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{pago.proyecto}</div>
-                        <div className="text-sm text-muted-foreground">{pago.numeroCaso}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{pago.cliente}</TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-[#2e4600]">${pago.monto.toLocaleString()}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="border-[#a2c523] text-[#486b00]">
-                        {metodoPago[pago.metodo as keyof typeof metodoPago]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${estadoColors[pago.estado as keyof typeof estadoColors]} text-white`}>
-                        {pago.estado}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm" className="hover:bg-[#c9e077]/20">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(pago)}
-                            className="hover:bg-[#c9e077]/20"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">Cargando pagos...</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Número de Caso</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Monto</TableHead>
+                    {/*TODO <TableHead>Método</TableHead>*/}
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredPayments.map((payment, index) => (
+                    <TableRow key={payment.PAY_id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
+                      <TableCell>
+                        <div className="flex items-center text-sm">
+                          <Calendar className="mr-1 h-3 w-3 text-[#486b00]" />
+                          {payment.PAY_payment_date ? new Date(payment.PAY_payment_date).toLocaleDateString() : "N/A"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{payment.projectCaseNumber || "N/A"}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{payment.projectClientName || "N/A"}</TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-[#2e4600]">₡{(payment.PAY_amount_paid)?.toLocaleString()}</div>
+                      </TableCell>
+                      {/*TODO <TableCell>
+                        <Badge variant="outline" className="border-[#a2c523] text-[#486b00]">
+                          {metodoPago[(payment.metodo || payment.PAY_method) as keyof typeof metodoPago]}
+                        </Badge>
+                      </TableCell>*/}
+                      <TableCell>
+                        <Badge className="bg-[#486b00] text-white">
+                          {stateLabels[payment.projectState || "N/A"]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button variant="ghost" size="sm" className="hover:bg-[#c9e077]/20">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(payment)}
+                              className="hover:bg-[#c9e077]/20"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -296,10 +289,10 @@ export default function PagosPage() {
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle className="text-[#2e4600]">
-                {selectedPago ? "Editar Pago" : "Registrar Nuevo Pago"}
+                {selectedPayment ? "Editar Pago" : "Registrar Nuevo Pago"}
               </DialogTitle>
               <DialogDescription>
-                {selectedPago ? "Modifica los datos del pago" : "Ingresa los detalles del nuevo pago"}
+                {selectedPayment ? "Modifica los datos del pago" : "Ingresa los detalles del nuevo pago"}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -309,7 +302,7 @@ export default function PagosPage() {
                   <Input
                     id="fecha"
                     type="date"
-                    defaultValue={selectedPago?.fecha || ""}
+                    defaultValue={selectedPayment?.fecha || ""}
                     className="border-[#a2c523]/30 focus:border-[#486b00]"
                   />
                 </div>
@@ -321,7 +314,7 @@ export default function PagosPage() {
                       id="monto"
                       type="number"
                       placeholder="25000"
-                      defaultValue={selectedPago?.monto || ""}
+                      defaultValue={selectedPayment?.monto || ""}
                       className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
                     />
                   </div>
@@ -329,7 +322,7 @@ export default function PagosPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="proyecto">Proyecto</Label>
-                <Select defaultValue={selectedPago?.proyecto || ""}>
+                <Select defaultValue={selectedPayment?.proyecto || ""}>
                   <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
                     <SelectValue placeholder="Seleccionar proyecto" />
                   </SelectTrigger>
@@ -343,7 +336,7 @@ export default function PagosPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="metodo">Método de pago</Label>
-                  <Select defaultValue={selectedPago?.metodo || ""}>
+                  <Select defaultValue={selectedPayment?.metodo || ""}>
                     <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
                       <SelectValue placeholder="Método" />
                     </SelectTrigger>
@@ -360,7 +353,7 @@ export default function PagosPage() {
                   <Input
                     id="numeroCaso"
                     placeholder="VM-001"
-                    defaultValue={selectedPago?.numeroCaso || ""}
+                    defaultValue={selectedPayment?.numeroCaso || ""}
                     className="border-[#a2c523]/30 focus:border-[#486b00]"
                   />
                 </div>
@@ -370,7 +363,7 @@ export default function PagosPage() {
                 <Input
                   id="detalle"
                   placeholder="Descripción del pago..."
-                  defaultValue={selectedPago?.detalle || ""}
+                  defaultValue={selectedPayment?.detalle || ""}
                   className="border-[#a2c523]/30 focus:border-[#486b00]"
                 />
               </div>
@@ -384,7 +377,7 @@ export default function PagosPage() {
                 Cancelar
               </Button>
               <Button className="gradient-primary text-white hover:opacity-90" onClick={() => setIsDialogOpen(false)}>
-                {selectedPago ? "Actualizar" : "Registrar"} Pago
+                {selectedPayment ? "Actualizar" : "Registrar"} Pago
               </Button>
             </div>
           </DialogContent>

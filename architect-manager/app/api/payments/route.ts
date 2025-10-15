@@ -7,7 +7,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('project_id')
     
-    let query = 'SELECT * FROM GPA_Payments'
+    let query = `
+      SELECT 
+        p.*,
+        pr.PRJ_state AS projectState,
+        pr.PRJ_case_number AS projectCaseNumber,
+        CONCAT(c.CLI_name, ' ', c.CLI_f_lastname, ' ', c.CLI_s_lastname) AS projectClientName
+      FROM GPA_Payments p
+      JOIN GPA_Projects pr ON p.PAY_project_id = pr.PRJ_id
+      JOIN GPA_Clients c ON pr.PRJ_client_id = c.CLI_id
+    `
+
     const params: any[] = []
     
     if (projectId) {
@@ -18,7 +28,7 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    query += ' ORDER BY PAY_due_date ASC'
+    query += ' ORDER BY PAY_payment_date ASC'
     
     const payments = await executeQuery(query, params) as GPAPayment[]
     
@@ -41,8 +51,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Amount due is required and must be positive' }, { status: 400 })
     }
     
-    if (!body.PAY_due_date) {
-      return NextResponse.json({ error: 'Due date is required' }, { status: 400 })
+    if (!body.PAY_payment_date) {
+      return NextResponse.json({ error: 'Payment date is required' }, { status: 400 })
     }
     
     if (!body.PAY_project_id) {
@@ -52,8 +62,8 @@ export async function POST(request: NextRequest) {
     const paymentData: Omit<GPAPayment, 'PAY_id'> = {
       PAY_amount_due: body.PAY_amount_due,
       PAY_amount_paid: body.PAY_amount_paid ?? 0,
-      PAY_due_date: body.PAY_due_date,
-      PAY_payment_date: body.PAY_payment_date || undefined,
+      PAY_due_date: body.PAY_due_date || undefined,
+      PAY_payment_date: body.PAY_payment_date,
       PAY_description: body.PAY_description || undefined,
       PAY_project_id: body.PAY_project_id
     }
@@ -72,9 +82,9 @@ export async function POST(request: NextRequest) {
     const result = await executeQuery(insertQuery, [
       paymentData.PAY_amount_due,
       paymentData.PAY_amount_paid,
-      paymentData.PAY_due_date,
-      paymentData.PAY_payment_date || null,
-      paymentData.PAY_description || null,
+      paymentData.PAY_due_date?.toString() || null,
+      paymentData.PAY_payment_date,
+      paymentData.PAY_description?.toString() || null,
       paymentData.PAY_project_id
     ]) as any
     
