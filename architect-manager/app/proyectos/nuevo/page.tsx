@@ -23,6 +23,12 @@ import { useToast } from "@/hooks/use-toast"
 import { ProjectTypeManager } from "@/components/projectTypeManager"
 import { Category, ProjectCategoryTags } from "@/components/projectCategoryTags"
 
+interface PendingDocument {
+  file: File
+  documentName: string
+  id: string
+}
+
 export default function NewProjectPage() {
   const { isAdmin } = useAuth()
   const router = useRouter()
@@ -46,6 +52,10 @@ export default function NewProjectPage() {
   const [filter, setFilter] = useState("")
   const [newCat, setNewCat] = useState("")
   const [allCategories, setAllCategories] = useState<Category[]>([])
+  
+  // 👇 NUEVO: Estado para documentos pendientes (antes de crear el proyecto)
+  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([])
+  const [uploadingDocuments, setUploadingDocuments] = useState(false)
 
   // Delete assigned category
   const handleRemoveCategory = (id: number) => {
@@ -146,6 +156,7 @@ export default function NewProjectPage() {
       })),
     }
     try {
+      // 1️⃣ Crear el proyecto primero
       const response = await fetch("/api/projects", {
         method: "POST",
         headers: {
@@ -154,7 +165,6 @@ export default function NewProjectPage() {
         body: JSON.stringify(newProject),
       })
       if (!response.ok) {
-        // get error message from response body or use a default one
         const errorData = await response.json()
         const errorMessage = errorData.error || "Error creating project"
         throw new Error(errorMessage)
@@ -163,14 +173,74 @@ export default function NewProjectPage() {
       const registeredProject: GPAProject = data.project;
       console.log("Registered project", registeredProject)
       
-      // Store the created project ID for document upload
-      setCreatedProjectId(registeredProject.PRJ_id!)
+      const projectId = registeredProject.PRJ_id!
+      setCreatedProjectId(projectId)
       
       toast({
         title: "Proyecto Registrado",
-        description: "El proyecto fue registrado correctamente. Ahora puedes subir documentos.",
+        description: "El proyecto fue registrado correctamente.",
         variant: "success"
       })
+
+      // 2️⃣ Subir documentos pendientes si hay alguno
+      if (pendingDocuments.length > 0) {
+        setUploadingDocuments(true)
+        toast({
+          title: "Subiendo documentos",
+          description: `Subiendo ${pendingDocuments.length} documento(s)...`,
+        })
+
+        let uploadedCount = 0
+        let failedCount = 0
+
+        for (const doc of pendingDocuments) {
+          try {
+            const formData = new FormData()
+            formData.append('file', doc.file)
+            formData.append('documentName', doc.documentName)
+
+            const uploadResponse = await fetch(`/api/upload/${projectId}`, {
+              method: 'POST',
+              body: formData
+            })
+
+            if (uploadResponse.ok) {
+              uploadedCount++
+            } else {
+              failedCount++
+              console.error(`Error subiendo documento: ${doc.documentName}`)
+            }
+          } catch (error) {
+            failedCount++
+            console.error(`Error subiendo documento: ${doc.documentName}`, error)
+          }
+        }
+
+        setUploadingDocuments(false)
+
+        if (failedCount === 0) {
+          toast({
+            title: "Documentos Subidos",
+            description: `${uploadedCount} documento(s) subido(s) exitosamente.`,
+            variant: "success"
+          })
+        } else {
+          toast({
+            title: "Documentos Parcialmente Subidos",
+            description: `${uploadedCount} subido(s), ${failedCount} fallido(s).`,
+            variant: "destructive"
+          })
+        }
+
+        // Limpiar documentos pendientes
+        setPendingDocuments([])
+      }
+
+      // 3️⃣ Redirigir al detalle del proyecto
+      setTimeout(() => {
+        router.push(`/proyectos/${projectId}`)
+      }, 1500)
+
     } catch (error) {
       console.error(error instanceof Error ? error.message : "There was a problem creating the project.")
       toast({
@@ -549,13 +619,115 @@ export default function NewProjectPage() {
                 </CardContent>
               </Card>
 
-              {/* Document Management */}
-              <ProjectDocumentManager
-                projectId={createdProjectId}
-                canEdit={true}
-                showUpload={true}
-                title="Documentos del Proyecto"
-              />
+              {/* Document Management - Pending Documents */}
+              <Card className="border-[#a2c523]/20">
+                <CardHeader>
+                  <CardTitle className="text-[#2e4600] flex items-center">
+                    <FileText className="mr-2 h-5 w-5" />
+                    Documentos del Proyecto ({pendingDocuments.length})
+                  </CardTitle>
+                  <CardDescription>
+                    Los documentos se subirán automáticamente cuando se registre el proyecto
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Zona de carga */}
+                  <div className="border-2 border-dashed rounded-lg p-6 text-center border-[#a2c523]/30 hover:border-[#486b00] hover:bg-[#c9e077]/5 transition-colors">
+                    <FileText className="mx-auto h-8 w-8 text-[#486b00] mb-2" />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Selecciona documentos para adjuntar al proyecto
+                    </p>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || [])
+                        const newDocs: PendingDocument[] = files.map(file => ({
+                          file,
+                          documentName: file.name.replace(/\.[^/.]+$/, ""),
+                          id: `${Date.now()}_${Math.random()}`
+                        }))
+                        setPendingDocuments([...pendingDocuments, ...newDocs])
+                        e.target.value = '' // Reset input
+                      }}
+                      className="hidden"
+                      id="pending-file-upload"
+                      accept="*/*"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById("pending-file-upload")?.click()}
+                      className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Seleccionar Archivos
+                    </Button>
+                  </div>
+
+                  {/* Lista de documentos pendientes */}
+                  {pendingDocuments.length > 0 && (
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                      {pendingDocuments.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between p-3 border border-[#c9e077]/30 rounded-lg hover:bg-[#c9e077]/5"
+                        >
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            <FileText className="h-5 w-5 text-[#486b00] flex-shrink-0" />
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <Input
+                                value={doc.documentName}
+                                onChange={(e) => {
+                                  setPendingDocuments(pendingDocuments.map(d => 
+                                    d.id === doc.id ? { ...d, documentName: e.target.value } : d
+                                  ))
+                                }}
+                                placeholder="Nombre del documento"
+                                className="border-[#a2c523]/30 focus:border-[#486b00] h-8 text-sm"
+                              />
+                              <p className="text-xs text-muted-foreground truncate">
+                                {doc.file.name} ({(doc.file.size / 1024 / 1024).toFixed(2)} MB)
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setPendingDocuments(pendingDocuments.filter(d => d.id !== doc.id))
+                            }}
+                            className="text-red-500 hover:bg-red-50 ml-2"
+                          >
+                            <span className="sr-only">Eliminar</span>
+                            ✕
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {pendingDocuments.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No hay documentos adjuntos</p>
+                      <p className="text-sm">Usa el botón de arriba para agregar documentos</p>
+                    </div>
+                  )}
+
+                  {/* Estadísticas */}
+                  {pendingDocuments.length > 0 && (
+                    <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t border-[#c9e077]/20">
+                      <span>
+                        Total: {(pendingDocuments.reduce((sum, doc) => sum + doc.file.size, 0) / 1024 / 1024).toFixed(2)} MB
+                      </span>
+                      <span>{pendingDocuments.length} documento{pendingDocuments.length !== 1 ? 's' : ''} pendiente{pendingDocuments.length !== 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Action Buttons */}
               <div className="flex justify-end space-x-4">
@@ -563,19 +735,25 @@ export default function NewProjectPage() {
                   type="button"
                   variant="outline"
                   onClick={() => router.back()}
+                  disabled={loading || uploadingDocuments}
                   className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || uploadingDocuments}
                   className="gradient-primary text-white hover:opacity-90"
                 >
-                  {loading ? (
+                  {uploadingDocuments ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      Creando...
+                      Subiendo Documentos...
+                    </>
+                  ) : loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Creando Proyecto...
                     </>
                   ) : (
                     <>
@@ -589,6 +767,37 @@ export default function NewProjectPage() {
 
             {/* Sidebar Panel */}
             <div className="space-y-6">
+              {/* Resumen de Documentos Pendientes */}
+              {pendingDocuments.length > 0 && (
+                <Card className="border-[#486b00]/20 bg-[#c9e077]/5">
+                  <CardHeader>
+                    <CardTitle className="text-[#486b00] flex items-center text-base">
+                      <FileText className="mr-2 h-5 w-5" />
+                      Documentos Pendientes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="text-sm space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Total de documentos:</span>
+                        <span className="font-medium text-[#486b00]">{pendingDocuments.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Tamaño total:</span>
+                        <span className="font-medium text-[#486b00]">
+                          {(pendingDocuments.reduce((sum, doc) => sum + doc.file.size, 0) / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t border-[#486b00]/20">
+                        <p className="text-xs text-muted-foreground">
+                          ℹ️ Los documentos se subirán automáticamente al crear el proyecto
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card className="border-[#c9e077]/30">
                 <CardHeader>
                   <CardTitle className="text-[#2e4600] flex items-center">
