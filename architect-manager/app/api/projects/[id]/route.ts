@@ -90,7 +90,7 @@ export async function GET(
     project.client_name = clientData?.CLI_name + " " + clientData?.CLI_f_lastname + " " + clientData?.CLI_s_lastname;
 
     project.client_identification = clientData?.CLI_identification;
-    
+
     const categoriesRes = await fetch(`${new URL(request.url).origin}/api/categories?project_id=${project.PRJ_id}`, {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -153,6 +153,7 @@ export async function PUT(
       PRJ_district,
       PRJ_neighborhood,
       PRJ_start_construction_date,
+      categories
     } = body
 
     const updateQuery = `
@@ -181,25 +182,63 @@ export async function PUT(
     await executeQuery(updateQuery, [
       PRJ_client_id,
       PRJ_case_number,
-      PRJ_area_m2,
-      PRJ_additional_directions,
-      PRJ_budget,
-      PRJ_entry_date,
-      PRJ_completion_date,
-      PRJ_logbook_number,
-      PRJ_logbook_close_date,
+      PRJ_area_m2?.toString() || null,
+      PRJ_additional_directions || null,
+      PRJ_budget?.toString() || null,
+      PRJ_entry_date.toString() || null,
+      PRJ_completion_date?.toString() || null,
+      PRJ_logbook_number?.toString() || null,
+      PRJ_logbook_close_date?.toString() || null,
       PRJ_type_id,
       PRJ_state,
-      PRJ_final_price,
-      PRJ_notes,
-      PRJ_province,
-      PRJ_canton,
-      PRJ_district,
-      PRJ_neighborhood,
-      PRJ_start_construction_date,
+      PRJ_final_price?.toString() || null,
+      PRJ_notes?.toString() || null,
+      PRJ_province?.toString() || null,
+      PRJ_canton?.toString() || null,
+      PRJ_district?.toString() || null,
+      PRJ_neighborhood?.toString() || null,
+      PRJ_start_construction_date?.toString() || null,
       projectId
     ])
+    const projectCategories = await fetch(`${new URL(request.url).origin}/api/categories?project_id=${projectId}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const categoriesData = projectCategories.ok ? await projectCategories.json() as GPAcategory[] : [];
 
+    // Extraer los IDs de las categorías existentes y nuevas
+    const existingCategoryIds: number[] = categoriesData
+      ? categoriesData.map((cat: GPAcategory) => cat.CAT_id).filter((id): id is number => id !== undefined)
+      : [];
+    const newCategoryIds: number[] = categories ? categories.map((cat: GPAcategory) => cat.CAT_id) : [];
+    console.log('Categories:', categoriesData);
+    console.log('cliente categories:', categories);
+    // Categorías que están en 'categories' pero no en 'categoriesData' (nuevas a agregar)
+    const categoriesToAdd = newCategoryIds
+      ? newCategoryIds.filter(cat => !existingCategoryIds.includes(cat))
+      : [];
+
+    // Categorías que están en 'categoriesData' pero no en 'categories' (a eliminar)
+    const categoriesToRemove = existingCategoryIds
+      ? existingCategoryIds.filter(cat => !newCategoryIds.includes(cat))
+      : [];
+    console.log('Categories to add:', categoriesToAdd);
+    console.log('Categories to remove:', categoriesToRemove);
+
+    // Agregar nuevas relaciones
+    for (const catId of categoriesToAdd) {
+      await executeQuery(
+        `INSERT INTO GPA_ProjectsXGPA_Categories (PRJ_id, CAT_id) VALUES (?, ?)`,
+        [projectId, catId]
+      );
+    }
+
+    // Eliminar relaciones
+    for (const catId of categoriesToRemove) {
+      await executeQuery(
+        `DELETE FROM GPA_ProjectsXGPA_Categories WHERE PRJ_id = ? AND CAT_id = ?`,
+        [projectId, catId]
+      );
+    }
     return NextResponse.json({ message: 'Project updated successfully' }, { status: 200 })
 
   } catch (error) {
