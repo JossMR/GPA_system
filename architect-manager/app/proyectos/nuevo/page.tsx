@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DocumentManager } from "@/components/document-manager"
+import { ProjectDocumentManager } from "@/components/project-document-manager"
 import { ArrowLeft, Save, Building, Calendar, DollarSign, MapPin, FileText } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-select"
@@ -23,22 +23,11 @@ import { useToast } from "@/hooks/use-toast"
 import { ProjectTypeManager } from "@/components/projectTypeManager"
 import { Category, ProjectCategoryTags } from "@/components/projectCategoryTags"
 
-
-interface Document {
-  id: string
-  name: string
-  type: string
-  size: number
-  uploadDate: string
-  category: "plano" | "permiso" | "contrato" | "foto" | "otro"
-  url?: string
-}
-
 export default function NewProjectPage() {
   const { isAdmin } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [documents, setDocuments] = useState<Document[]>([])
+  const [createdProjectId, setCreatedProjectId] = useState<number | null>(null)
   const [province, setProvince] = useState("")
   const [canton, setCanton] = useState("")
   const [district, setDistrict] = useState("")
@@ -170,15 +159,18 @@ export default function NewProjectPage() {
         const errorMessage = errorData.error || "Error creating project"
         throw new Error(errorMessage)
       }
-      toast({
-        title: "Proyecto Registrado",
-        description: "El proyecto fue registrado correctamente",
-        variant: "success"
-      })
       const data = await response.json()
       const registeredProject: GPAProject = data.project;
       console.log("Registered project", registeredProject)
-      router.push("/proyectos")
+      
+      // Store the created project ID for document upload
+      setCreatedProjectId(registeredProject.PRJ_id!)
+      
+      toast({
+        title: "Proyecto Registrado",
+        description: "El proyecto fue registrado correctamente. Ahora puedes subir documentos.",
+        variant: "success"
+      })
     } catch (error) {
       console.error(error instanceof Error ? error.message : "There was a problem creating the project.")
       toast({
@@ -558,9 +550,8 @@ export default function NewProjectPage() {
               </Card>
 
               {/* Document Management */}
-              <DocumentManager
-                documents={documents}
-                onDocumentsChange={setDocuments}
+              <ProjectDocumentManager
+                projectId={createdProjectId}
                 canEdit={true}
                 showUpload={true}
                 title="Documentos del Proyecto"
@@ -672,35 +663,6 @@ export default function NewProjectPage() {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Document Summary */}
-              {documents.length > 0 && (
-                <Card className="border-[#486b00]/20">
-                  <CardHeader>
-                    <CardTitle className="text-[#486b00]">Documentos Adjuntos</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="text-sm space-y-2">
-                      <div className="flex justify-between">
-                        <span>Total de archivos:</span>
-                        <span className="font-medium">{documents.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Planos:</span>
-                        <span className="font-medium">{documents.filter((d) => d.category === "plano").length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Fotografías:</span>
-                        <span className="font-medium">{documents.filter((d) => d.category === "foto").length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Contratos:</span>
-                        <span className="font-medium">{documents.filter((d) => d.category === "contrato").length}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           </form>
         </div>
