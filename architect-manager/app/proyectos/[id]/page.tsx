@@ -92,7 +92,6 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
         if (!response.ok) throw new Error("No se pudo cargar el proyecto")
         const data = await response.json()
         setProject(data.project)
-        console.log("datos", data.project)
       } catch (err: any) {
         setError(err.message)
       } finally {

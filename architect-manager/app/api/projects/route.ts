@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
       PRJ_district,
       PRJ_neighborhood,
       PRJ_start_construction_date,
+      PRJ_remaining_amount,
       categories
     } = body
 
@@ -152,8 +153,8 @@ export async function POST(request: NextRequest) {
         PRJ_client_id, PRJ_case_number, PRJ_area_m2, PRJ_additional_directions,
         PRJ_budget, PRJ_entry_date, PRJ_completion_date, PRJ_logbook_number,
         PRJ_logbook_close_date, PRJ_type_id, PRJ_state,
-        PRJ_final_price, PRJ_notes, PRJ_province, PRJ_canton, PRJ_district, PRJ_neighborhood, PRJ_start_construction_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        PRJ_final_price, PRJ_notes, PRJ_province, PRJ_canton, PRJ_district, PRJ_neighborhood, PRJ_start_construction_date, PRJ_remaining_amount
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
 
     const result = await executeQuery(insertQuery, [
@@ -174,7 +175,8 @@ export async function POST(request: NextRequest) {
       PRJ_canton?.toString() || null,
       PRJ_district?.toString() || null,
       PRJ_neighborhood?.toString() || null,
-      PRJ_start_construction_date?.toString() || null
+      PRJ_start_construction_date?.toString() || null,
+      PRJ_remaining_amount?.toString() || null
     ]) as any
 
     const projectId = result.insertId
