@@ -51,7 +51,7 @@ export default function HomePage() {
       try {
         const [projectsRes, clientsRes, paymentsRes] = await Promise.all([
           fetch("/api/projects"),
-          fetch("/api/clientes"),
+          fetch("/api/clients"),
           fetch("/api/payments"),
         ])
         
