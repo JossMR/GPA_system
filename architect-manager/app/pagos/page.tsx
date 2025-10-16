@@ -36,7 +36,7 @@ export default function PagosPage() {
   const [stateFilter, setStateFilter] = useState("todos")
   const [selectedPayment, setSelectedPayment] = useState<GPAPayment | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [viewMode, setViewMode] = useState(false) // 👈 Nuevo: modo solo lectura
+  const [viewMode, setViewMode] = useState(false)
   const [sumPendingAmounts, setSumPendingAmounts] = useState(0)
 
   useEffect(() => {
@@ -150,7 +150,7 @@ export default function PagosPage() {
       PAY_project_id: payment.PAY_project_id?.toString() || "",
       PAY_description: payment.PAY_description || "",
     })
-    setViewMode(false) // 👈 Modo edición
+    setViewMode(false)
     setIsDialogOpen(true)
   }
 
@@ -164,7 +164,7 @@ export default function PagosPage() {
       PAY_project_id: payment.PAY_project_id?.toString() || "",
       PAY_description: payment.PAY_description || "",
     })
-    setViewMode(true) // 👈 Modo solo lectura
+    setViewMode(true)
     setIsDialogOpen(true)
   }
 
@@ -176,7 +176,7 @@ export default function PagosPage() {
       PAY_project_id: "",
       PAY_description: "",
     })
-    setViewMode(false) // 👈 Modo creación
+    setViewMode(false)
     setIsDialogOpen(true)
   }
 
@@ -325,13 +325,8 @@ export default function PagosPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">₡{totalIngresos.toLocaleString()}</div>
-              <div className="flex items-center text-xs text-green-600 mt-1">
-                <TrendingUp className="mr-1 h-3 w-3" />
-                +12% este mes
-              </div>
             </CardContent>
           </Card>
-
           <Card className="card-hover border-yellow-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center">
@@ -342,9 +337,6 @@ export default function PagosPage() {
             <CardContent>
               <div className="text-2xl font-bold text-yellow-600">
                 ₡{sumPendingAmounts.toLocaleString()}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {projectsWithDue} proyectos con saldos pendientes
               </div>
             </CardContent>
           </Card>
@@ -620,19 +612,14 @@ export default function PagosPage() {
                           <span className="text-[#2e4600] font-medium">Costo total del proyecto:</span>
                           <span className="font-bold">₡{totalProjectCost.toLocaleString()}</span>
                         </div>
-                        {formData.PAY_amount_paid && (
-                          <div className="border-t border-[#486b00]/20 pt-2">
-                            <div className="text-sm font-medium text-[#2e4600]">
-                              Saldo Pendiente después de este pago:
-                            </div>
-                            <div className="text-2xl font-bold text-[#486b00]">
-                              ₡{calculateRemainingAmount(
-                                Number(formData.PAY_project_id),
-                                Number(formData.PAY_amount_paid)
-                              ).toLocaleString()}
-                            </div>
+                        <div className="border-t border-[#486b00]/20 pt-2">
+                          <div className="text-sm font-medium text-[#2e4600]">
+                            Saldo restante total:
                           </div>
-                        )}
+                          <div className="text-2xl font-bold text-[#486b00]">
+                            ₡{Number(project?.PRJ_remaining_amount || 0).toLocaleString()}
+                          </div>
+                        </div>
                       </>
                     )
                   })()}
