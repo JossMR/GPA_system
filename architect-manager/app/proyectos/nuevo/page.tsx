@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ProjectDocumentManager } from "@/components/project-document-manager"
-import { ArrowLeft, Save, Building, Calendar, DollarSign, MapPin, FileText } from "lucide-react"
+import { ArrowLeft, Save, Building, Calendar, DollarSign, MapPin, FileText, MessageSquare, AlertCircle } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
@@ -52,8 +52,7 @@ export default function NewProjectPage() {
   const [filter, setFilter] = useState("")
   const [newCat, setNewCat] = useState("")
   const [allCategories, setAllCategories] = useState<Category[]>([])
-  
-  // 👇 NUEVO: Estado para documentos pendientes (antes de crear el proyecto)
+
   const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([])
   const [uploadingDocuments, setUploadingDocuments] = useState(false)
 
@@ -157,7 +156,6 @@ export default function NewProjectPage() {
       })),
     }
     try {
-      // 1️⃣ Crear el proyecto primero
       const response = await fetch("/api/projects", {
         method: "POST",
         headers: {
@@ -172,18 +170,16 @@ export default function NewProjectPage() {
       }
       const data = await response.json()
       const registeredProject: GPAProject = data.project;
-      console.log("Registered project", registeredProject)
-      
+
       const projectId = registeredProject.PRJ_id!
       setCreatedProjectId(projectId)
-      
+
       toast({
         title: "Proyecto Registrado",
         description: "El proyecto fue registrado correctamente.",
         variant: "success"
       })
 
-      // 2️⃣ Subir documentos pendientes si hay alguno
       if (pendingDocuments.length > 0) {
         setUploadingDocuments(true)
         toast({
@@ -233,11 +229,9 @@ export default function NewProjectPage() {
           })
         }
 
-        // Limpiar documentos pendientes
         setPendingDocuments([])
       }
 
-      // 3️⃣ Redirigir al detalle del proyecto
       setTimeout(() => {
         router.push(`/proyectos/${projectId}`)
       }, 1500)
@@ -298,7 +292,11 @@ export default function NewProjectPage() {
     <MainLayout>
       <div className="container py-8 space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => router.back()} className="hover:bg-[#c9e077]/20">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/proyectos")}
+            className="hover:bg-[#c9e077]/20"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>
@@ -681,7 +679,7 @@ export default function NewProjectPage() {
                               <Input
                                 value={doc.documentName}
                                 onChange={(e) => {
-                                  setPendingDocuments(pendingDocuments.map(d => 
+                                  setPendingDocuments(pendingDocuments.map(d =>
                                     d.id === doc.id ? { ...d, documentName: e.target.value } : d
                                   ))
                                 }}
@@ -870,6 +868,25 @@ export default function NewProjectPage() {
                     <div className="flex items-center justify-between">
                       <span>Condicionado</span>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Información sobre Observaciones */}
+              <Card className="border-[#a2c523]/20">
+                <CardHeader>
+                  <CardTitle className="text-[#486b00] flex items-center">
+                    <MessageSquare className="mr-2 h-5 w-5" />
+                    Observaciones
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-4 rounded-md border border-blue-200 dark:border-blue-800">
+                    <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <p>
+                      Las observaciones podrán agregarse una vez que el proyecto haya sido creado.
+                      Podrás añadirlas desde la página de edición o visualización del proyecto.
+                    </p>
                   </div>
                 </CardContent>
               </Card>

@@ -85,7 +85,7 @@ export default function NewClientPage() {
         variant: "success"
       })
       const data = await response.json()
-      const registeredClient:GPAClient = data.client;
+      const registeredClient: GPAClient = data.client;
       router.push("/clientes")
     } catch (error) {
       console.error(error instanceof Error ? error.message : "There was a problem creating the client.")
@@ -102,7 +102,11 @@ export default function NewClientPage() {
     <MainLayout>
       <div className="container py-8 space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => router.back()} className="hover:bg-[#c9e077]/20">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/clientes")}
+            className="hover:bg-[#c9e077]/20"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>

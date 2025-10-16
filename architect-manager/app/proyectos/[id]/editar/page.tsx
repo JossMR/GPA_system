@@ -11,12 +11,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ProjectDocumentManager } from "@/components/project-document-manager"
-import { ArrowLeft, Save, Building, Calendar, DollarSign, MapPin, FileText, Trash2, Plus, Edit } from "lucide-react"
+import { ArrowLeft, Save, Building, Calendar, DollarSign, MapPin, FileText, Trash2, Plus, Edit, MessageSquare } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 import { GPAProject } from "@/models/GPA_project"
+import { GPAObservation } from "@/models/GPA_observation"
 import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-select"
 import { GPAClient } from '@/models/GPA_client'
 import { ClientSelector } from "@/components/client-selector"
@@ -35,12 +36,16 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(false)
   const [fetchingData, setFetchingData] = useState(true)
   const [project, setProject] = useState<GPAProject | null>(null)
+  const [observations, setObservations] = useState<GPAObservation[]>([])
   const [pagos, setPagos] = useState<any[]>([])
   const [costosExtra, setCostosExtra] = useState<any[]>([])
   const [isPagoDialogOpen, setIsPagoDialogOpen] = useState(false)
   const [isCostoDialogOpen, setIsCostoDialogOpen] = useState(false)
   const [selectedPago, setSelectedPago] = useState<any>(null)
   const [selectedCosto, setSelectedCosto] = useState<any>(null)
+  const [isObservacionDialogOpen, setIsObservacionDialogOpen] = useState(false)
+  const [nuevaObservacion, setNuevaObservacion] = useState("")
+  const [savingObservation, setSavingObservation] = useState(false)
 
   // Form states
   const [province, setProvince] = useState("")
@@ -88,6 +93,9 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         }
         setPagos([])
         setCostosExtra([]) // Cargar si tienes endpoint
+        
+        // Fetch observations
+        await fetchObservations()
       } catch (error) {
         router.push("/proyectos")
       } finally {
@@ -96,6 +104,66 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     }
     fetchProject()
   }, [id, router])
+
+  // Fetch observations
+  const fetchObservations = async () => {
+    try {
+      const response = await fetch(`/api/observations?project_id=${id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setObservations(data)
+      }
+    } catch (err) {
+      console.error("Error fetching observations:", err)
+    }
+  }
+
+  // Save observation
+  const handleSaveObservation = async () => {
+    if (!nuevaObservacion.trim()) {
+      toast({
+        title: "Error",
+        description: "La observación no puede estar vacía",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setSavingObservation(true)
+    try {
+      const response = await fetch("/api/observations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          OST_project_id: Number(id),
+          OST_content: nuevaObservacion.trim(),
+          OST_date: new Date().toISOString()
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error("Error al guardar la observación")
+      }
+
+      toast({
+        title: "Observación Guardada",
+        description: "La observación fue registrada correctamente",
+        variant: "success"
+      })
+
+      setNuevaObservacion("")
+      setIsObservacionDialogOpen(false)
+      await fetchObservations()
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "No se pudo guardar la observación",
+        variant: "destructive"
+      })
+    } finally {
+      setSavingObservation(false)
+    }
+  }
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -324,10 +392,14 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     <MainLayout>
       <div className="container py-8 space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => router.back()} className="hover:bg-[#c9e077]/20">
+            <Button
+            variant="ghost"
+            onClick={() => router.push("/proyectos")}
+            className="hover:bg-[#c9e077]/20"
+            >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
-          </Button>
+            </Button>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-[#2e4600] to-[#486b00] bg-clip-text text-transparent">
               Editar Proyecto: {project.PRJ_case_number}
@@ -894,6 +966,106 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             </Card>
           </div>
         </form>
+
+        {/* Observaciones Section */}
+        <Card className="border-[#a2c523]/20 mt-6">
+          <CardHeader className="gradient-light text-white rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center">
+                <MessageSquare className="mr-2 h-5 w-5" />
+                Observaciones ({observations.length})
+              </CardTitle>
+              <Button 
+                onClick={() => setIsObservacionDialogOpen(true)}
+                size="sm"
+                className="bg-white text-[#486b00] hover:bg-gray-100"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Nueva Observación
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            {observations.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageSquare className="mx-auto h-12 w-12 text-[#a2c523]/30 mb-2" />
+                <p>No hay observaciones registradas para este proyecto</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {observations.map((obs) => (
+                  <Card key={obs.OST_id} className="border-[#c9e077]/30">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                            {obs.OST_content}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center mt-2 text-xs text-muted-foreground">
+                        <Calendar className="mr-1 h-3 w-3" />
+                        {new Date(obs.OST_date).toLocaleDateString('es-ES', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Dialog para Nueva Observación */}
+        <Dialog open={isObservacionDialogOpen} onOpenChange={setIsObservacionDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="text-[#2e4600]">Nueva Observación</DialogTitle>
+              <DialogDescription>
+                Agrega una observación para este proyecto
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="observacion">Observación</Label>
+                <Textarea
+                  id="observacion"
+                  placeholder="Escribe la observación aquí..."
+                  value={nuevaObservacion}
+                  onChange={(e) => setNuevaObservacion(e.target.value)}
+                  className="min-h-[150px] border-[#a2c523]/30 focus:border-[#486b00]"
+                  disabled={savingObservation}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsObservacionDialogOpen(false)
+                  setNuevaObservacion("")
+                }}
+                className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
+                disabled={savingObservation}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="gradient-primary text-white hover:opacity-90"
+                onClick={handleSaveObservation}
+                disabled={savingObservation}
+              >
+                {savingObservation ? "Guardando..." : "Guardar Observación"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* ClientSelector modal */}
         <ClientSelector
           open={clientDialogOpen}

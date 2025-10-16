@@ -180,6 +180,11 @@ export async function POST(request: NextRequest) {
     ]) as any
 
     const projectId = result.insertId
+    // Fetch the newly created project object
+    const [project] = await executeQuery(
+      'SELECT * FROM GPA_Projects WHERE PRJ_id = ?',
+      [projectId]
+    ) as GPAProject[];
 
     // Assign categories if provided
     if (Array.isArray(categories) && categories.length > 0) {
@@ -195,7 +200,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: 'Project created successfully',
-      projectId
+      projectId,
+      project
     }, { status: 201 })
 
   } catch (error) {

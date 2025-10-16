@@ -89,7 +89,12 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
         <div className="container py-8">
           <div className="text-center">
             <p>Cliente no encontrado</p>
-            <Button onClick={() => router.back()} className="mt-4">
+            <Button
+              variant="ghost"
+              onClick={() => router.push("/clientes")}
+              className="hover:bg-[#c9e077]/20"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
               Volver
             </Button>
           </div>
@@ -100,10 +105,10 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
 
   // Datos calculados para proyectos con información real
   const totalProyectos = projects?.length || 0
-  const proyectosActivos = projects?.filter(p => 
+  const proyectosActivos = projects?.filter(p =>
     ['Under Construction', 'Disbursement', 'APC and Permits'].includes(p.PRJ_state)
   ).length || 0
-  const proyectosCompletados = projects?.filter(p => 
+  const proyectosCompletados = projects?.filter(p =>
     ['Completed', 'Logbook Closed'].includes(p.PRJ_state)
   ).length || 0
   const valorTotal = projects?.reduce((sum, p) => sum + (p.PRJ_budget || 0), 0) || 0
@@ -114,7 +119,11 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
       <div className="container py-8 space-y-6">
         {/* Header */}
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => router.back()} className="hover:bg-[#c9e077]/20">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/clientes")}
+            className="hover:bg-[#c9e077]/20"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver a Clientes
           </Button>
