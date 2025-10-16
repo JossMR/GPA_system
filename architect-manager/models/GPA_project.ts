@@ -38,6 +38,7 @@ export interface GPAProject {
   PRJ_district?: string
   PRJ_neighborhood?: string
   PRJ_start_construction_date?: string | Date
+  PRJ_remaining_amount: number
 
   categories?: GPAcategory[]
   type?: GPAtype

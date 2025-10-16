@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
 import { GPAPayment } from '@/models/GPA_payment'
+import { GPAProject } from '@/models/GPA_project'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('project_id')
-    
+
     let query = `
       SELECT 
         p.*,
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     `
 
     const params: any[] = []
-    
+
     if (projectId) {
       const projectIdNum = parseInt(projectId)
       if (!isNaN(projectIdNum)) {
@@ -27,11 +28,11 @@ export async function GET(request: NextRequest) {
         params.push(projectIdNum)
       }
     }
-    
+
     query += ' ORDER BY PAY_payment_date ASC'
-    
+
     const payments = await executeQuery(query, params) as GPAPayment[]
-    
+
     return NextResponse.json(payments, { status: 200 })
 
   } catch (error) {
@@ -46,49 +47,60 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as Partial<GPAPayment>
-    
-    if (!body.PAY_amount_due || body.PAY_amount_due <= 0) {
-      return NextResponse.json({ error: 'Amount due is required and must be positive' }, { status: 400 })
-    }
-    
+
+    //if (!body.PAY_amount_due || body.PAY_amount_due < 0 && body.PAY_amount_due !== 0) {
+    //console.log("Invalid Amount Due:", body.PAY_amount_due);
+    //return NextResponse.json({ error: 'Amount due is required and must not be negative' }, { status: 400 })
+    //}
+
     if (!body.PAY_payment_date) {
       return NextResponse.json({ error: 'Payment date is required' }, { status: 400 })
     }
-    
+
     if (!body.PAY_project_id) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 })
     }
-    
+
     const paymentData: Omit<GPAPayment, 'PAY_id'> = {
-      PAY_amount_due: body.PAY_amount_due,
       PAY_amount_paid: body.PAY_amount_paid ?? 0,
-      PAY_due_date: body.PAY_due_date || undefined,
       PAY_payment_date: body.PAY_payment_date,
       PAY_description: body.PAY_description || undefined,
       PAY_project_id: body.PAY_project_id
     }
-    
+
     const insertQuery = `
       INSERT INTO GPA_Payments (
-        PAY_amount_due, 
         PAY_amount_paid, 
-        PAY_due_date, 
         PAY_payment_date, 
         PAY_description, 
         PAY_project_id
-      ) VALUES (?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?)
     `
-    
+
     const result = await executeQuery(insertQuery, [
-      paymentData.PAY_amount_due,
       paymentData.PAY_amount_paid,
-      paymentData.PAY_due_date?.toString() || null,
       paymentData.PAY_payment_date,
       paymentData.PAY_description?.toString() || null,
       paymentData.PAY_project_id
     ]) as any
-    
-    return NextResponse.json({ 
+
+    const project = await fetch(`${new URL(request.url).origin}/api/projects/${paymentData.PAY_project_id}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    let responseProject = project.ok ? await project.json() : null;
+    let projectData = responseProject?.project as GPAProject | null;
+    let response;
+    if (projectData) {
+      console.log("projectData after payment:", projectData);
+      const putUrl = `${new URL(request.url).origin}/api/projects/${projectData.PRJ_id}`;
+      response = await fetch(putUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(projectData),
+      });
+    }
+
+    return NextResponse.json({
       message: 'Payment created successfully',
       paymentId: result.insertId
     }, { status: 201 })

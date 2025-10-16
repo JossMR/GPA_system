@@ -1,6 +1,6 @@
 ﻿/*
 Created: 27/5/2025
-Modified: 1/10/2025
+Modified: 15/10/2025
 Model: RE MySQL 8.0
 Database: MySQL 8.0
 */
@@ -75,9 +75,7 @@ CREATE TABLE GPA_ClientDelinquency
 CREATE TABLE GPA_Payments
 (
   PAY_id Int AUTO_INCREMENT,
-  PAY_amount_due Decimal(12,2) NOT NULL,
   PAY_amount_paid Decimal(12,2) NOT NULL DEFAULT 0,
-  PAY_due_date Date,
   PAY_payment_date Date,
   PAY_description Text,
   PAY_project_id Int,
@@ -128,6 +126,7 @@ CREATE TABLE GPA_Projects
   PRJ_district Text,
   PRJ_neighborhood Text,
   PRJ_start_construction_date Date,
+  PRJ_remaining_amount Decimal(12,2) NOT NULL,
   PRIMARY KEY (PRJ_id)
 )
 ;

@@ -151,6 +151,7 @@ export default function NewProjectPage() {
       PRJ_client_id: clientSelectedObj.CLI_id,
       PRJ_logbook_close_date: formData.get("logbookCloseDate") ? formData.get("logbookCloseDate") as string : undefined,
       PRJ_logbook_number: formData.get("logbookNumber") as string,
+      PRJ_remaining_amount: formData.get("budget") ? Number(formData.get("budget")) : 0,
       categories: assignedCategories.map(cat => ({
         CAT_id: cat.id,
         CAT_name: cat.name,

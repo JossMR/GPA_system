@@ -3,6 +3,7 @@ import { executeQuery } from '@/lib/database'
 import { GPAProject } from '@/models/GPA_project'
 import { GPAClient } from '@/models/GPA_client'
 import { GPAcategory } from '@/models/GPA_category'
+import { GPAPayment } from '@/models/GPA_payment'
 
 // Helper function to make API calls to main endpoints
 async function fetchProjectRelatedData(projectId: number, request: NextRequest) {
@@ -134,7 +135,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const {
+    let {
       PRJ_client_id,
       PRJ_case_number,
       PRJ_area_m2,
@@ -153,10 +154,36 @@ export async function PUT(
       PRJ_district,
       PRJ_neighborhood,
       PRJ_start_construction_date,
+      PRJ_remaining_amount,
       categories
     } = body
+    const projectPayments = await fetch(`${new URL(request.url).origin}/api/payments?project_id=${projectId}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const paymentsData = projectPayments.ok ? await projectPayments.json() as GPAPayment[] : [];
+    const totalPaid = paymentsData.reduce((sum, payment) => sum + (Number(payment.PAY_amount_paid) || 0), 0);
+    const projectAdditions = await fetch(`${new URL(request.url).origin}/api/additions?project_id=${projectId}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const additionsData = projectAdditions.ok ? await projectAdditions.json() as any[] : [];
+    const totalAdditions = additionsData.reduce((sum, addition) => sum + (Number(addition.ADD_amount) || 0), 0);
 
+    // Normalizar fechas: si contienen 'T', dejar solo la parte antes de la 'T'
+    const normalizeDate = (date: string | null | undefined) => {
+      if (typeof date === 'string' && date.includes('T')) {
+      return date.split('T')[0];
+      }
+      return date;
+    };
+
+    PRJ_entry_date = normalizeDate(PRJ_entry_date);
+    PRJ_completion_date = normalizeDate(PRJ_completion_date);
+    PRJ_logbook_close_date = normalizeDate(PRJ_logbook_close_date);
+    PRJ_start_construction_date = normalizeDate(PRJ_start_construction_date);
+    
+    PRJ_remaining_amount = (PRJ_budget || 0) + totalAdditions - totalPaid;
     const updateQuery = `
+
       UPDATE GPA_Projects SET
         PRJ_client_id = ?,
         PRJ_case_number = ?,
@@ -175,7 +202,8 @@ export async function PUT(
         PRJ_canton = ?,
         PRJ_district = ?,
         PRJ_neighborhood = ?,
-        PRJ_start_construction_date = ?
+        PRJ_start_construction_date = ?,
+        PRJ_remaining_amount = ?
       WHERE PRJ_id = ?
     `
 
@@ -198,6 +226,7 @@ export async function PUT(
       PRJ_district?.toString() || null,
       PRJ_neighborhood?.toString() || null,
       PRJ_start_construction_date?.toString() || null,
+      PRJ_remaining_amount?.toString() || null,
       projectId
     ])
     const projectCategories = await fetch(`${new URL(request.url).origin}/api/categories?project_id=${projectId}`, {
