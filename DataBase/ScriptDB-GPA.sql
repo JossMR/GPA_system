@@ -79,6 +79,8 @@ CREATE TABLE GPA_Payments
   PAY_payment_date Date,
   PAY_description Text,
   PAY_project_id Int,
+  PAY_method Enum('Cash', 'Card', 'SINPE', 'Credit', 'Debit', 'Transfer', 'Deposit', 'Check') NOT NULL,
+  PAY_bill_number Text,
   PRIMARY KEY (PAY_id)
 )
 ;
@@ -127,6 +129,8 @@ CREATE TABLE GPA_Projects
   PRJ_neighborhood Text,
   PRJ_start_construction_date Date,
   PRJ_remaining_amount Decimal(12,2) NOT NULL,
+  PRJ_last_modification_user_id Int,
+  PRJ_last_modification_date Date,
   PRIMARY KEY (PRJ_id)
 )
 ;
@@ -242,5 +246,8 @@ ALTER TABLE GPA_ProjectsXGPA_Categories ADD CONSTRAINT fk_GPA_Categories_GPA_Pro
 ;
 
 ALTER TABLE GPA_ProjectsXGPA_Categories ADD CONSTRAINT fk_GPA_Categories_GPA_Projects_2 FOREIGN KEY (CAT_id) REFERENCES GPA_Categories (CAT_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_Projects ADD CONSTRAINT fk_GPA_Users_GPA_Projects_0 FOREIGN KEY (PRJ_last_modification_user_id) REFERENCES GPA_Users (USR_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ;
 
