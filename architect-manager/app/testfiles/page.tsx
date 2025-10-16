@@ -42,7 +42,6 @@ export default function TestFiles() {
                 setIsLoading(true)
                 const response = await fetch("/api/projects")
                 const data = await response.json()
-                console.log("Projects data:", data)
                 
                 // El endpoint devuelve directamente el array de proyectos
                 const projectsArray: GPAProject[] = Array.isArray(data.projects) ? data.projects : []

@@ -48,11 +48,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as Partial<GPAPayment>
 
-    //if (!body.PAY_amount_due || body.PAY_amount_due < 0 && body.PAY_amount_due !== 0) {
-    //console.log("Invalid Amount Due:", body.PAY_amount_due);
-    //return NextResponse.json({ error: 'Amount due is required and must not be negative' }, { status: 400 })
-    //}
-
     if (!body.PAY_payment_date) {
       return NextResponse.json({ error: 'Payment date is required' }, { status: 400 })
     }
@@ -91,7 +86,6 @@ export async function POST(request: NextRequest) {
     let projectData = responseProject?.project as GPAProject | null;
     let response;
     if (projectData) {
-      console.log("projectData after payment:", projectData);
       const putUrl = `${new URL(request.url).origin}/api/projects/${projectData.PRJ_id}`;
       response = await fetch(putUrl, {
         method: "PUT",

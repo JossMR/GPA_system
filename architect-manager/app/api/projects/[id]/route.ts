@@ -4,8 +4,8 @@ import { GPAProject } from '@/models/GPA_project'
 import { GPAClient } from '@/models/GPA_client'
 import { GPAcategory } from '@/models/GPA_category'
 import { GPAPayment } from '@/models/GPA_payment'
+import { GPAAddition } from '@/models/GPA_addition'
 
-// Helper function to make API calls to main endpoints
 async function fetchProjectRelatedData(projectId: number, request: NextRequest) {
   try {
     const baseUrl = new URL(request.url).origin
@@ -162,13 +162,13 @@ export async function PUT(
     });
     const paymentsData = projectPayments.ok ? await projectPayments.json() as GPAPayment[] : [];
     const totalPaid = paymentsData.reduce((sum, payment) => sum + (Number(payment.PAY_amount_paid) || 0), 0);
+
     const projectAdditions = await fetch(`${new URL(request.url).origin}/api/additions?project_id=${projectId}`, {
       headers: { 'Content-Type': 'application/json' }
     });
-    const additionsData = projectAdditions.ok ? await projectAdditions.json() as any[] : [];
-    const totalAdditions = additionsData.reduce((sum, addition) => sum + (Number(addition.ADD_amount) || 0), 0);
+    const additionsData = projectAdditions.ok ? await projectAdditions.json() as GPAAddition[] : [];
+    const totalAdditions = additionsData.reduce((sum, addition) => sum + (Number(addition.ATN_cost) || 0), 0);
 
-    // Normalizar fechas: si contienen 'T', dejar solo la parte antes de la 'T'
     const normalizeDate = (date: string | null | undefined) => {
       if (typeof date === 'string' && date.includes('T')) {
       return date.split('T')[0];
@@ -234,26 +234,19 @@ export async function PUT(
     });
     const categoriesData = projectCategories.ok ? await projectCategories.json() as GPAcategory[] : [];
 
-    // Extraer los IDs de las categorías existentes y nuevas
     const existingCategoryIds: number[] = categoriesData
       ? categoriesData.map((cat: GPAcategory) => cat.CAT_id).filter((id): id is number => id !== undefined)
       : [];
     const newCategoryIds: number[] = categories ? categories.map((cat: GPAcategory) => cat.CAT_id) : [];
-    console.log('Categories:', categoriesData);
-    console.log('cliente categories:', categories);
-    // Categorías que están en 'categories' pero no en 'categoriesData' (nuevas a agregar)
+
     const categoriesToAdd = newCategoryIds
       ? newCategoryIds.filter(cat => !existingCategoryIds.includes(cat))
       : [];
 
-    // Categorías que están en 'categoriesData' pero no en 'categories' (a eliminar)
     const categoriesToRemove = existingCategoryIds
       ? existingCategoryIds.filter(cat => !newCategoryIds.includes(cat))
       : [];
-    console.log('Categories to add:', categoriesToAdd);
-    console.log('Categories to remove:', categoriesToRemove);
 
-    // Agregar nuevas relaciones
     for (const catId of categoriesToAdd) {
       await executeQuery(
         `INSERT INTO GPA_ProjectsXGPA_Categories (PRJ_id, CAT_id) VALUES (?, ?)`,
@@ -261,7 +254,6 @@ export async function PUT(
       );
     }
 
-    // Eliminar relaciones
     for (const catId of categoriesToRemove) {
       await executeQuery(
         `DELETE FROM GPA_ProjectsXGPA_Categories WHERE PRJ_id = ? AND CAT_id = ?`,

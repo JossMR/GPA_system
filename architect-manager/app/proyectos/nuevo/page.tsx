@@ -178,7 +178,6 @@ export default function NewProjectPage() {
       })
       const data = await response.json()
       const registeredProject: GPAProject = data.project;
-      console.log("Registered project", registeredProject)
       router.push("/proyectos")
     } catch (error) {
       console.error(error instanceof Error ? error.message : "There was a problem creating the project.")

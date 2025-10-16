@@ -32,7 +32,6 @@ export async function POST(req: NextRequest) {
             );
         }
     // Insert the new user into the database
-    console.log("Inserting user:", newUser);
     const results = await executeTransaction([
       {
         query: 'INSERT INTO gpa_users (USR_email, USR_active, USR_role_id, USR_name, USR_f_lastname, USR_s_lastname, USR_creation_date) VALUES (?, ?, ?, ?, ?, ?, ?)',

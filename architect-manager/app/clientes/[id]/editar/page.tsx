@@ -57,7 +57,6 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
 
         const data = await response.json()
         const clientData: GPAClient = data.client
-        console.log("clientData: ",clientData)
         setCliente(clientData)
         setIdentificationType(clientData.CLI_identificationtype)
         setPhone(clientData.CLI_phone || "")
@@ -131,7 +130,6 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
 
       const data = await response.json()
       const updatedClientData: GPAClient = data.client
-      console.log("Updated client", updatedClientData)
       router.push(`/clientes/${id}`)
     } catch (error) {
       console.error(error instanceof Error ? error.message : "There was a problem updating the client.")

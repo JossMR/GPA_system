@@ -80,12 +80,18 @@ export async function PUT(
     if (updateFields.length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }
+    const ResponseOldPayment = await fetch(`${new URL(request.url).origin}/api/payments/${paymentId}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    let BodyResponseOldPayment = ResponseOldPayment.ok ? await ResponseOldPayment.json() : null;
+    let OldPayment = BodyResponseOldPayment as GPAPayment | null;
 
     const updateQuery = `UPDATE GPA_Payments SET ${updateFields.join(', ')} WHERE PAY_id = ?`
     updateValues.push(paymentId)
 
     await executeQuery(updateQuery, updateValues)
 
+    //Update the new project of the comment to update the data inside
     const project = await fetch(`${new URL(request.url).origin}/api/projects/${PAY_project_id}`, {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -98,6 +104,21 @@ export async function PUT(
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(projectData),
+      });
+    }
+    //Update the old project of the comment to update the data inside
+    const OldProject = await fetch(`${new URL(request.url).origin}/api/projects/${OldPayment?.PAY_project_id}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    let responseOldProject = OldProject.ok ? await OldProject.json() : null;
+    let OldProjectData = responseOldProject?.project as GPAProject | null;
+    let OldProjectResponse;
+    if (OldProjectData) {
+      const putUrl = `${new URL(request.url).origin}/api/projects/${OldPayment?.PAY_project_id}`;
+      OldProjectResponse = await fetch(putUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(OldProjectData),
       });
     }
 

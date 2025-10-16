@@ -29,7 +29,6 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
   const handleLogin = async (credentialResponse: any) => {
     setLoading(true)
     setError(null)
-    console.log(credentialResponse)
     try {
       // Send the Google credential to our backend for verification
       // Include the CSRF token in the request body
@@ -44,7 +43,6 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
         }),
       })
       const data = await response.json()
-      console.log(data)
       if (!response.ok) {
         // Handle different error scenarios
         if (response.status === 401 && data.needsRegistration) {
@@ -73,7 +71,6 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
     console.error("API error:", error);
     }
 
-      console.log(data.message)
       // Authentication successful, update user context
       const user: User = {
         id: data.user.id,

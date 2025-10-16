@@ -211,7 +211,6 @@ export default function PagosPage() {
         PAY_project_id: projectId,
         PAY_description: formData.PAY_description || null,
       }
-      console.log("Payment Data to Save:", paymentData)
       let response
       if (selectedPayment?.PAY_id) {
         // Update existing payment
