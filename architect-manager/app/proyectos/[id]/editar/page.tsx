@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 import { GPAProject } from "@/models/GPA_project"
 import { GPAObservation } from "@/models/GPA_observation"
+import { GPAPayment } from "@/models/GPA_payment"
+import { GPAAddition } from "@/models/GPA_addition"
 import { CostaRicaLocationSelect } from "@/components/ui/costarica-location-select"
 import { GPAClient } from '@/models/GPA_client'
 import { ClientSelector } from "@/components/client-selector"
@@ -37,12 +39,12 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [fetchingData, setFetchingData] = useState(true)
   const [project, setProject] = useState<GPAProject | null>(null)
   const [observations, setObservations] = useState<GPAObservation[]>([])
-  const [pagos, setPagos] = useState<any[]>([])
-  const [costosExtra, setCostosExtra] = useState<any[]>([])
+  const [pagos, setPagos] = useState<GPAPayment[]>([])
+  const [costosExtra, setCostosExtra] = useState<GPAAddition[]>([])
   const [isPagoDialogOpen, setIsPagoDialogOpen] = useState(false)
   const [isCostoDialogOpen, setIsCostoDialogOpen] = useState(false)
-  const [selectedPago, setSelectedPago] = useState<any>(null)
-  const [selectedCosto, setSelectedCosto] = useState<any>(null)
+  const [selectedPago, setSelectedPago] = useState<GPAPayment | null>(null)
+  const [selectedCosto, setSelectedCosto] = useState<GPAAddition | null>(null)
   const [isObservacionDialogOpen, setIsObservacionDialogOpen] = useState(false)
   const [nuevaObservacion, setNuevaObservacion] = useState("")
   const [savingObservation, setSavingObservation] = useState(false)
@@ -91,11 +93,12 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           const clientData = await responseClient.json() as { client: GPAClient | null }
           setClientSelectedObj(clientData.client ?? null)
         }
-        setPagos([])
-        setCostosExtra([]) // Cargar si tienes endpoint
-        
-        // Fetch observations
-        await fetchObservations()
+        // Fetch payments, additions, and observations
+        await Promise.all([
+          fetchPayments(),
+          fetchAdditions(),
+          fetchObservations()
+        ])
       } catch (error) {
         router.push("/proyectos")
       } finally {
@@ -104,6 +107,32 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     }
     fetchProject()
   }, [id, router])
+
+  // Fetch payments
+  const fetchPayments = async () => {
+    try {
+      const response = await fetch(`/api/payments?project_id=${id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setPagos(data)
+      }
+    } catch (err) {
+      console.error("Error fetching payments:", err)
+    }
+  }
+
+  // Fetch additions
+  const fetchAdditions = async () => {
+    try {
+      const response = await fetch(`/api/additions?project_id=${id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setCostosExtra(data)
+      }
+    } catch (err) {
+      console.error("Error fetching additions:", err)
+    }
+  }
 
   // Fetch observations
   const fetchObservations = async () => {
@@ -248,52 +277,168 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     setLoading(false)
   }
 
-  // Lógica de pagos y costos extra (igual que antes)
+  // Lógica de pagos
   const handleNewPago = () => {
     setSelectedPago(null)
     setIsPagoDialogOpen(true)
   }
-  const handleEditPago = (pago: any) => {
+
+  const handleEditPago = (pago: GPAPayment) => {
     setSelectedPago(pago)
     setIsPagoDialogOpen(true)
   }
-  const handleDeletePago = (pagoId: number) => {
-    setPagos((prev) => prev.filter((p) => p.id !== pagoId))
-  }
-  const handleSavePago = (pagoData: any) => {
-    if (selectedPago) {
-      setPagos((prev) => prev.map((p) => (p.id === selectedPago.id ? { ...p, ...pagoData } : p)))
-    } else {
-      const newPago = {
-        id: pagos.length ? Math.max(...pagos.map((p) => p.id)) + 1 : 1,
-        ...pagoData,
+
+  const handleDeletePago = async (pagoId: number) => {
+    try {
+      const response = await fetch(`/api/payments/${pagoId}`, {
+        method: "DELETE"
+      })
+
+      if (!response.ok) {
+        throw new Error("Error al eliminar el pago")
       }
-      setPagos((prev) => [...prev, newPago])
+
+      toast({
+        title: "Pago Eliminado",
+        description: "El pago fue eliminado correctamente",
+        variant: "success"
+      })
+
+      await fetchPayments()
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "No se pudo eliminar el pago",
+        variant: "destructive"
+      })
     }
-    setIsPagoDialogOpen(false)
   }
+
+  const handleSavePago = async (pagoData: Partial<GPAPayment>) => {
+    try {
+      const paymentToSave: Partial<GPAPayment> = {
+        ...pagoData,
+        PAY_project_id: Number(id)
+      }
+
+      let response
+      if (selectedPago?.PAY_id) {
+        // Update existing payment
+        response = await fetch(`/api/payments/${selectedPago.PAY_id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(paymentToSave)
+        })
+      } else {
+        // Create new payment
+        response = await fetch("/api/payments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(paymentToSave)
+        })
+      }
+
+      if (!response.ok) {
+        throw new Error("Error al guardar el pago")
+      }
+
+      toast({
+        title: selectedPago ? "Pago Actualizado" : "Pago Creado",
+        description: `El pago fue ${selectedPago ? "actualizado" : "creado"} correctamente`,
+        variant: "success"
+      })
+
+      setIsPagoDialogOpen(false)
+      await fetchPayments()
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "No se pudo guardar el pago",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Lógica de costos extra (additions)
   const handleNewCosto = () => {
     setSelectedCosto(null)
     setIsCostoDialogOpen(true)
   }
-  const handleEditCosto = (costo: any) => {
+
+  const handleEditCosto = (costo: GPAAddition) => {
     setSelectedCosto(costo)
     setIsCostoDialogOpen(true)
   }
-  const handleDeleteCosto = (costoId: number) => {
-    setCostosExtra((prev) => prev.filter((c) => c.id !== costoId))
-  }
-  const handleSaveCosto = (costoData: any) => {
-    if (selectedCosto) {
-      setCostosExtra((prev) => prev.map((c) => (c.id === selectedCosto.id ? { ...c, ...costoData } : c)))
-    } else {
-      const newCosto = {
-        id: costosExtra.length ? Math.max(...costosExtra.map((c) => c.id)) + 1 : 1,
-        ...costoData,
+
+  const handleDeleteCosto = async (costoId: number) => {
+    try {
+      const response = await fetch(`/api/additions/${costoId}`, {
+        method: "DELETE"
+      })
+
+      if (!response.ok) {
+        throw new Error("Error al eliminar la adición")
       }
-      setCostosExtra((prev) => [...prev, newCosto])
+
+      toast({
+        title: "Adición Eliminada",
+        description: "La adición fue eliminada correctamente",
+        variant: "success"
+      })
+
+      await fetchAdditions()
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "No se pudo eliminar la adición",
+        variant: "destructive"
+      })
     }
-    setIsCostoDialogOpen(false)
+  }
+
+  const handleSaveCosto = async (costoData: Partial<GPAAddition>) => {
+    try {
+      const additionToSave: Partial<GPAAddition> = {
+        ...costoData,
+        ATN_project_id: Number(id)
+      }
+
+      let response
+      if (selectedCosto?.ATN_id) {
+        // Update existing addition
+        response = await fetch(`/api/additions/${selectedCosto.ATN_id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(additionToSave)
+        })
+      } else {
+        // Create new addition
+        response = await fetch("/api/additions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(additionToSave)
+        })
+      }
+
+      if (!response.ok) {
+        throw new Error("Error al guardar la adición")
+      }
+
+      toast({
+        title: selectedCosto ? "Adición Actualizada" : "Adición Creada",
+        description: `La adición fue ${selectedCosto ? "actualizada" : "creada"} correctamente`,
+        variant: "success"
+      })
+
+      setIsCostoDialogOpen(false)
+      await fetchAdditions()
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "No se pudo guardar la adición",
+        variant: "destructive"
+      })
+    }
   }
 
   // Categorías disponibles para asignar
@@ -392,14 +537,14 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     <MainLayout>
       <div className="container py-8 space-y-6">
         <div className="flex items-center space-x-4">
-            <Button
+          <Button
             variant="ghost"
             onClick={() => router.push("/proyectos")}
             className="hover:bg-[#c9e077]/20"
-            >
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
-            </Button>
+          </Button>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-[#2e4600] to-[#486b00] bg-clip-text text-transparent">
               Editar Proyecto: {project.PRJ_case_number}
@@ -741,7 +886,11 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleNewPago}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleNewPago()
+                    }}
                     className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
                   >
                     <Plus className="mr-1 h-4 w-4" />
@@ -763,30 +912,48 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   </TableHeader>
                   <TableBody>
                     {pagos.map((pago) => (
-                      <TableRow key={pago.id}>
-                        <TableCell>{pago.fecha}</TableCell>
-                        <TableCell className="font-semibold text-[#2e4600]">₡{pago.monto.toLocaleString()}</TableCell>
+                      <TableRow key={pago.PAY_id}>
+                        <TableCell>
+                          {pago.PAY_payment_date ? new Date(pago.PAY_payment_date).toLocaleDateString('es-ES') : 'N/A'}
+                        </TableCell>
+                        <TableCell className="font-semibold text-[#2e4600]">
+                          ₡{Number(pago.PAY_amount_paid || 0).toLocaleString()}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="border-[#a2c523] text-[#486b00]">
-                            {pago.metodo}
+                            Transferencia
                           </Badge>
                         </TableCell>
-                        <TableCell>{pago.detalle}</TableCell>
-                        <TableCell className="font-mono text-sm">{pago.numeroCaso}</TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {pago.PAY_description || 'Sin descripción'}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {pago.projectCaseNumber || project?.PRJ_case_number || 'N/A'}
+                        </TableCell>
                         <TableCell>
                           <div className="flex space-x-1">
                             <Button
+                              type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleEditPago(pago)}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleEditPago(pago)
+                              }}
                               className="hover:bg-[#c9e077]/20"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
+                              type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDeletePago(pago.id)}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleDeletePago(pago.PAY_id!)
+                              }}
                               className="text-red-500 hover:bg-red-50"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -814,9 +981,14 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     Costos Extra
                   </CardTitle>
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleNewCosto}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleNewCosto()
+                    }}
                     className="border-[#7d4427] text-[#7d4427] hover:bg-[#7d4427]/10"
                   >
                     <Plus className="mr-1 h-4 w-4" />
@@ -826,32 +998,47 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
               </CardHeader>
               <CardContent className="p-4 space-y-3">
                 {costosExtra.map((costo) => (
-                  <div key={costo.id} className="border rounded-lg p-3 border-[#7d4427]/20">
+                  <div key={costo.ATN_id} className="border rounded-lg p-3 border-[#7d4427]/20">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1">
-                        <span className="text-sm font-medium">{costo.descripcion}</span>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Badge className={`${costo.aprobado ? "bg-green-500" : "bg-yellow-500"} text-white text-xs`}>
-                            {costo.aprobado ? "Aprobado" : "Pendiente"}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">{costo.fecha}</span>
+                        <div className="font-medium text-[#7d4427]">{costo.ATN_name}</div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {costo.ATN_description || 'Sin descripción'}
+                        </div>
+                        <div className="flex items-center space-x-2 mt-2">
+                          <span className="text-xs text-muted-foreground flex items-center">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {costo.ATN_date ? new Date(costo.ATN_date).toLocaleDateString('es-ES') : 'N/A'}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className="font-semibold text-[#7d4427]">${costo.monto.toLocaleString()}</span>
+                        <span className="font-semibold text-[#7d4427]">
+                          ₡{Number(costo.ATN_cost || 0).toLocaleString()}
+                        </span>
                         <div className="flex space-x-1">
                           <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleEditCosto(costo)}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleEditCosto(costo)
+                            }}
                             className="hover:bg-[#7d4427]/10"
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
                           <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteCosto(costo.id)}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleDeleteCosto(costo.ATN_id!)
+                            }}
                             className="text-red-500 hover:bg-red-50"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -907,37 +1094,32 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 <div className="text-sm space-y-3">
                   <div className="flex justify-between">
                     <span>Presupuesto base:</span>
-                    <span className="font-medium">₡{(project.PRJ_budget ?? 0).toLocaleString()}</span>
+                    <span className="font-medium">₡{Number(project.PRJ_budget ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Costos extra:</span>
+                    <span>Costos extra ({costosExtra.length}):</span>
                     <span className="font-medium text-[#7d4427]">
-                      +₡{costosExtra.reduce((sum, c) => sum + c.monto, 0).toLocaleString()}
+                      +₡{costosExtra.reduce((sum, c) => sum + Number(c.ATN_cost || 0), 0).toLocaleString()}
                     </span>
                   </div>
                   <hr className="border-[#a2c523]/30" />
                   <div className="flex justify-between">
                     <span>Total presupuestado:</span>
                     <span className="font-bold text-[#486b00]">
-                      ₡{((project.PRJ_budget ?? 0) + costosExtra.reduce((sum, c) => sum + c.monto, 0)).toLocaleString()}
+                      ₡{(Number(project.PRJ_budget ?? 0) + costosExtra.reduce((sum, c) => sum + Number(c.ATN_cost || 0), 0)).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Total pagado:</span>
+                    <span>Total pagado ({pagos.length}):</span>
                     <span className="font-medium text-green-600">
-                      ₡{pagos.reduce((sum, p) => sum + p.monto, 0).toLocaleString()}
+                      ₡{pagos.reduce((sum, p) => sum + Number(p.PAY_amount_paid || 0), 0).toLocaleString()}
                     </span>
                   </div>
                   <hr className="border-[#a2c523]/30" />
                   <div className="flex justify-between">
                     <span>Saldo restante:</span>
                     <span className="font-bold text-[#7d4427]">
-                      ₡
-                      {(
-                        (project.PRJ_budget ?? 0) +
-                        costosExtra.reduce((sum, c) => sum + c.monto, 0) -
-                        pagos.reduce((sum, p) => sum + p.monto, 0)
-                      ).toLocaleString()}
+                      ₡{Number(project.PRJ_remaining_amount || 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -975,8 +1157,13 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 <MessageSquare className="mr-2 h-5 w-5" />
                 Observaciones ({observations.length})
               </CardTitle>
-              <Button 
-                onClick={() => setIsObservacionDialogOpen(true)}
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setIsObservacionDialogOpen(true)
+                }}
                 size="sm"
                 className="bg-white text-[#486b00] hover:bg-gray-100"
               >
@@ -1063,6 +1250,189 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 {savingObservation ? "Guardando..." : "Guardar Observación"}
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog para Pagos */}
+        <Dialog open={isPagoDialogOpen} onOpenChange={setIsPagoDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-[#2e4600]">
+                {selectedPago ? "Editar Pago" : "Nuevo Pago"}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedPago ? "Modifica la información del pago" : "Registra un nuevo pago para este proyecto"}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              const formData = new FormData(e.currentTarget)
+              handleSavePago({
+                PAY_payment_date: formData.get("payment_date") as string,
+                PAY_amount_paid: Number(formData.get("amount_paid")),
+                PAY_description: formData.get("description") as string || undefined,
+              })
+            }}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="payment_date">Fecha de Pago *</Label>
+                  <Input
+                    id="payment_date"
+                    name="payment_date"
+                    type="date"
+                    defaultValue={selectedPago?.PAY_payment_date ?
+                      new Date(selectedPago.PAY_payment_date).toISOString().split('T')[0] :
+                      new Date().toISOString().split('T')[0]
+                    }
+                    required
+                    className="border-[#a2c523]/30 focus:border-[#486b00]"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="amount_paid">Monto Pagado * (₡)</Label>
+                  <Input
+                    id="amount_paid"
+                    name="amount_paid"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    defaultValue={selectedPago?.PAY_amount_paid || ""}
+                    required
+                    placeholder="Ej: 25000"
+                    className="border-[#a2c523]/30 focus:border-[#486b00]"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Descripción</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    defaultValue={selectedPago?.PAY_description || ""}
+                    placeholder="Descripción del pago..."
+                    className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[100px]"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsPagoDialogOpen(false)}
+                  className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  className="gradient-primary text-white hover:opacity-90"
+                  onClick={async (e) => {
+                  e.preventDefault();
+                  const form = (e.target as HTMLButtonElement).form;
+                  if (!form) return;
+                  const formData = new FormData(form);
+                  await handleSavePago({
+                    PAY_payment_date: formData.get("payment_date") as string,
+                    PAY_amount_paid: Number(formData.get("amount_paid")),
+                    PAY_description: formData.get("description") as string || undefined,
+                  });
+                  }}
+                >
+                  {selectedPago ? "Actualizar" : "Guardar"} Pago
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog para Adiciones/Costos Extra */}
+        <Dialog open={isCostoDialogOpen} onOpenChange={setIsCostoDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-[#7d4427]">
+                {selectedCosto ? "Editar Costo Extra" : "Nuevo Costo Extra"}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedCosto ? "Modifica la información del costo extra" : "Registra un nuevo costo adicional para este proyecto"}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              const formData = new FormData(e.currentTarget)
+              handleSaveCosto({
+                ATN_name: formData.get("name") as string,
+                ATN_description: formData.get("description") as string || undefined,
+                ATN_cost: Number(formData.get("cost")),
+                ATN_date: formData.get("date") as string,
+              })
+            }}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Nombre *</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    defaultValue={selectedCosto?.ATN_name || ""}
+                    required
+                    placeholder="Ej: Permiso municipal"
+                    className="border-[#7d4427]/30 focus:border-[#7d4427]"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="cost">Costo * (₡)</Label>
+                  <Input
+                    id="cost"
+                    name="cost"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    defaultValue={selectedCosto?.ATN_cost || ""}
+                    required
+                    placeholder="Ej: 5000"
+                    className="border-[#7d4427]/30 focus:border-[#7d4427]"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="date">Fecha *</Label>
+                  <Input
+                    id="date"
+                    name="date"
+                    type="date"
+                    defaultValue={selectedCosto?.ATN_date ?
+                      new Date(selectedCosto.ATN_date).toISOString().split('T')[0] :
+                      new Date().toISOString().split('T')[0]
+                    }
+                    required
+                    className="border-[#7d4427]/30 focus:border-[#7d4427]"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Descripción</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    defaultValue={selectedCosto?.ATN_description || ""}
+                    placeholder="Descripción del costo extra..."
+                    className="border-[#7d4427]/30 focus:border-[#7d4427] min-h-[100px]"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsCostoDialogOpen(false)}
+                  className="border-[#7d4427] text-[#7d4427] hover:bg-[#7d4427]/10"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-[#7d4427] text-white hover:bg-[#7d4427]/90"
+                >
+                  {selectedCosto ? "Actualizar" : "Guardar"} Costo
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
 
