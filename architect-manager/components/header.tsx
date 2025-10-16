@@ -41,6 +41,7 @@ export function Header() {
     { name: "Promoción", href: "/promocion", icon: Settings },
     { name: "Reportes", href: "/reportes", icon: Settings },
     ...(isAdmin ? [{ name: "Usuarios", href: "/usuarios", icon: Shield }] : []),
+    { name: "TestFiles", href: "/testfiles", icon: Settings }
   ]
 
   return (

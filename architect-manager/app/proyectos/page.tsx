@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,48 +9,26 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Search, Edit, Eye, Calendar, DollarSign } from "lucide-react"
+import { Plus, Search, Edit, Eye, Calendar, DollarSign, PawPrint } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import Link from "next/link"
+import { GPAProject } from "@/models/GPA_project"
 
-const mockProyectos = [
-  {
-    id: 1,
-    nombre: "Villa Moderna",
-    cliente: "María González",
-    estado: "en_progreso",
-    progreso: 65,
-    presupuesto: 150000,
-    pagado: 97500,
-    fechaInicio: "2024-01-15",
-    fechaEntrega: "2024-06-15",
-    categoria: "residencial",
-  },
-  {
-    id: 2,
-    nombre: "Oficina Corporativa",
-    cliente: "Carlos Rodríguez",
-    estado: "planificacion",
-    progreso: 25,
-    presupuesto: 300000,
-    pagado: 75000,
-    fechaInicio: "2024-03-01",
-    fechaEntrega: "2024-12-01",
-    categoria: "comercial",
-  },
-  {
-    id: 3,
-    nombre: "Casa Familiar",
-    cliente: "Ana Martínez",
-    estado: "completado",
-    progreso: 100,
-    presupuesto: 120000,
-    pagado: 120000,
-    fechaInicio: "2023-08-01",
-    fechaEntrega: "2024-02-01",
-    categoria: "residencial",
-  },
-]
+const stateLabels = {
+  "Document Collection": "Recepción de Documentos",
+  "Technical Inspection": "Inspección Técnica",
+  "Document Review": "Revisión de Documentos",
+  "Plans and Budget": "Creación de Planos y Presupuesto",
+  "Entity Review": "Revisión de Entidad Financiera",
+  "APC and Permits": "APC y Permisos",
+  "Disbursement": "Desembolso",
+  "Under Construction": "En Construcción",
+  "Completed": "Completado",
+  "Logbook Closed": "Bitácora Cerrada",
+  "Rejected": "Rechazado",
+  "Professional Withdrawal": "Retiro Profesional",
+  "Conditioned": "Condicionado",
+};
 
 const estadoColors = {
   planificacion: "bg-yellow-500",
@@ -59,30 +37,31 @@ const estadoColors = {
   pausado: "bg-red-500",
 }
 
-const estadoLabels = {
-  planificacion: "Planificación",
-  en_progreso: "En Progreso",
-  completado: "Completado",
-  pausado: "Pausado",
-}
-
-export default function ProyectosPage() {
+export default function ProjectsPage() {
   const { isAdmin } = useAuth()
-  const [proyectos, setProyectos] = useState(mockProyectos)
+  const [projects, setProjects] = useState<GPAProject[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
-  const [estadoFilter, setEstadoFilter] = useState("todos")
+  const [loading, setLoading] = useState(true)
 
-  const filteredProyectos = proyectos.filter((proyecto) => {
-    const matchesSearch =
-      proyecto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      proyecto.cliente.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesEstado = estadoFilter === "todos" || proyecto.estado === estadoFilter
-    return matchesSearch && matchesEstado
-  })
+  const filteredProjects = projects?.filter(
+    (project) =>
+      project.PRJ_case_number.includes(searchTerm) ||
+      project.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.type?.TYP_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
-  const handleEstadoChange = (proyectoId: number, nuevoEstado: string) => {
-    setProyectos((prev) => prev.map((p) => (p.id === proyectoId ? { ...p, estado: nuevoEstado } : p)))
+  // Fetch projects from API
+  const fetchProjects = async () => {
+    setLoading(true)
+    const response = await fetch("/api/projects")
+    const data = await response.json()
+    const requestedProjects: GPAProject[] = data.projects
+    setProjects(requestedProjects)
+    setLoading(false)
   }
+  useEffect(() => {
+    fetchProjects()
+  }, [])
 
   return (
     <MainLayout>
@@ -102,23 +81,23 @@ export default function ProyectosPage() {
           )}
         </div>
 
-        {/* Estadísticas Rápidas */}
+        {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total Proyectos</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{proyectos.length}</div>
+              <div className="text-2xl font-bold">{projects?.length}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">En Progreso</CardTitle>
+              <CardTitle className="text-sm font-medium">En Construcción</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {proyectos.filter((p) => p.estado === "en_progreso").length}
+                {projects?.filter((p) => p.PRJ_state === "Under Construction").length}
               </div>
             </CardContent>
           </Card>
@@ -128,7 +107,7 @@ export default function ProyectosPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {proyectos.filter((p) => p.estado === "completado").length}
+                {projects?.filter((p) => p.PRJ_state === "Completed").length}
               </div>
             </CardContent>
           </Card>
@@ -137,14 +116,15 @@ export default function ProyectosPage() {
               <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                ${proyectos.reduce((sum, p) => sum + p.presupuesto, 0).toLocaleString()}
+              <div className="text-2xl font-bold flex">
+                <p>₡</p>
+                {projects?.reduce((sum, p) => sum + Number(p.PRJ_budget ?? 0), 0).toLocaleString("es-CR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filtros */}
+        {/* Filters */}
         <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
@@ -157,121 +137,90 @@ export default function ProyectosPage() {
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder="Buscar por nombre o cliente..."
+                    placeholder="Buscar por numero de caso o tipo de proyecto..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-8"
                   />
                 </div>
               </div>
-              <div className="w-48">
-                <Label htmlFor="estado">Estado</Label>
-                <Select value={estadoFilter} onValueChange={setEstadoFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos los estados</SelectItem>
-                    <SelectItem value="planificacion">Planificación</SelectItem>
-                    <SelectItem value="en_progreso">En Progreso</SelectItem>
-                    <SelectItem value="completado">Completado</SelectItem>
-                    <SelectItem value="pausado">Pausado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tabla de Proyectos */}
+        {/* Projects Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Lista de Proyectos ({filteredProyectos.length})</CardTitle>
+            <CardTitle>Lista de Proyectos</CardTitle>
             <CardDescription>Todos los proyectos registrados en el sistema</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Proyecto</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Progreso</TableHead>
-                  <TableHead>Financiero</TableHead>
-                  <TableHead>Fechas</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProyectos.map((proyecto) => (
-                  <TableRow key={proyecto.id} className="animate-fade-in">
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{proyecto.nombre}</div>
-                        <div className="text-sm text-muted-foreground capitalize">{proyecto.categoria}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{proyecto.cliente}</TableCell>
-                    <TableCell>
-                      <Select
-                        value={proyecto.estado}
-                        onValueChange={(value) => handleEstadoChange(proyecto.id, value)}
-                        disabled={!isAdmin}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="planificacion">Planificación</SelectItem>
-                          <SelectItem value="en_progreso">En Progreso</SelectItem>
-                          <SelectItem value="completado">Completado</SelectItem>
-                          <SelectItem value="pausado">Pausado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Progress value={proyecto.progreso} className="w-16" />
-                        <div className="text-xs text-muted-foreground">{proyecto.progreso}%</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm">
-                          <DollarSign className="mr-1 h-3 w-3" />${proyecto.presupuesto.toLocaleString()}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Pagado: ${proyecto.pagado.toLocaleString()}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm">
-                          <Calendar className="mr-1 h-3 w-3" />
-                          {proyecto.fechaInicio}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Entrega: {proyecto.fechaEntrega}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/proyectos/${proyecto.id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        {isAdmin && (
-                          <Link href={`/proyectos/${proyecto.id}/editar`}>
-                            <Button variant="ghost" size="sm" className="hover:bg-[#c9e077]/20">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                        )}
-                      </div>
-                    </TableCell>
+            {loading ? (
+              <div className="flex justify-center items-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#486b00] mr-4" />
+                <span className="text-muted-foreground">Cargando información de proyectos...</span>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Numero de Caso</TableHead>
+                    <TableHead>Nombre del Cliente</TableHead>
+                    <TableHead>Tipo de Proyecto</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Presupuesto</TableHead>
+                    <TableHead>Fechas</TableHead>
+                    <TableHead>Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredProjects?.map((project) => (
+                    <TableRow key={project.PRJ_id} className="animate-fade-in">
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{project.PRJ_case_number}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{project.client_name}</TableCell>
+                      <TableCell>{project.type?.TYP_name}</TableCell>
+                      <TableCell>{stateLabels[project.PRJ_state] ?? project.PRJ_state}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center text-sm">
+                            ₡{(project.PRJ_budget ?? 0).toLocaleString()}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center text-sm">
+                            <Calendar className="mr-1 h-3 w-3" />
+                            {project.PRJ_start_construction_date ? new Date(project.PRJ_start_construction_date).toLocaleDateString() : "N/A"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Conclusión: {project.PRJ_completion_date ? new Date(project.PRJ_completion_date).toLocaleDateString() : "N/A"}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/proyectos/${project.PRJ_id}`}>
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          {isAdmin && (
+                            <Link href={`/proyectos/${project.PRJ_id}/editar`}>
+                              <Button variant="ghost" size="sm" className="hover:bg-[#c9e077]/20">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

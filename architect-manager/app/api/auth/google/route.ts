@@ -53,7 +53,6 @@ export async function POST(request: NextRequest) {
     if (!payload) {
       return NextResponse.json({ error: "Invalid Google token" }, { status: 400 })
     }
-    console.log(payload)
 
     const { sub, email, email_verified, name, picture, hd } = payload
 

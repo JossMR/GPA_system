@@ -391,7 +391,7 @@ export function CostaRicaLocationSelect(
         </Select>
         {!province && (
           <p className="text-yellow-600 text-sm font-medium">
-            ⚠️ Debes elegir una provincia
+            ⚠️ Debe elegir una provincia
           </p>
         )}
         {/* Input oculto para validación */}

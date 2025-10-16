@@ -86,7 +86,6 @@ export default function NewClientPage() {
       })
       const data = await response.json()
       const registeredClient:GPAClient = data.client;
-      console.log("Registered user", registeredClient)
       router.push("/clientes")
     } catch (error) {
       console.error(error instanceof Error ? error.message : "There was a problem creating the client.")

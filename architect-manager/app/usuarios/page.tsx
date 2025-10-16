@@ -149,9 +149,7 @@ export default function UsersPage() {
       USR_role_id: Number(selectedRoleId),
       ROL_name: selectedRole?.ROL_name || "",
       ...(selectedUser && { USR_id: selectedUser.USR_id })
-    };
-    console.log("User Data to submit:", userData);
-    
+    };    
     // if editing, include the user ID
   if (selectedUser) {
     userData["USR_id"] = selectedUser.USR_id;

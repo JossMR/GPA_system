@@ -45,8 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) {
       setUser(user)
       setIsAdmin(user.roleid === 1)
-      //localStorage.setItem("user", JSON.stringify(mockUser))
-      console.log("usuario: ", user)
       return true
     }
     return false
@@ -63,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       if(!response.ok){
-        console.log("Error closing session")
+
       }
     } catch {
 

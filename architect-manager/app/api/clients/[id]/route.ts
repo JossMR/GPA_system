@@ -2,9 +2,9 @@ import { executeQuery, executeTransaction } from '@/lib/database';
 import { GPAClient } from '@/models/GPA_client';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest,{ params }: { params: Promise<{ id: string }> }) {
   try {
-    const clientId = params.id;
+    const clientId = parseInt((await params).id);
     const result = await executeQuery(
       `SELECT 
         CLI_id,
