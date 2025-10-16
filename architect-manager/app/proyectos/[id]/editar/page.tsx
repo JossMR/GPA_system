@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DocumentManager } from "@/components/document-manager"
+import { ProjectDocumentManager } from "@/components/project-document-manager"
 import { ArrowLeft, Save, Building, Calendar, DollarSign, MapPin, FileText, Trash2, Plus, Edit } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -24,16 +24,6 @@ import { useToast } from "@/hooks/use-toast"
 import { ProjectTypeManager } from "@/components/projectTypeManager"
 import { Category, ProjectCategoryTags } from "@/components/projectCategoryTags"
 
-interface Document {
-  id: string
-  name: string
-  type: string
-  size: number
-  uploadDate: string
-  category: "plano" | "permiso" | "contrato" | "foto" | "otro"
-  url?: string
-}
-
 export default function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { isAdmin } = useAuth()
   const router = useRouter()
@@ -45,7 +35,6 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(false)
   const [fetchingData, setFetchingData] = useState(true)
   const [project, setProject] = useState<GPAProject | null>(null)
-  const [documents, setDocuments] = useState<Document[]>([])
   const [pagos, setPagos] = useState<any[]>([])
   const [costosExtra, setCostosExtra] = useState<any[]>([])
   const [isPagoDialogOpen, setIsPagoDialogOpen] = useState(false)
@@ -97,7 +86,6 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           const clientData = await responseClient.json() as { client: GPAClient | null }
           setClientSelectedObj(clientData.client ?? null)
         }
-        setDocuments([])
         setPagos([])
         setCostosExtra([]) // Cargar si tienes endpoint
       } catch (error) {
@@ -664,9 +652,8 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             </Card>
 
             {/* Documents*/}
-            <DocumentManager
-              documents={documents}
-              onDocumentsChange={setDocuments}
+            <ProjectDocumentManager
+              projectId={id}
               canEdit={true}
               showUpload={true}
               title="Documentos del Proyecto"
