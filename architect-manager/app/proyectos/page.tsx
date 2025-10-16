@@ -89,26 +89,7 @@ export default function ProjectsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{projects?.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">En Construcción</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {projects?.filter((p) => p.PRJ_state === "Under Construction").length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Completados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {projects?.filter((p) => p.PRJ_state === "Completed").length}
-              </div>
+              <p className="text-xs text-muted-foreground mt-1">Proyectos registrados</p>
             </CardContent>
           </Card>
           <Card>
@@ -120,6 +101,34 @@ export default function ProjectsPage() {
                 <p>₡</p>
                 {projects?.reduce((sum, p) => sum + Number(p.PRJ_budget ?? 0), 0).toLocaleString("es-CR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
+              <p className="text-xs text-muted-foreground mt-1">Presupuesto total</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Proyectos Activos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {projects?.filter((p) => 
+                  p.PRJ_state !== "Completed" && 
+                  p.PRJ_state !== "Logbook Closed" && 
+                  p.PRJ_state !== "Rejected" && 
+                  p.PRJ_state !== "Professional Withdrawal"
+                ).length}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">En proceso</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Área Total</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {projects?.reduce((sum, p) => sum + Number(p.PRJ_area_m2 ?? 0), 0).toLocaleString("es-CR", { maximumFractionDigits: 0 })} m²
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Metros cuadrados totales</p>
             </CardContent>
           </Card>
         </div>

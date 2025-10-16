@@ -6,6 +6,9 @@ import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Users, Building, DollarSign, FileText } from "lucide-react"
+import { GPAProject } from "@/models/GPA_project"
+import { GPAClient } from "@/models/GPA_client"
+import { GPAPayment } from "@/models/GPA_payment"
 
 const projectImages = [
   {
@@ -34,14 +37,43 @@ const projectImages = [
   },
 ]
 
-const stats = [
-  { title: "Clientes Activos", value: "24", icon: Users, color: "text-primary-medium" },
-  { title: "Proyectos en Curso", value: "12", icon: Building, color: "text-primary-light" },
-  { title: "Documentos Pendientes", value: "8", icon: FileText, color: "text-orange-500" },
-]
-
 export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [projects, setProjects] = useState<GPAProject[]>([])
+  const [clients, setClients] = useState<GPAClient[]>([])
+  const [payments, setPayments] = useState<GPAPayment[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch data from APIs
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        const [projectsRes, clientsRes, paymentsRes] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/clientes"),
+          fetch("/api/payments"),
+        ])
+        
+        const projectsData = await projectsRes.json()
+        const clientsData = await clientsRes.json()
+        const paymentsData = await paymentsRes.json()
+        
+        console.log("Payments data:", paymentsData)
+        console.log("Payments array:", paymentsData.payments)
+        
+        setProjects(projectsData.projects || [])
+        setClients(clientsData.clients || [])
+        setPayments(paymentsData.payments || [])
+      } catch (error) {
+        console.error("Error fetching data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchData()
+  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -49,6 +81,48 @@ export default function HomePage() {
     }, 5000)
     return () => clearInterval(timer)
   }, [])
+
+  // Calculate real stats
+  const totalClients = clients.length
+  const activeProjects = projects.filter((p) => 
+    p.PRJ_state !== "Completed" && 
+    p.PRJ_state !== "Logbook Closed" && 
+    p.PRJ_state !== "Rejected" && 
+    p.PRJ_state !== "Professional Withdrawal"
+  ).length
+  
+  const totalRevenue = payments.reduce((sum, p) => {
+    const amount = Number(p.PAY_amount_paid)
+    console.log("Payment amount:", amount, "from:", p.PAY_amount_paid)
+    return sum + (isNaN(amount) ? 0 : amount)
+  }, 0)
+  
+  console.log("Total revenue calculated:", totalRevenue)
+  console.log("Payments count:", payments.length)
+
+  const stats = [
+    { 
+      title: "Total Clientes", 
+      value: loading ? "..." : totalClients.toString(), 
+      icon: Users, 
+      color: "text-primary-medium",
+      percentage: 100
+    },
+    { 
+      title: "Proyectos Activos", 
+      value: loading ? "..." : activeProjects.toString(), 
+      icon: Building, 
+      color: "text-primary-light",
+      percentage: projects.length > 0 ? Math.round((activeProjects / projects.length) * 100) : 0
+    },
+    { 
+      title: "Ingresos Totales", 
+      value: loading ? "..." : `₡${totalRevenue.toLocaleString("es-CR", { maximumFractionDigits: 0 })}`, 
+      icon: DollarSign, 
+      color: "text-green-600",
+      percentage: 85
+    },
+  ]
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % projectImages.length)
@@ -168,7 +242,7 @@ export default function HomePage() {
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full gradient-primary rounded-full transition-all duration-1000"
-                        style={{ width: `${70 + index * 10}%`, animationDelay: `${index * 0.2}s` }}
+                        style={{ width: `${stat.percentage}%`, animationDelay: `${index * 0.2}s` }}
                       ></div>
                     </div>
                   </div>
