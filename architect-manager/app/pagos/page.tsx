@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -33,11 +33,21 @@ export default function PagosPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [stateFilter, setStateFilter] = useState("todos")
   const [selectedPayment, setSelectedPayment] = useState<GPAPayment | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useState(false)
   const [sumPendingAmounts, setSumPendingAmounts] = useState(0)
+
+  // Debounce del searchTerm con delay de 500ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
   useEffect(() => {
     // Actualiza sumPendingAmounts cada vez que projects cambie
@@ -130,15 +140,23 @@ export default function PagosPage() {
     fetchData()
   }, [])
 
-  const filteredPayments = payments.filter((payment) => {
-    const matchesSearch =
-      (payment.projectCaseNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (payment.projectClientName || "").toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesState = stateFilter === "todos" || (payment.projectState) === stateFilter
-    return matchesSearch && matchesState
-  })
+  // useMemo para que el filtrado pesado solo se ejecute cuando cambien las dependencias reales
+  const filteredPayments = useMemo(() => {
+    return payments.filter((payment) => {
+      const matchesSearch =
+        (payment.projectCaseNumber || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (payment.projectClientName || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      
+      const matchesState = stateFilter === "todos" || (payment.projectState) === stateFilter
+      
+      return matchesSearch && matchesState
+    })
+  }, [payments, debouncedSearchTerm, stateFilter])
 
-  const totalIngresos = payments.filter((p) => p.projectState === "completado").reduce((sum, p) => sum + p.PAY_amount_paid, 0)
+  // Suma de todos los montos de pagos registrados (memoizado para evitar recalcular en cada render)
+  const totalIngresos = useMemo(() => {
+    return payments.reduce((sum, p) => sum + (Number(p.PAY_amount_paid) || 0), 0)
+  }, [payments])
 
   const handleEdit = (payment: GPAPayment) => {
     setSelectedPayment(payment)
@@ -350,7 +368,6 @@ export default function PagosPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#7d4427]">{payments.length}</div>
-              <div className="text-xs text-muted-foreground mt-1">Este mes</div>
             </CardContent>
           </Card>
         </div>
@@ -368,7 +385,7 @@ export default function PagosPage() {
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#486b00]" />
                   <Input
                     id="search"
-                    placeholder="Buscar por proyecto, cliente o número de caso..."
+                    placeholder="Buscar por nombre de cliente o número de caso..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-8 border-[#a2c523]/30 focus:border-[#486b00]"
@@ -376,16 +393,26 @@ export default function PagosPage() {
                 </div>
               </div>
               <div className="w-48">
-                <Label htmlFor="estado">Estado</Label>
+                <Label htmlFor="estado">Estado del Proyecto</Label>
                 <Select value={stateFilter} onValueChange={setStateFilter}>
                   <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
                     <SelectValue placeholder="Filtrar por estado" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos los estados</SelectItem>
-                    <SelectItem value="completado">Completado</SelectItem>
-                    <SelectItem value="pendiente">Pendiente</SelectItem>
-                    <SelectItem value="rechazado">Rechazado</SelectItem>
+                    <SelectItem value="Document Collection">Recepción de documentos</SelectItem>
+                    <SelectItem value="Technical Inspection">Inspección técnica</SelectItem>
+                    <SelectItem value="Document Review">Revisión de documentos</SelectItem>
+                    <SelectItem value="Plans and Budget">Planos y presupuesto</SelectItem>
+                    <SelectItem value="Entity Review">Revisión de entidad</SelectItem>
+                    <SelectItem value="APC and Permits">APC y permisos</SelectItem>
+                    <SelectItem value="Disbursement">Desembolso</SelectItem>
+                    <SelectItem value="Under Construction">En construcción</SelectItem>
+                    <SelectItem value="Completed">Completado</SelectItem>
+                    <SelectItem value="Logbook Closed">Bitácora cerrada</SelectItem>
+                    <SelectItem value="Rejected">Rechazado</SelectItem>
+                    <SelectItem value="Professional Withdrawal">Retiro profesional</SelectItem>
+                    <SelectItem value="Conditioned">Condicionado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -410,8 +437,7 @@ export default function PagosPage() {
                     <TableHead>Número de Caso</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Monto</TableHead>
-                    {/*TODO <TableHead>Método</TableHead>*/}
-                    <TableHead>Estado</TableHead>
+                    <TableHead>Estado del proyecto</TableHead>
                     <TableHead>Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
