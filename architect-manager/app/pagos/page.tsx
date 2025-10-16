@@ -36,6 +36,7 @@ export default function PagosPage() {
   const [stateFilter, setStateFilter] = useState("todos")
   const [selectedPayment, setSelectedPayment] = useState<GPAPayment | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [viewMode, setViewMode] = useState(false) // 👈 Nuevo: modo solo lectura
   const [sumPendingAmounts, setSumPendingAmounts] = useState(0)
 
   useEffect(() => {
@@ -149,6 +150,21 @@ export default function PagosPage() {
       PAY_project_id: payment.PAY_project_id?.toString() || "",
       PAY_description: payment.PAY_description || "",
     })
+    setViewMode(false) // 👈 Modo edición
+    setIsDialogOpen(true)
+  }
+
+  const handleView = (payment: GPAPayment) => {
+    setSelectedPayment(payment)
+    setFormData({
+      PAY_payment_date: payment.PAY_payment_date
+        ? new Date(payment.PAY_payment_date).toISOString().split('T')[0]
+        : "",
+      PAY_amount_paid: payment.PAY_amount_paid?.toString() || "",
+      PAY_project_id: payment.PAY_project_id?.toString() || "",
+      PAY_description: payment.PAY_description || "",
+    })
+    setViewMode(true) // 👈 Modo solo lectura
     setIsDialogOpen(true)
   }
 
@@ -160,6 +176,7 @@ export default function PagosPage() {
       PAY_project_id: "",
       PAY_description: "",
     })
+    setViewMode(false) // 👈 Modo creación
     setIsDialogOpen(true)
   }
 
@@ -436,7 +453,12 @@ export default function PagosPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Button variant="ghost" size="sm" className="hover:bg-[#c9e077]/20">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleView(payment)}
+                            className="hover:bg-[#c9e077]/20"
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
                           {isAdmin && (
@@ -459,83 +481,115 @@ export default function PagosPage() {
           </CardContent>
         </Card>
 
-        {/* Dialog para Crear/Editar Pago */}
+        {/* Dialog para Crear/Editar/Ver Pago */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle className="text-[#2e4600]">
-                {selectedPayment ? "Editar Pago" : "Registrar Nuevo Pago"}
+                {viewMode ? "Detalles del Pago" : (selectedPayment ? "Editar Pago" : "Registrar Nuevo Pago")}
               </DialogTitle>
               <DialogDescription>
-                {selectedPayment ? "Modifica los datos del pago" : "Ingresa los detalles del nuevo pago"}
+                {viewMode 
+                  ? "Información completa del pago registrado" 
+                  : (selectedPayment ? "Modifica los datos del pago" : "Ingresa los detalles del nuevo pago")
+                }
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="proyecto">
-                  Proyecto <span className="text-red-500">*</span>
+                  Proyecto {!viewMode && <span className="text-red-500">*</span>}
                 </Label>
-                <Select
-                  value={formData.PAY_project_id}
-                  onValueChange={(value) => setFormData({ ...formData, PAY_project_id: value })}
-                >
-                  <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
-                    <SelectValue placeholder="Seleccionar proyecto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((project) => (
-                      <SelectItem key={project.PRJ_id} value={project.PRJ_id?.toString() || ""}>
-                        {project.PRJ_case_number} - {project.client_name} - ₡{Number(project.PRJ_budget || 0).toLocaleString()}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {viewMode ? (
+                  <Input
+                    value={(() => {
+                      const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
+                      return project 
+                        ? `${project.PRJ_case_number} - ${project.client_name} - ₡${Number(project.PRJ_budget || 0).toLocaleString()}`
+                        : "N/A"
+                    })()}
+                    disabled
+                    className="bg-gray-50 dark:bg-gray-800 border-[#a2c523]/30"
+                  />
+                ) : (
+                  <Select
+                    value={formData.PAY_project_id}
+                    onValueChange={(value) => setFormData({ ...formData, PAY_project_id: value })}
+                  >
+                    <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                      <SelectValue placeholder="Seleccionar proyecto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((project) => (
+                        <SelectItem key={project.PRJ_id} value={project.PRJ_id?.toString() || ""}>
+                          {project.PRJ_case_number} - {project.client_name} - ₡{Number(project.PRJ_budget || 0).toLocaleString()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="fecha">
-                    Fecha del pago <span className="text-red-500">*</span>
+                    Fecha del pago {!viewMode && <span className="text-red-500">*</span>}
                   </Label>
                   <Input
                     id="fecha"
-                    type="date"
-                    value={formData.PAY_payment_date}
+                    type={viewMode ? "text" : "date"}
+                    value={viewMode 
+                      ? new Date(formData.PAY_payment_date).toLocaleDateString('es-ES', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                      : formData.PAY_payment_date
+                    }
                     onChange={(e) => setFormData({ ...formData, PAY_payment_date: e.target.value })}
-                    className="border-[#a2c523]/30 focus:border-[#486b00]"
-                    required
+                    className={viewMode ? "bg-gray-50 dark:bg-gray-800 border-[#a2c523]/30" : "border-[#a2c523]/30 focus:border-[#486b00]"}
+                    disabled={viewMode}
+                    required={!viewMode}
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="monto">
-                    Monto Pagado <span className="text-red-500">*</span>
+                    Monto Pagado {!viewMode && <span className="text-red-500">*</span>}
                   </Label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-[#486b00]" />
                     <Input
                       id="monto"
-                      type="number"
+                      type={viewMode ? "text" : "number"}
                       placeholder="25000"
-                      value={formData.PAY_amount_paid}
+                      value={viewMode 
+                        ? `₡${Number(formData.PAY_amount_paid).toLocaleString()}`
+                        : formData.PAY_amount_paid
+                      }
                       onChange={(e) => {
-                        // Remove leading zeros and keep the numeric value
-                        let value = e.target.value
-                        if (value && !isNaN(Number(value))) {
-                          value = String(Number(value))
+                        if (!viewMode) {
+                          // Remove leading zeros and keep the numeric value
+                          let value = e.target.value
+                          if (value && !isNaN(Number(value))) {
+                            value = String(Number(value))
+                          }
+                          setFormData({ ...formData, PAY_amount_paid: value })
                         }
-                        setFormData({ ...formData, PAY_amount_paid: value })
                       }}
                       onBlur={(e) => {
-                        // Format the value on blur to remove leading zeros
-                        const value = e.target.value
-                        if (value && !isNaN(Number(value))) {
-                          setFormData({ ...formData, PAY_amount_paid: String(Number(value)) })
+                        if (!viewMode) {
+                          // Format the value on blur to remove leading zeros
+                          const value = e.target.value
+                          if (value && !isNaN(Number(value))) {
+                            setFormData({ ...formData, PAY_amount_paid: String(Number(value)) })
+                          }
                         }
                       }}
-                      className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
-                      required
-                      min="0"
-                      step="0.01"
+                      className={viewMode ? "pl-10 bg-gray-50 dark:bg-gray-800 border-[#a2c523]/30" : "pl-10 border-[#a2c523]/30 focus:border-[#486b00]"}
+                      disabled={viewMode}
+                      required={!viewMode}
+                      min={!viewMode ? "0" : undefined}
+                      step={!viewMode ? "0.01" : undefined}
                     />
                   </div>
                 </div>
@@ -589,38 +643,63 @@ export default function PagosPage() {
                 <Label htmlFor="detalle">Descripción del pago</Label>
                 <Input
                   id="detalle"
-                  placeholder="Descripción o notas adicionales..."
-                  value={formData.PAY_description}
+                  placeholder={viewMode ? "Sin descripción" : "Descripción o notas adicionales..."}
+                  value={formData.PAY_description || (viewMode ? "Sin descripción adicional" : "")}
                   onChange={(e) => setFormData({ ...formData, PAY_description: e.target.value })}
-                  className="border-[#a2c523]/30 focus:border-[#486b00]"
+                  className={viewMode ? "bg-gray-50 dark:bg-gray-800 border-[#a2c523]/30" : "border-[#a2c523]/30 focus:border-[#486b00]"}
+                  disabled={viewMode}
                 />
               </div>
             </div>
             <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsDialogOpen(false)
-                  setSelectedPayment(null)
-                  setFormData({
-                    PAY_payment_date: "",
-                    PAY_amount_paid: "",
-                    PAY_project_id: "",
-                    PAY_description: "",
-                  })
-                }}
-                className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
-                disabled={saving}
-              >
-                Cancelar
-              </Button>
-              <Button
-                className="gradient-primary text-white hover:opacity-90"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? "Guardando..." : (selectedPayment ? "Actualizar" : "Registrar")} Pago
-              </Button>
+              {viewMode ? (
+                // 👁️ Modo Vista: Solo botón de cerrar
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDialogOpen(false)
+                    setSelectedPayment(null)
+                    setViewMode(false)
+                    setFormData({
+                      PAY_payment_date: "",
+                      PAY_amount_paid: "",
+                      PAY_project_id: "",
+                      PAY_description: "",
+                    })
+                  }}
+                  className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
+                >
+                  Cerrar
+                </Button>
+              ) : (
+                // ✏️ Modo Crear/Editar: Botones normales
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsDialogOpen(false)
+                      setSelectedPayment(null)
+                      setFormData({
+                        PAY_payment_date: "",
+                        PAY_amount_paid: "",
+                        PAY_project_id: "",
+                        PAY_description: "",
+                      })
+                    }}
+                    className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
+                    disabled={saving}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="gradient-primary text-white hover:opacity-90"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? "Guardando..." : (selectedPayment ? "Actualizar" : "Registrar")} Pago
+                  </Button>
+                </>
+              )}
             </div>
           </DialogContent>
         </Dialog>
