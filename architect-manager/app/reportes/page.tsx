@@ -9,6 +9,11 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Download, FileSpreadsheet, Calendar, Users, Building, DollarSign } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { useToast } from "@/hooks/use-toast"
+import ExcelJS from "exceljs"
+import { saveAs } from "file-saver"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
 
 const reportTypes = [
   {
@@ -63,10 +68,13 @@ const reportTypes = [
 
 export default function ReportesPage() {
   const { isAdmin } = useAuth()
+  const { toast } = useToast()
   const [selectedReport, setSelectedReport] = useState("")
   const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({})
   const [dateRange, setDateRange] = useState("ultimo_mes")
   const [isGenerating, setIsGenerating] = useState(false)
+  const [estadoFilter, setEstadoFilter] = useState("todos")
+  const [metodoPagoFilter, setMetodoPagoFilter] = useState("todos")
 
   const handleReportSelect = (reportId: string) => {
     setSelectedReport(reportId)
@@ -87,25 +95,686 @@ export default function ReportesPage() {
     }))
   }
 
+  const translateProjectState = (state: string): string => {
+    const translations: Record<string, string> = {
+      "Document Collection": "Recolección de Documentos",
+      "Technical Inspection": "Inspección Técnica",
+      "Document Review": "Revisión de Documentos",
+      "Plans and Budget": "Planos y Presupuesto",
+      "Entity Review": "Revisión de Entidad",
+      "APC and Permits": "APC y Permisos",
+      "Disbursement": "Desembolso",
+      "Under Construction": "En Construcción",
+      "Completed": "Completado",
+      "Logbook Closed": "Bitácora Cerrada",
+      "Rejected": "Rechazado",
+      "Professional Withdrawal": "Retiro Profesional",
+      "Conditioned": "Condicionado"
+    }
+    return translations[state] || state
+  }
+
+  const translateCivilStatus = (status: string): string => {
+    const translations: Record<string, string> = {
+      "Single": "Soltero/a",
+      "Married": "Casado/a",
+      "Divorced": "Divorciado/a",
+      "Widowed": "Viudo/a"
+    }
+    return translations[status] || status
+  }
+
+  const translateIdentificationType = (type: string): string => {
+    const translations: Record<string, string> = {
+      "national": "Cédula Nacional",
+      "dimex": "DIMEX",
+      "passport": "Pasaporte",
+      "nite": "NITE",
+      "entity": "Cédula Jurídica"
+    }
+    return translations[type] || type
+  }
+
+  const translatePaymentMethod = (method: string): string => {
+    const translations: Record<string, string> = {
+      "Cash": "Efectivo",
+      "Card": "Tarjeta",
+      "SINPE": "SINPE Móvil",
+      "Credit": "Crédito",
+      "Debit": "Débito",
+      "Transfer": "Transferencia",
+      "Deposit": "Depósito",
+      "Check": "Cheque"
+    }
+    return translations[method] || method
+  }
+
+  const translateDateRange = (range: string): string => {
+    const translations: Record<string, string> = {
+      "ultima_semana": "Última semana",
+      "ultimo_mes": "Último mes",
+      "ultimos_3_meses": "Últimos 3 meses",
+      "ultimo_ano": "Último año",
+      "todo": "Todo el historial"
+    }
+    return translations[range] || range
+  }
+
+  const getDateFilter = (range: string): Date | null => {
+    const now = new Date()
+    switch (range) {
+      case "ultima_semana":
+        return new Date(now.setDate(now.getDate() - 7))
+      case "ultimo_mes":
+        return new Date(now.setMonth(now.getMonth() - 1))
+      case "ultimos_3_meses":
+        return new Date(now.setMonth(now.getMonth() - 3))
+      case "ultimo_ano":
+        return new Date(now.setFullYear(now.getFullYear() - 1))
+      case "todo":
+        return null
+      default:
+        return null
+    }
+  }
+
+  const generateClientsReport = async () => {
+    try {
+      const response = await fetch("/api/clients")
+      const data = await response.json()
+      let clients = data.clients || []
+
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet("Clientes")
+
+      // Colores corporativos
+      const primaryColor = "2E4600"
+      const secondaryColor = "486B00"
+      const lightColor = "C9E077"
+
+      // Título del reporte
+      worksheet.mergeCells("A1:G1")
+      const titleCell = worksheet.getCell("A1")
+      titleCell.value = "REPORTE DE CLIENTES"
+      titleCell.font = { size: 18, bold: true, color: { argb: "FFFFFFFF" } }
+      titleCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: primaryColor }
+      }
+      titleCell.alignment = { vertical: "middle", horizontal: "center" }
+      worksheet.getRow(1).height = 35
+
+      // Información del filtro
+      worksheet.mergeCells("A2:G2")
+      const filterCell = worksheet.getCell("A2")
+      filterCell.value = `Filtro aplicado: ${translateDateRange(dateRange)}`
+      filterCell.font = { size: 11, italic: true }
+      filterCell.alignment = { horizontal: "center" }
+      worksheet.getRow(2).height = 20
+
+      // Fecha de generación
+      worksheet.mergeCells("A3:G3")
+      const dateCell = worksheet.getCell("A3")
+      dateCell.value = `Generado el: ${format(new Date(), "dd 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })}`
+      dateCell.font = { size: 10, italic: true }
+      dateCell.alignment = { horizontal: "center" }
+      worksheet.getRow(3).height = 20
+
+      // Encabezados
+      const headers: string[] = []
+      const fields: string[] = []
+
+      if (selectedFields.nombre) {
+        headers.push("Nombre Completo")
+        fields.push("nombre")
+      }
+      if (selectedFields.email) {
+        headers.push("Correo Electrónico")
+        fields.push("email")
+      }
+      if (selectedFields.telefono) {
+        headers.push("Teléfono")
+        fields.push("telefono")
+      }
+      if (selectedFields.empresa) {
+        headers.push("Tipo de Identificación")
+        fields.push("empresa")
+      }
+      if (selectedFields.proyectos) {
+        headers.push("N° de Proyectos")
+        fields.push("proyectos")
+      }
+      if (selectedFields.estado) {
+        headers.push("Estado Civil")
+        fields.push("estado")
+      }
+
+      worksheet.getRow(5).values = headers
+      worksheet.getRow(5).font = { bold: true, color: { argb: "FFFFFFFF" } }
+      worksheet.getRow(5).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: secondaryColor }
+      }
+      worksheet.getRow(5).alignment = { vertical: "middle", horizontal: "center" }
+      worksheet.getRow(5).height = 25
+
+      // Datos
+      let rowIndex = 6
+      clients.forEach((client: any) => {
+        const rowData: any[] = []
+        
+        if (selectedFields.nombre) {
+          const fullName = `${client.CLI_name || ""} ${client.CLI_f_lastname || ""} ${client.CLI_s_lastname || ""}`.trim()
+          rowData.push(fullName)
+        }
+        if (selectedFields.email) {
+          rowData.push(client.CLI_email || "N/A")
+        }
+        if (selectedFields.telefono) {
+          rowData.push(client.CLI_phone || "N/A")
+        }
+        if (selectedFields.empresa) {
+          rowData.push(translateIdentificationType(client.CLI_identificationtype))
+        }
+        if (selectedFields.proyectos) {
+          rowData.push(client.CLI_projects_amount || 0)
+        }
+        if (selectedFields.estado) {
+          rowData.push(translateCivilStatus(client.CLI_civil_status))
+        }
+
+        worksheet.getRow(rowIndex).values = rowData
+        worksheet.getRow(rowIndex).alignment = { vertical: "middle" }
+        
+        // Alternar colores de fila
+        if (rowIndex % 2 === 0) {
+          worksheet.getRow(rowIndex).fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "F5F5F5" }
+          }
+        }
+        
+        rowIndex++
+      })
+
+      // Ajustar ancho de columnas
+      worksheet.columns.forEach((column, index) => {
+        column.width = 20
+      })
+
+      // Bordes
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber >= 5) {
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" }
+            }
+          })
+        }
+      })
+
+      // Resumen al final
+      const summaryRow = rowIndex + 1
+      worksheet.mergeCells(`A${summaryRow}:${String.fromCharCode(64 + headers.length)}${summaryRow}`)
+      const summaryCell = worksheet.getCell(`A${summaryRow}`)
+      summaryCell.value = `Total de clientes: ${clients.length}`
+      summaryCell.font = { bold: true, size: 12 }
+      summaryCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: lightColor }
+      }
+      summaryCell.alignment = { horizontal: "center" }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+      saveAs(blob, `Reporte_Clientes_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`)
+
+      toast({
+        title: "Reporte generado",
+        description: "El reporte de clientes se ha descargado exitosamente"
+      })
+    } catch (error) {
+      console.error("Error generando reporte:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo generar el reporte de clientes",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const generateProjectsReport = async () => {
+    try {
+      const response = await fetch("/api/projects")
+      const data = await response.json()
+      let projects = data.projects || []
+
+      // Aplicar filtro de fecha
+      const dateFilter = getDateFilter(dateRange)
+      if (dateFilter) {
+        projects = projects.filter((p: any) => {
+          const entryDate = new Date(p.PRJ_entry_date)
+          return entryDate >= dateFilter
+        })
+      }
+
+      // Aplicar filtro de estado
+      if (estadoFilter !== "todos") {
+        projects = projects.filter((p: any) => p.PRJ_state === estadoFilter)
+      }
+
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet("Proyectos")
+
+      const primaryColor = "2E4600"
+      const secondaryColor = "486B00"
+      const lightColor = "C9E077"
+
+      // Título
+      worksheet.mergeCells("A1:I1")
+      const titleCell = worksheet.getCell("A1")
+      titleCell.value = "REPORTE DE PROYECTOS"
+      titleCell.font = { size: 18, bold: true, color: { argb: "FFFFFFFF" } }
+      titleCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: primaryColor }
+      }
+      titleCell.alignment = { vertical: "middle", horizontal: "center" }
+      worksheet.getRow(1).height = 35
+
+      // Filtros aplicados
+      worksheet.mergeCells("A2:I2")
+      const filterCell = worksheet.getCell("A2")
+      let filterText = `Filtro de fecha: ${translateDateRange(dateRange)}`
+      if (estadoFilter !== "todos") {
+        filterText += ` | Estado: ${translateProjectState(estadoFilter)}`
+      }
+      filterCell.value = filterText
+      filterCell.font = { size: 11, italic: true }
+      filterCell.alignment = { horizontal: "center" }
+      worksheet.getRow(2).height = 20
+
+      // Fecha de generación
+      worksheet.mergeCells("A3:I3")
+      const dateCell = worksheet.getCell("A3")
+      dateCell.value = `Generado el: ${format(new Date(), "dd 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })}`
+      dateCell.font = { size: 10, italic: true }
+      dateCell.alignment = { horizontal: "center" }
+      worksheet.getRow(3).height = 20
+
+      // Encabezados
+      const headers: string[] = []
+      const fields: string[] = []
+
+      if (selectedFields.nombre) {
+        headers.push("N° de Caso")
+        fields.push("nombre")
+      }
+      if (selectedFields.cliente) {
+        headers.push("Cliente")
+        fields.push("cliente")
+      }
+      if (selectedFields.estado) {
+        headers.push("Estado")
+        fields.push("estado")
+      }
+      if (selectedFields.presupuesto) {
+        headers.push("Presupuesto")
+        fields.push("presupuesto")
+      }
+      if (selectedFields.pagado) {
+        headers.push("Monto Restante")
+        fields.push("pagado")
+      }
+      if (selectedFields.fechaInicio) {
+        headers.push("Fecha de Inicio")
+        fields.push("fechaInicio")
+      }
+      if (selectedFields.fechaEntrega) {
+        headers.push("Fecha de Entrega")
+        fields.push("fechaEntrega")
+      }
+      if (selectedFields.categoria) {
+        headers.push("Categorías")
+        fields.push("categoria")
+      }
+
+      worksheet.getRow(5).values = headers
+      worksheet.getRow(5).font = { bold: true, color: { argb: "FFFFFFFF" } }
+      worksheet.getRow(5).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: secondaryColor }
+      }
+      worksheet.getRow(5).alignment = { vertical: "middle", horizontal: "center" }
+      worksheet.getRow(5).height = 25
+
+      // Datos
+      let rowIndex = 6
+      let totalBudget = 0
+      let totalRemaining = 0
+
+      projects.forEach((project: any) => {
+        const rowData: any[] = []
+        
+        if (selectedFields.nombre) {
+          rowData.push(project.PRJ_case_number || "N/A")
+        }
+        if (selectedFields.cliente) {
+          rowData.push(project.client_name || "N/A")
+        }
+        if (selectedFields.estado) {
+          rowData.push(translateProjectState(project.PRJ_state))
+        }
+        if (selectedFields.presupuesto) {
+          const budget = parseFloat(project.PRJ_budget) || 0
+          totalBudget += budget
+          rowData.push(`₡${budget.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`)
+        }
+        if (selectedFields.pagado) {
+          const remaining = parseFloat(project.PRJ_remaining_amount) || 0
+          totalRemaining += remaining
+          rowData.push(`₡${remaining.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`)
+        }
+        if (selectedFields.fechaInicio) {
+          rowData.push(project.PRJ_entry_date ? format(new Date(project.PRJ_entry_date), "dd/MM/yyyy") : "N/A")
+        }
+        if (selectedFields.fechaEntrega) {
+          rowData.push(project.PRJ_completion_date ? format(new Date(project.PRJ_completion_date), "dd/MM/yyyy") : "N/A")
+        }
+        if (selectedFields.categoria) {
+          rowData.push(project.categories_names?.join(", ") || "N/A")
+        }
+
+        worksheet.getRow(rowIndex).values = rowData
+        worksheet.getRow(rowIndex).alignment = { vertical: "middle" }
+        
+        if (rowIndex % 2 === 0) {
+          worksheet.getRow(rowIndex).fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "F5F5F5" }
+          }
+        }
+        
+        rowIndex++
+      })
+
+      // Ajustar ancho de columnas
+      worksheet.columns.forEach((column) => {
+        column.width = 18
+      })
+
+      // Bordes
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber >= 5) {
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" }
+            }
+          })
+        }
+      })
+
+      // Resumen
+      const summaryRow = rowIndex + 1
+      worksheet.mergeCells(`A${summaryRow}:${String.fromCharCode(64 + headers.length)}${summaryRow}`)
+      const summaryCell = worksheet.getCell(`A${summaryRow}`)
+      summaryCell.value = `Total de proyectos: ${projects.length} | Presupuesto total: ₡${totalBudget.toLocaleString("es-CR", { minimumFractionDigits: 2 })} | Monto restante: ₡${totalRemaining.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`
+      summaryCell.font = { bold: true, size: 11 }
+      summaryCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: lightColor }
+      }
+      summaryCell.alignment = { horizontal: "center" }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+      saveAs(blob, `Reporte_Proyectos_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`)
+
+      toast({
+        title: "Reporte generado",
+        description: "El reporte de proyectos se ha descargado exitosamente"
+      })
+    } catch (error) {
+      console.error("Error generando reporte:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo generar el reporte de proyectos",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const generatePaymentsReport = async () => {
+    try {
+      const response = await fetch("/api/payments")
+      let payments = await response.json()
+
+      // Aplicar filtro de fecha
+      const dateFilter = getDateFilter(dateRange)
+      if (dateFilter) {
+        payments = payments.filter((p: any) => {
+          const paymentDate = new Date(p.PAY_payment_date)
+          return paymentDate >= dateFilter
+        })
+      }
+
+      // Aplicar filtro de método de pago
+      if (metodoPagoFilter !== "todos") {
+        payments = payments.filter((p: any) => p.PAY_method === metodoPagoFilter)
+      }
+
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet("Pagos")
+
+      const primaryColor = "2E4600"
+      const secondaryColor = "486B00"
+      const lightColor = "C9E077"
+
+      // Título
+      worksheet.mergeCells("A1:H1")
+      const titleCell = worksheet.getCell("A1")
+      titleCell.value = "REPORTE DE PAGOS"
+      titleCell.font = { size: 18, bold: true, color: { argb: "FFFFFFFF" } }
+      titleCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: primaryColor }
+      }
+      titleCell.alignment = { vertical: "middle", horizontal: "center" }
+      worksheet.getRow(1).height = 35
+
+      // Filtros aplicados
+      worksheet.mergeCells("A2:H2")
+      const filterCell = worksheet.getCell("A2")
+      let filterText = `Filtro de fecha: ${translateDateRange(dateRange)}`
+      if (metodoPagoFilter !== "todos") {
+        filterText += ` | Método de pago: ${translatePaymentMethod(metodoPagoFilter)}`
+      }
+      filterCell.value = filterText
+      filterCell.font = { size: 11, italic: true }
+      filterCell.alignment = { horizontal: "center" }
+      worksheet.getRow(2).height = 20
+
+      // Fecha de generación
+      worksheet.mergeCells("A3:H3")
+      const dateCell = worksheet.getCell("A3")
+      dateCell.value = `Generado el: ${format(new Date(), "dd 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })}`
+      dateCell.font = { size: 10, italic: true }
+      dateCell.alignment = { horizontal: "center" }
+      worksheet.getRow(3).height = 20
+
+      // Encabezados
+      const headers: string[] = []
+      const fields: string[] = []
+
+      if (selectedFields.fecha) {
+        headers.push("Fecha de Pago")
+        fields.push("fecha")
+      }
+      if (selectedFields.monto) {
+        headers.push("Monto")
+        fields.push("monto")
+      }
+      if (selectedFields.metodo) {
+        headers.push("Método de Pago")
+        fields.push("metodo")
+      }
+      if (selectedFields.proyecto) {
+        headers.push("N° de Caso")
+        fields.push("proyecto")
+      }
+      if (selectedFields.cliente) {
+        headers.push("Cliente")
+        fields.push("cliente")
+      }
+      if (selectedFields.detalle) {
+        headers.push("Descripción")
+        fields.push("detalle")
+      }
+      if (selectedFields.estado) {
+        headers.push("Estado del Proyecto")
+        fields.push("estado")
+      }
+
+      worksheet.getRow(5).values = headers
+      worksheet.getRow(5).font = { bold: true, color: { argb: "FFFFFFFF" } }
+      worksheet.getRow(5).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: secondaryColor }
+      }
+      worksheet.getRow(5).alignment = { vertical: "middle", horizontal: "center" }
+      worksheet.getRow(5).height = 25
+
+      // Datos
+      let rowIndex = 6
+      let totalAmount = 0
+
+      payments.forEach((payment: any) => {
+        const rowData: any[] = []
+        
+        if (selectedFields.fecha) {
+          rowData.push(payment.PAY_payment_date ? format(new Date(payment.PAY_payment_date), "dd/MM/yyyy") : "N/A")
+        }
+        if (selectedFields.monto) {
+          const amount = parseFloat(payment.PAY_amount_paid) || 0
+          totalAmount += amount
+          rowData.push(`₡${amount.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`)
+        }
+        if (selectedFields.metodo) {
+          rowData.push(payment.PAY_method ? translatePaymentMethod(payment.PAY_method) : "N/A")
+        }
+        if (selectedFields.proyecto) {
+          rowData.push(payment.projectCaseNumber || "N/A")
+        }
+        if (selectedFields.cliente) {
+          rowData.push(payment.projectClientName || "N/A")
+        }
+        if (selectedFields.detalle) {
+          rowData.push(payment.PAY_description || "N/A")
+        }
+        if (selectedFields.estado) {
+          rowData.push(payment.projectState ? translateProjectState(payment.projectState) : "N/A")
+        }
+
+        worksheet.getRow(rowIndex).values = rowData
+        worksheet.getRow(rowIndex).alignment = { vertical: "middle" }
+        
+        if (rowIndex % 2 === 0) {
+          worksheet.getRow(rowIndex).fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "F5F5F5" }
+          }
+        }
+        
+        rowIndex++
+      })
+
+      // Ajustar ancho de columnas
+      worksheet.columns.forEach((column) => {
+        column.width = 20
+      })
+
+      // Bordes
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber >= 5) {
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" }
+            }
+          })
+        }
+      })
+
+      // Resumen
+      const summaryRow = rowIndex + 1
+      worksheet.mergeCells(`A${summaryRow}:${String.fromCharCode(64 + headers.length)}${summaryRow}`)
+      const summaryCell = worksheet.getCell(`A${summaryRow}`)
+      summaryCell.value = `Total de pagos: ${payments.length} | Monto total recibido: ₡${totalAmount.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`
+      summaryCell.font = { bold: true, size: 11 }
+      summaryCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: lightColor }
+      }
+      summaryCell.alignment = { horizontal: "center" }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+      saveAs(blob, `Reporte_Pagos_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`)
+
+      toast({
+        title: "Reporte generado",
+        description: "El reporte de pagos se ha descargado exitosamente"
+      })
+    } catch (error) {
+      console.error("Error generando reporte:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo generar el reporte de pagos",
+        variant: "destructive"
+      })
+    }
+  }
+
   const handleGenerateReport = async () => {
     if (!selectedReport) return
 
     setIsGenerating(true)
 
-    // Simular generación de reporte
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    // Aquí normalmente se generaría el archivo Excel
-    console.log("Generando reporte:", {
-      type: selectedReport,
-      fields: selectedFields,
-      dateRange,
-    })
-
-    setIsGenerating(false)
-
-    // Simular descarga
-    alert("Reporte generado exitosamente (simulación)")
+    try {
+      switch (selectedReport) {
+        case "clientes":
+          await generateClientsReport()
+          break
+        case "proyectos":
+          await generateProjectsReport()
+          break
+        case "pagos":
+          await generatePaymentsReport()
+          break
+      }
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   const currentReport = reportTypes.find((r) => r.id === selectedReport)
@@ -217,6 +886,51 @@ export default function ReportesPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Filtros adicionales según tipo de reporte */}
+                  {selectedReport === "proyectos" && (
+                    <div className="space-y-2">
+                      <Label>Estado del Proyecto</Label>
+                      <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todos">Todos los estados</SelectItem>
+                          <SelectItem value="Document Collection">Recolección de Documentos</SelectItem>
+                          <SelectItem value="Technical Inspection">Inspección Técnica</SelectItem>
+                          <SelectItem value="Document Review">Revisión de Documentos</SelectItem>
+                          <SelectItem value="Plans and Budget">Planos y Presupuesto</SelectItem>
+                          <SelectItem value="Entity Review">Revisión de Entidad</SelectItem>
+                          <SelectItem value="APC and Permits">APC y Permisos</SelectItem>
+                          <SelectItem value="Disbursement">Desembolso</SelectItem>
+                          <SelectItem value="Under Construction">En Construcción</SelectItem>
+                          <SelectItem value="Completed">Completado</SelectItem>
+                          <SelectItem value="Logbook Closed">Bitácora Cerrada</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {selectedReport === "pagos" && (
+                    <div className="space-y-2">
+                      <Label>Método de Pago</Label>
+                      <Select value={metodoPagoFilter} onValueChange={setMetodoPagoFilter}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todos">Todos los métodos</SelectItem>
+                          <SelectItem value="Cash">Efectivo</SelectItem>
+                          <SelectItem value="Card">Tarjeta</SelectItem>
+                          <SelectItem value="SINPE">SINPE Móvil</SelectItem>
+                          <SelectItem value="Transfer">Transferencia</SelectItem>
+                          <SelectItem value="Deposit">Depósito</SelectItem>
+                          <SelectItem value="Check">Cheque</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {/* Campos a Incluir */}
                   <div className="space-y-3">
