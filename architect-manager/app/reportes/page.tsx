@@ -1,19 +1,27 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Download, FileSpreadsheet, Calendar, Users, Building, DollarSign } from "lucide-react"
+import { Download, FileSpreadsheet, Calendar, Users, Building, DollarSign, ChevronLeft, ChevronRight, Eye, RefreshCw } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import ExcelJS from "exceljs"
 import { saveAs } from "file-saver"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 const reportTypes = [
   {
@@ -75,6 +83,19 @@ export default function ReportesPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [estadoFilter, setEstadoFilter] = useState("todos")
   const [metodoPagoFilter, setMetodoPagoFilter] = useState("todos")
+  
+  // Estados para la vista previa
+  const [previewData, setPreviewData] = useState<any[]>([])
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
+  const [showPreview, setShowPreview] = useState(false)
+
+  // Calcular datos paginados
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentItems = previewData.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(previewData.length / itemsPerPage)
 
   const handleReportSelect = (reportId: string) => {
     setSelectedReport(reportId)
@@ -176,6 +197,152 @@ export default function ReportesPage() {
       default:
         return null
     }
+  }
+
+  // Cargar vista previa de datos
+  const loadPreviewData = async () => {
+    if (!selectedReport) return
+
+    setIsLoadingPreview(true)
+    setShowPreview(true)
+    setCurrentPage(1)
+
+    try {
+      let data: any[] = []
+
+      if (selectedReport === "clientes") {
+        const response = await fetch("/api/clients")
+        const result = await response.json()
+        data = result.clients || []
+      } else if (selectedReport === "proyectos") {
+        const response = await fetch("/api/projects")
+        const result = await response.json()
+        let projects = result.projects || []
+
+        // Aplicar filtro de fecha
+        const dateFilter = getDateFilter(dateRange)
+        if (dateFilter) {
+          projects = projects.filter((p: any) => {
+            const entryDate = new Date(p.PRJ_entry_date)
+            return entryDate >= dateFilter
+          })
+        }
+
+        // Aplicar filtro de estado
+        if (estadoFilter !== "todos") {
+          projects = projects.filter((p: any) => p.PRJ_state === estadoFilter)
+        }
+
+        data = projects
+      } else if (selectedReport === "pagos") {
+        const response = await fetch("/api/payments")
+        let payments = await response.json()
+
+        // Aplicar filtro de fecha
+        const dateFilter = getDateFilter(dateRange)
+        if (dateFilter) {
+          payments = payments.filter((p: any) => {
+            const paymentDate = new Date(p.PAY_payment_date)
+            return paymentDate >= dateFilter
+          })
+        }
+
+        // Aplicar filtro de método de pago
+        if (metodoPagoFilter !== "todos") {
+          payments = payments.filter((p: any) => p.PAY_method === metodoPagoFilter)
+        }
+
+        data = payments
+      }
+
+      setPreviewData(data)
+    } catch (error) {
+      console.error("Error cargando vista previa:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo cargar la vista previa",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoadingPreview(false)
+    }
+  }
+
+  // Recargar vista previa cuando cambian los filtros
+  useEffect(() => {
+    if (selectedReport && showPreview) {
+      loadPreviewData()
+    }
+  }, [dateRange, estadoFilter, metodoPagoFilter])
+
+  // Renderizar fila de la tabla según el tipo de reporte
+  const renderPreviewRow = (item: any, index: number) => {
+    if (selectedReport === "clientes") {
+      return (
+        <TableRow key={index}>
+          {selectedFields.nombre && (
+            <TableCell>{`${item.CLI_name || ""} ${item.CLI_f_lastname || ""} ${item.CLI_s_lastname || ""}`.trim()}</TableCell>
+          )}
+          {selectedFields.email && <TableCell>{item.CLI_email || "N/A"}</TableCell>}
+          {selectedFields.telefono && <TableCell>{item.CLI_phone || "N/A"}</TableCell>}
+          {selectedFields.empresa && <TableCell>{translateIdentificationType(item.CLI_identificationtype)}</TableCell>}
+          {selectedFields.proyectos && <TableCell className="text-center">{item.CLI_projects_amount || 0}</TableCell>}
+          {selectedFields.estado && <TableCell>{translateCivilStatus(item.CLI_civil_status)}</TableCell>}
+        </TableRow>
+      )
+    } else if (selectedReport === "proyectos") {
+      return (
+        <TableRow key={index}>
+          {selectedFields.nombre && <TableCell>{item.PRJ_case_number || "N/A"}</TableCell>}
+          {selectedFields.cliente && <TableCell>{item.client_name || "N/A"}</TableCell>}
+          {selectedFields.estado && <TableCell>{translateProjectState(item.PRJ_state)}</TableCell>}
+          {selectedFields.presupuesto && (
+            <TableCell className="text-right">₡{parseFloat(item.PRJ_budget || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}</TableCell>
+          )}
+          {selectedFields.pagado && (
+            <TableCell className="text-right">₡{parseFloat(item.PRJ_remaining_amount || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}</TableCell>
+          )}
+          {selectedFields.fechaInicio && (
+            <TableCell>{item.PRJ_entry_date ? format(new Date(item.PRJ_entry_date), "dd/MM/yyyy") : "N/A"}</TableCell>
+          )}
+          {selectedFields.fechaEntrega && (
+            <TableCell>{item.PRJ_completion_date ? format(new Date(item.PRJ_completion_date), "dd/MM/yyyy") : "N/A"}</TableCell>
+          )}
+          {selectedFields.categoria && <TableCell>{item.categories_names?.join(", ") || "N/A"}</TableCell>}
+        </TableRow>
+      )
+    } else if (selectedReport === "pagos") {
+      return (
+        <TableRow key={index}>
+          {selectedFields.fecha && (
+            <TableCell>{item.PAY_payment_date ? format(new Date(item.PAY_payment_date), "dd/MM/yyyy") : "N/A"}</TableCell>
+          )}
+          {selectedFields.monto && (
+            <TableCell className="text-right">₡{parseFloat(item.PAY_amount_paid || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}</TableCell>
+          )}
+          {selectedFields.metodo && (
+            <TableCell>{item.PAY_method ? translatePaymentMethod(item.PAY_method) : "N/A"}</TableCell>
+          )}
+          {selectedFields.proyecto && <TableCell>{item.projectCaseNumber || "N/A"}</TableCell>}
+          {selectedFields.cliente && <TableCell>{item.projectClientName || "N/A"}</TableCell>}
+          {selectedFields.detalle && <TableCell>{item.PAY_description || "N/A"}</TableCell>}
+          {selectedFields.estado && (
+            <TableCell>{item.projectState ? translateProjectState(item.projectState) : "N/A"}</TableCell>
+          )}
+        </TableRow>
+      )
+    }
+  }
+
+  // Renderizar encabezados de la tabla
+  const renderPreviewHeaders = () => {
+    const currentFields = reportTypes.find(r => r.id === selectedReport)?.fields || []
+    
+    return currentFields
+      .filter(field => selectedFields[field.id])
+      .map(field => (
+        <TableHead key={field.id}>{field.label}</TableHead>
+      ))
   }
 
   const generateClientsReport = async () => {
@@ -970,6 +1137,26 @@ export default function ReportesPage() {
                     )}
                   </Button>
 
+                  {/* Botón de Vista Previa */}
+                  <Button
+                    onClick={loadPreviewData}
+                    disabled={isLoadingPreview}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {isLoadingPreview ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-medium mr-2" />
+                        Cargando...
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Ver Vista Previa
+                      </>
+                    )}
+                  </Button>
+
                   {!isAdmin && (
                     <p className="text-sm text-muted-foreground text-center">
                       Necesitas permisos de administrador para generar reportes
@@ -985,6 +1172,123 @@ export default function ReportesPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Vista Previa del Reporte */}
+        {showPreview && selectedReport && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Vista Previa del Reporte</CardTitle>
+                  <CardDescription>
+                    Mostrando {currentItems.length} de {previewData.length} registros
+                    {dateRange !== "todo" && ` (${translateDateRange(dateRange)})`}
+                    {selectedReport === "proyectos" && estadoFilter !== "todos" && ` - ${translateProjectState(estadoFilter)}`}
+                    {selectedReport === "pagos" && metodoPagoFilter !== "todos" && ` - ${translatePaymentMethod(metodoPagoFilter)}`}
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={loadPreviewData}
+                  disabled={isLoadingPreview}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoadingPreview ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingPreview ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-medium" />
+                </div>
+              ) : previewData.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No hay datos que coincidan con los filtros seleccionados</p>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {renderPreviewHeaders()}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentItems.map((item, index) => renderPreviewRow(item, index))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Paginación */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="text-sm text-muted-foreground">
+                        Página {currentPage} de {totalPages}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Anterior
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Siguiente
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Resumen */}
+                  <div className="mt-4 p-4 bg-primary-lighter/10 rounded-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total de Registros</p>
+                        <p className="text-2xl font-bold text-primary-dark">{previewData.length}</p>
+                      </div>
+                      {selectedReport === "proyectos" && (
+                        <>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Presupuesto Total</p>
+                            <p className="text-2xl font-bold text-primary-dark">
+                              ₡{previewData.reduce((sum, p) => sum + (parseFloat(p.PRJ_budget) || 0), 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Monto Restante</p>
+                            <p className="text-2xl font-bold text-primary-dark">
+                              ₡{previewData.reduce((sum, p) => sum + (parseFloat(p.PRJ_remaining_amount) || 0), 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                      {selectedReport === "pagos" && (
+                        <div className="md:col-span-2">
+                          <p className="text-sm text-muted-foreground">Monto Total Recibido</p>
+                          <p className="text-2xl font-bold text-primary-dark">
+                            ₡{previewData.reduce((sum, p) => sum + (parseFloat(p.PAY_amount_paid) || 0), 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Historial de Reportes */}
         <Card>
