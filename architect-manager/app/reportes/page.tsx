@@ -52,15 +52,27 @@ const reportTypes = [
     description: "Detalles de todos los proyectos arquitectónicos",
     icon: Building,
     fields: [
-      { id: "nombre", label: "Nombre del proyecto", checked: true },
+      { id: "numeroCaso", label: "Número de caso", checked: true },
       { id: "cliente", label: "Cliente", checked: true },
+      { id: "identificacionCliente", label: "Identificación del cliente", checked: false },
       { id: "estado", label: "Estado actual", checked: true },
-      { id: "progreso", label: "Porcentaje de progreso", checked: false },
-      { id: "presupuesto", label: "Presupuesto total", checked: true },
-      { id: "pagado", label: "Monto pagado", checked: true },
-      { id: "fechaInicio", label: "Fecha de inicio", checked: false },
+      { id: "tipo", label: "Tipo de proyecto", checked: false },
+      { id: "categorias", label: "Categorías", checked: false },
+      { id: "presupuesto", label: "Presupuesto inicial", checked: true },
+      { id: "precioFinal", label: "Precio final", checked: false },
+      { id: "restante", label: "Monto restante", checked: true },
+      { id: "area", label: "Área en m²", checked: false },
+      { id: "fechaIngreso", label: "Fecha de ingreso", checked: true },
       { id: "fechaEntrega", label: "Fecha de entrega", checked: false },
-      { id: "categoria", label: "Categoría", checked: false },
+      { id: "fechaInicioConst", label: "Fecha inicio construcción", checked: false },
+      { id: "fechaCierreBitacora", label: "Fecha cierre bitácora", checked: false },
+      { id: "numeroBitacora", label: "Número de bitácora", checked: false },
+      { id: "provincia", label: "Provincia", checked: false },
+      { id: "canton", label: "Cantón", checked: false },
+      { id: "distrito", label: "Distrito", checked: false },
+      { id: "barrio", label: "Barrio", checked: false },
+      { id: "direcciones", label: "Direcciones adicionales", checked: false },
+      { id: "notas", label: "Notas", checked: false },
     ],
   },
   {
@@ -89,6 +101,7 @@ export default function ReportesPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [estadoFilter, setEstadoFilter] = useState("todos")
   const [metodoPagoFilter, setMetodoPagoFilter] = useState("todos")
+  const [includeAllFields, setIncludeAllFields] = useState(false)
   
   // Estados para la vista previa
   const [previewData, setPreviewData] = useState<any[]>([])
@@ -105,6 +118,7 @@ export default function ReportesPage() {
 
   const handleReportSelect = (reportId: string) => {
     setSelectedReport(reportId)
+    setIncludeAllFields(false)
     const report = reportTypes.find((r) => r.id === reportId)
     if (report) {
       const initialFields: Record<string, boolean> = {}
@@ -112,6 +126,31 @@ export default function ReportesPage() {
         initialFields[field.id] = field.checked
       })
       setSelectedFields(initialFields)
+    }
+  }
+
+  const handleIncludeAllToggle = (checked: boolean) => {
+    setIncludeAllFields(checked)
+    if (checked) {
+      // Guardar estado actual antes de activar todos
+      const report = reportTypes.find((r) => r.id === selectedReport)
+      if (report) {
+        const allFields: Record<string, boolean> = {}
+        report.fields.forEach((field) => {
+          allFields[field.id] = true
+        })
+        setSelectedFields(allFields)
+      }
+    } else {
+      // Restaurar al estado por defecto cuando se desactiva
+      const report = reportTypes.find((r) => r.id === selectedReport)
+      if (report) {
+        const defaultFields: Record<string, boolean> = {}
+        report.fields.forEach((field) => {
+          defaultFields[field.id] = field.checked
+        })
+        setSelectedFields(defaultFields)
+      }
     }
   }
 
@@ -224,7 +263,7 @@ export default function ReportesPage() {
         const response = await fetch("/api/projects")
         const result = await response.json()
         let projects = result.projects || []
-
+        console.log("Projects fetcheds on reportes:", projects)
         // Aplicar filtro de fecha
         const dateFilter = getDateFilter(dateRange)
         if (dateFilter) {
@@ -309,22 +348,43 @@ export default function ReportesPage() {
     } else if (selectedReport === "proyectos") {
       return (
         <TableRow key={index}>
-          {selectedFields.nombre && <TableCell>{item.PRJ_case_number || "N/A"}</TableCell>}
+          {selectedFields.numeroCaso && <TableCell>{item.PRJ_case_number || "N/A"}</TableCell>}
           {selectedFields.cliente && <TableCell>{item.client_name || "N/A"}</TableCell>}
+          {selectedFields.identificacionCliente && <TableCell>{item.client_identification || "N/A"}</TableCell>}
           {selectedFields.estado && <TableCell>{translateProjectState(item.PRJ_state)}</TableCell>}
+          {selectedFields.tipo && <TableCell>{item.type?.TYP_name || "N/A"}</TableCell>}
+          {selectedFields.categorias && <TableCell>{item.categories_names?.join(", ") || "N/A"}</TableCell>}
           {selectedFields.presupuesto && (
             <TableCell className="text-right">₡{parseFloat(item.PRJ_budget || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}</TableCell>
           )}
-          {selectedFields.pagado && (
+          {selectedFields.precioFinal && (
+            <TableCell className="text-right">₡{parseFloat(item.PRJ_final_price || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}</TableCell>
+          )}
+          {selectedFields.restante && (
             <TableCell className="text-right">₡{parseFloat(item.PRJ_remaining_amount || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}</TableCell>
           )}
-          {selectedFields.fechaInicio && (
+          {selectedFields.area && (
+            <TableCell className="text-right">{parseFloat(item.PRJ_area_m2 || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })} m²</TableCell>
+          )}
+          {selectedFields.fechaIngreso && (
             <TableCell>{item.PRJ_entry_date ? format(new Date(item.PRJ_entry_date), "dd/MM/yyyy") : "N/A"}</TableCell>
           )}
           {selectedFields.fechaEntrega && (
             <TableCell>{item.PRJ_completion_date ? format(new Date(item.PRJ_completion_date), "dd/MM/yyyy") : "N/A"}</TableCell>
           )}
-          {selectedFields.categoria && <TableCell>{item.categories_names?.join(", ") || "N/A"}</TableCell>}
+          {selectedFields.fechaInicioConst && (
+            <TableCell>{item.PRJ_start_construction_date ? format(new Date(item.PRJ_start_construction_date), "dd/MM/yyyy") : "N/A"}</TableCell>
+          )}
+          {selectedFields.fechaCierreBitacora && (
+            <TableCell>{item.PRJ_logbook_close_date ? format(new Date(item.PRJ_logbook_close_date), "dd/MM/yyyy") : "N/A"}</TableCell>
+          )}
+          {selectedFields.numeroBitacora && <TableCell>{item.PRJ_logbook_number || "N/A"}</TableCell>}
+          {selectedFields.provincia && <TableCell>{item.PRJ_province || "N/A"}</TableCell>}
+          {selectedFields.canton && <TableCell>{item.PRJ_canton || "N/A"}</TableCell>}
+          {selectedFields.distrito && <TableCell>{item.PRJ_district || "N/A"}</TableCell>}
+          {selectedFields.barrio && <TableCell>{item.PRJ_neighborhood || "N/A"}</TableCell>}
+          {selectedFields.direcciones && <TableCell>{item.PRJ_additional_directions || "N/A"}</TableCell>}
+          {selectedFields.notas && <TableCell>{item.PRJ_notes || "N/A"}</TableCell>}
         </TableRow>
       )
     } else if (selectedReport === "pagos") {
@@ -653,37 +713,89 @@ export default function ReportesPage() {
       const headers: string[] = []
       const fields: string[] = []
 
-      if (selectedFields.nombre) {
+      if (selectedFields.numeroCaso) {
         headers.push("N° de Caso")
-        fields.push("nombre")
+        fields.push("numeroCaso")
       }
       if (selectedFields.cliente) {
         headers.push("Cliente")
         fields.push("cliente")
       }
+      if (selectedFields.identificacionCliente) {
+        headers.push("Identificación Cliente")
+        fields.push("identificacionCliente")
+      }
       if (selectedFields.estado) {
         headers.push("Estado")
         fields.push("estado")
       }
+      if (selectedFields.tipo) {
+        headers.push("Tipo de Proyecto")
+        fields.push("tipo")
+      }
+      if (selectedFields.categorias) {
+        headers.push("Categorías")
+        fields.push("categorias")
+      }
       if (selectedFields.presupuesto) {
-        headers.push("Presupuesto")
+        headers.push("Presupuesto Inicial")
         fields.push("presupuesto")
       }
-      if (selectedFields.pagado) {
-        headers.push("Monto Restante")
-        fields.push("pagado")
+      if (selectedFields.precioFinal) {
+        headers.push("Precio Final")
+        fields.push("precioFinal")
       }
-      if (selectedFields.fechaInicio) {
-        headers.push("Fecha de Inicio")
-        fields.push("fechaInicio")
+      if (selectedFields.restante) {
+        headers.push("Monto Restante")
+        fields.push("restante")
+      }
+      if (selectedFields.area) {
+        headers.push("Área (m²)")
+        fields.push("area")
+      }
+      if (selectedFields.fechaIngreso) {
+        headers.push("Fecha de Ingreso")
+        fields.push("fechaIngreso")
       }
       if (selectedFields.fechaEntrega) {
         headers.push("Fecha de Entrega")
         fields.push("fechaEntrega")
       }
-      if (selectedFields.categoria) {
-        headers.push("Categorías")
-        fields.push("categoria")
+      if (selectedFields.fechaInicioConst) {
+        headers.push("Fecha Inicio Construcción")
+        fields.push("fechaInicioConst")
+      }
+      if (selectedFields.fechaCierreBitacora) {
+        headers.push("Fecha Cierre Bitácora")
+        fields.push("fechaCierreBitacora")
+      }
+      if (selectedFields.numeroBitacora) {
+        headers.push("N° Bitácora")
+        fields.push("numeroBitacora")
+      }
+      if (selectedFields.provincia) {
+        headers.push("Provincia")
+        fields.push("provincia")
+      }
+      if (selectedFields.canton) {
+        headers.push("Cantón")
+        fields.push("canton")
+      }
+      if (selectedFields.distrito) {
+        headers.push("Distrito")
+        fields.push("distrito")
+      }
+      if (selectedFields.barrio) {
+        headers.push("Barrio")
+        fields.push("barrio")
+      }
+      if (selectedFields.direcciones) {
+        headers.push("Direcciones Adicionales")
+        fields.push("direcciones")
+      }
+      if (selectedFields.notas) {
+        headers.push("Notas")
+        fields.push("notas")
       }
 
       worksheet.getRow(5).values = headers
@@ -704,33 +816,72 @@ export default function ReportesPage() {
       projects.forEach((project: any) => {
         const rowData: any[] = []
         
-        if (selectedFields.nombre) {
+        if (selectedFields.numeroCaso) {
           rowData.push(project.PRJ_case_number || "N/A")
         }
         if (selectedFields.cliente) {
           rowData.push(project.client_name || "N/A")
         }
+        if (selectedFields.identificacionCliente) {
+          rowData.push(project.client_identification || "N/A")
+        }
         if (selectedFields.estado) {
           rowData.push(translateProjectState(project.PRJ_state))
+        }
+        if (selectedFields.tipo) {
+          rowData.push(project.type?.TYP_name || "N/A")
+        }
+        if (selectedFields.categorias) {
+          rowData.push(project.categories_names?.join(", ") || "N/A")
         }
         if (selectedFields.presupuesto) {
           const budget = parseFloat(project.PRJ_budget) || 0
           totalBudget += budget
           rowData.push(`₡${budget.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`)
         }
-        if (selectedFields.pagado) {
+        if (selectedFields.precioFinal) {
+          rowData.push(project.PRJ_final_price ? `₡${parseFloat(project.PRJ_final_price).toLocaleString("es-CR", { minimumFractionDigits: 2 })}` : "N/A")
+        }
+        if (selectedFields.restante) {
           const remaining = parseFloat(project.PRJ_remaining_amount) || 0
           totalRemaining += remaining
           rowData.push(`₡${remaining.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`)
         }
-        if (selectedFields.fechaInicio) {
+        if (selectedFields.area) {
+          rowData.push(project.PRJ_area_m2 ? `${parseFloat(project.PRJ_area_m2).toLocaleString("es-CR", { minimumFractionDigits: 2 })} m²` : "N/A")
+        }
+        if (selectedFields.fechaIngreso) {
           rowData.push(project.PRJ_entry_date ? format(new Date(project.PRJ_entry_date), "dd/MM/yyyy") : "N/A")
         }
         if (selectedFields.fechaEntrega) {
           rowData.push(project.PRJ_completion_date ? format(new Date(project.PRJ_completion_date), "dd/MM/yyyy") : "N/A")
         }
-        if (selectedFields.categoria) {
-          rowData.push(project.categories_names?.join(", ") || "N/A")
+        if (selectedFields.fechaInicioConst) {
+          rowData.push(project.PRJ_start_construction_date ? format(new Date(project.PRJ_start_construction_date), "dd/MM/yyyy") : "N/A")
+        }
+        if (selectedFields.fechaCierreBitacora) {
+          rowData.push(project.PRJ_logbook_close_date ? format(new Date(project.PRJ_logbook_close_date), "dd/MM/yyyy") : "N/A")
+        }
+        if (selectedFields.numeroBitacora) {
+          rowData.push(project.PRJ_logbook_number || "N/A")
+        }
+        if (selectedFields.provincia) {
+          rowData.push(project.PRJ_province || "N/A")
+        }
+        if (selectedFields.canton) {
+          rowData.push(project.PRJ_canton || "N/A")
+        }
+        if (selectedFields.distrito) {
+          rowData.push(project.PRJ_district || "N/A")
+        }
+        if (selectedFields.barrio) {
+          rowData.push(project.PRJ_neighborhood || "N/A")
+        }
+        if (selectedFields.direcciones) {
+          rowData.push(project.PRJ_additional_directions || "N/A")
+        }
+        if (selectedFields.notas) {
+          rowData.push(project.PRJ_notes || "N/A")
         }
 
         worksheet.getRow(rowIndex).values = rowData
@@ -1176,15 +1327,33 @@ export default function ReportesPage() {
                   {/* Campos a Incluir */}
                   <div className="space-y-3">
                     <Label>Campos a Incluir</Label>
+                    
+                    {/* Checkbox para incluir todos los campos */}
+                    <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-md border border-primary-light/30">
+                      <Checkbox
+                        id="includeAll"
+                        checked={includeAllFields}
+                        onCheckedChange={(checked) => handleIncludeAllToggle(checked as boolean)}
+                      />
+                      <Label htmlFor="includeAll" className="text-sm font-semibold cursor-pointer">
+                        Incluir todos los campos
+                      </Label>
+                    </div>
+
+                    {/* Lista de campos individuales */}
                     <div className="space-y-2 max-h-64 overflow-y-auto">
                       {currentReport?.fields.map((field) => (
                         <div key={field.id} className="flex items-center space-x-2">
                           <Checkbox
                             id={field.id}
                             checked={selectedFields[field.id] || false}
+                            disabled={includeAllFields}
                             onCheckedChange={(checked) => handleFieldToggle(field.id, checked as boolean)}
                           />
-                          <Label htmlFor={field.id} className="text-sm">
+                          <Label 
+                            htmlFor={field.id} 
+                            className={`text-sm ${includeAllFields ? 'text-muted-foreground cursor-not-allowed' : 'cursor-pointer'}`}
+                          >
                             {field.label}
                           </Label>
                         </div>
