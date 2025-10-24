@@ -119,6 +119,9 @@ export default function ReportesPage() {
   const handleReportSelect = (reportId: string) => {
     setSelectedReport(reportId)
     setIncludeAllFields(false)
+    setShowPreview(false)
+    setPreviewData([])
+    setCurrentPage(1)
     const report = reportTypes.find((r) => r.id === reportId)
     if (report) {
       const initialFields: Record<string, boolean> = {}
