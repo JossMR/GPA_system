@@ -31,12 +31,19 @@ const reportTypes = [
     icon: Users,
     fields: [
       { id: "nombre", label: "Nombre completo", checked: true },
+      { id: "identificacion", label: "Identificación", checked: true },
+      { id: "tipoIdentificacion", label: "Tipo de identificación", checked: true },
       { id: "email", label: "Correo electrónico", checked: true },
       { id: "telefono", label: "Teléfono", checked: true },
-      { id: "empresa", label: "Empresa", checked: true },
-      { id: "proyectos", label: "Número de proyectos", checked: false },
-      { id: "fechaRegistro", label: "Fecha de registro", checked: false },
-      { id: "estado", label: "Estado del cliente", checked: true },
+      { id: "estadoCivil", label: "Estado civil", checked: false },
+      { id: "esPerson", label: "Es persona física", checked: false },
+      { id: "provincia", label: "Provincia", checked: false },
+      { id: "canton", label: "Cantón", checked: false },
+      { id: "distrito", label: "Distrito", checked: false },
+      { id: "barrio", label: "Barrio", checked: false },
+      { id: "direcciones", label: "Direcciones adicionales", checked: false },
+      { id: "observaciones", label: "Observaciones", checked: false },
+      { id: "proyectos", label: "Número de proyectos", checked: true },
     ],
   },
   {
@@ -272,7 +279,9 @@ export default function ReportesPage() {
     if (selectedReport && showPreview) {
       loadPreviewData()
     }
-  }, [dateRange, estadoFilter, metodoPagoFilter])
+    // Para clientes no hay filtros de fecha, solo recarga cuando cambia el reporte
+    if (selectedReport === "clientes") return
+  }, [selectedReport === "clientes" ? null : dateRange, estadoFilter, metodoPagoFilter])
 
   // Renderizar fila de la tabla según el tipo de reporte
   const renderPreviewRow = (item: any, index: number) => {
@@ -282,11 +291,19 @@ export default function ReportesPage() {
           {selectedFields.nombre && (
             <TableCell>{`${item.CLI_name || ""} ${item.CLI_f_lastname || ""} ${item.CLI_s_lastname || ""}`.trim()}</TableCell>
           )}
+          {selectedFields.identificacion && <TableCell>{item.CLI_identification || "N/A"}</TableCell>}
+          {selectedFields.tipoIdentificacion && <TableCell>{translateIdentificationType(item.CLI_identificationtype)}</TableCell>}
           {selectedFields.email && <TableCell>{item.CLI_email || "N/A"}</TableCell>}
           {selectedFields.telefono && <TableCell>{item.CLI_phone || "N/A"}</TableCell>}
-          {selectedFields.empresa && <TableCell>{translateIdentificationType(item.CLI_identificationtype)}</TableCell>}
+          {selectedFields.estadoCivil && <TableCell>{translateCivilStatus(item.CLI_civil_status)}</TableCell>}
+          {selectedFields.esPerson && <TableCell>{item.CLI_isperson ? "Sí" : "No"}</TableCell>}
+          {selectedFields.provincia && <TableCell>{item.CLI_province || "N/A"}</TableCell>}
+          {selectedFields.canton && <TableCell>{item.CLI_canton || "N/A"}</TableCell>}
+          {selectedFields.distrito && <TableCell>{item.CLI_district || "N/A"}</TableCell>}
+          {selectedFields.barrio && <TableCell>{item.CLI_neighborhood || "N/A"}</TableCell>}
+          {selectedFields.direcciones && <TableCell>{item.CLI_additional_directions || "N/A"}</TableCell>}
+          {selectedFields.observaciones && <TableCell>{item.CLI_observations || "N/A"}</TableCell>}
           {selectedFields.proyectos && <TableCell className="text-center">{item.CLI_projects_amount || 0}</TableCell>}
-          {selectedFields.estado && <TableCell>{translateCivilStatus(item.CLI_civil_status)}</TableCell>}
         </TableRow>
       )
     } else if (selectedReport === "proyectos") {
@@ -374,7 +391,7 @@ export default function ReportesPage() {
       // Información del filtro
       worksheet.mergeCells("A2:G2")
       const filterCell = worksheet.getCell("A2")
-      filterCell.value = `Filtro aplicado: ${translateDateRange(dateRange)}`
+      filterCell.value = `Reporte de Clientes - Todos los registros`
       filterCell.font = { size: 11, italic: true }
       filterCell.alignment = { horizontal: "center" }
       worksheet.getRow(2).height = 20
@@ -395,6 +412,14 @@ export default function ReportesPage() {
         headers.push("Nombre Completo")
         fields.push("nombre")
       }
+      if (selectedFields.identificacion) {
+        headers.push("Identificación")
+        fields.push("identificacion")
+      }
+      if (selectedFields.tipoIdentificacion) {
+        headers.push("Tipo de Identificación")
+        fields.push("tipoIdentificacion")
+      }
       if (selectedFields.email) {
         headers.push("Correo Electrónico")
         fields.push("email")
@@ -403,17 +428,41 @@ export default function ReportesPage() {
         headers.push("Teléfono")
         fields.push("telefono")
       }
-      if (selectedFields.empresa) {
-        headers.push("Tipo de Identificación")
-        fields.push("empresa")
+      if (selectedFields.estadoCivil) {
+        headers.push("Estado Civil")
+        fields.push("estadoCivil")
+      }
+      if (selectedFields.esPerson) {
+        headers.push("Es Persona Física")
+        fields.push("esPerson")
+      }
+      if (selectedFields.provincia) {
+        headers.push("Provincia")
+        fields.push("provincia")
+      }
+      if (selectedFields.canton) {
+        headers.push("Cantón")
+        fields.push("canton")
+      }
+      if (selectedFields.distrito) {
+        headers.push("Distrito")
+        fields.push("distrito")
+      }
+      if (selectedFields.barrio) {
+        headers.push("Barrio")
+        fields.push("barrio")
+      }
+      if (selectedFields.direcciones) {
+        headers.push("Direcciones Adicionales")
+        fields.push("direcciones")
+      }
+      if (selectedFields.observaciones) {
+        headers.push("Observaciones")
+        fields.push("observaciones")
       }
       if (selectedFields.proyectos) {
         headers.push("N° de Proyectos")
         fields.push("proyectos")
-      }
-      if (selectedFields.estado) {
-        headers.push("Estado Civil")
-        fields.push("estado")
       }
 
       worksheet.getRow(5).values = headers
@@ -435,20 +484,44 @@ export default function ReportesPage() {
           const fullName = `${client.CLI_name || ""} ${client.CLI_f_lastname || ""} ${client.CLI_s_lastname || ""}`.trim()
           rowData.push(fullName)
         }
+        if (selectedFields.identificacion) {
+          rowData.push(client.CLI_identification || "N/A")
+        }
+        if (selectedFields.tipoIdentificacion) {
+          rowData.push(translateIdentificationType(client.CLI_identificationtype))
+        }
         if (selectedFields.email) {
           rowData.push(client.CLI_email || "N/A")
         }
         if (selectedFields.telefono) {
           rowData.push(client.CLI_phone || "N/A")
         }
-        if (selectedFields.empresa) {
-          rowData.push(translateIdentificationType(client.CLI_identificationtype))
+        if (selectedFields.estadoCivil) {
+          rowData.push(translateCivilStatus(client.CLI_civil_status))
+        }
+        if (selectedFields.esPerson) {
+          rowData.push(client.CLI_isperson ? "Sí" : "No")
+        }
+        if (selectedFields.provincia) {
+          rowData.push(client.CLI_province || "N/A")
+        }
+        if (selectedFields.canton) {
+          rowData.push(client.CLI_canton || "N/A")
+        }
+        if (selectedFields.distrito) {
+          rowData.push(client.CLI_district || "N/A")
+        }
+        if (selectedFields.barrio) {
+          rowData.push(client.CLI_neighborhood || "N/A")
+        }
+        if (selectedFields.direcciones) {
+          rowData.push(client.CLI_additional_directions || "N/A")
+        }
+        if (selectedFields.observaciones) {
+          rowData.push(client.CLI_observations || "N/A")
         }
         if (selectedFields.proyectos) {
           rowData.push(client.CLI_projects_amount || 0)
-        }
-        if (selectedFields.estado) {
-          rowData.push(translateCivilStatus(client.CLI_civil_status))
         }
 
         worksheet.getRow(rowIndex).values = rowData
@@ -1036,22 +1109,24 @@ export default function ReportesPage() {
             <CardContent className="space-y-6">
               {selectedReport ? (
                 <>
-                  {/* Rango de Fechas */}
-                  <div className="space-y-2">
-                    <Label>Rango de Fechas</Label>
-                    <Select value={dateRange} onValueChange={setDateRange}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ultima_semana">Última semana</SelectItem>
-                        <SelectItem value="ultimo_mes">Último mes</SelectItem>
-                        <SelectItem value="ultimos_3_meses">Últimos 3 meses</SelectItem>
-                        <SelectItem value="ultimo_ano">Último año</SelectItem>
-                        <SelectItem value="todo">Todo el historial</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Rango de Fechas - Solo para proyectos y pagos */}
+                  {(selectedReport === "proyectos" || selectedReport === "pagos") && (
+                    <div className="space-y-2">
+                      <Label>Rango de Fechas</Label>
+                      <Select value={dateRange} onValueChange={setDateRange}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ultima_semana">Última semana</SelectItem>
+                          <SelectItem value="ultimo_mes">Último mes</SelectItem>
+                          <SelectItem value="ultimos_3_meses">Últimos 3 meses</SelectItem>
+                          <SelectItem value="ultimo_ano">Último año</SelectItem>
+                          <SelectItem value="todo">Todo el historial</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {/* Filtros adicionales según tipo de reporte */}
                   {selectedReport === "proyectos" && (
@@ -1181,7 +1256,7 @@ export default function ReportesPage() {
                   <CardTitle>Vista Previa del Reporte</CardTitle>
                   <CardDescription>
                     Mostrando {currentItems.length} de {previewData.length} registros
-                    {dateRange !== "todo" && ` (${translateDateRange(dateRange)})`}
+                    {selectedReport !== "clientes" && dateRange !== "todo" && ` (${translateDateRange(dateRange)})`}
                     {selectedReport === "proyectos" && estadoFilter !== "todos" && ` - ${translateProjectState(estadoFilter)}`}
                     {selectedReport === "pagos" && metodoPagoFilter !== "todos" && ` - ${translatePaymentMethod(metodoPagoFilter)}`}
                   </CardDescription>
