@@ -65,11 +65,10 @@ const reportTypes = [
       { id: "fecha", label: "Fecha del pago", checked: true },
       { id: "monto", label: "Monto", checked: true },
       { id: "metodo", label: "Método de pago", checked: true },
-      { id: "proyecto", label: "Proyecto asociado", checked: true },
+      { id: "numeroCaso", label: "Número de caso", checked: true },
       { id: "cliente", label: "Cliente", checked: true },
-      { id: "numeroCaso", label: "Número de caso", checked: false },
-      { id: "detalle", label: "Detalle del pago", checked: false },
-      { id: "estado", label: "Estado del pago", checked: true },
+      { id: "detalle", label: "Detalle del pago", checked: true },
+      { id: "estadoProyecto", label: "Estado del proyecto", checked: false },
     ],
   },
 ]
@@ -323,10 +322,10 @@ export default function ReportesPage() {
           {selectedFields.metodo && (
             <TableCell>{item.PAY_method ? translatePaymentMethod(item.PAY_method) : "N/A"}</TableCell>
           )}
-          {selectedFields.proyecto && <TableCell>{item.projectCaseNumber || "N/A"}</TableCell>}
+          {selectedFields.numeroCaso && <TableCell>{item.projectCaseNumber || "N/A"}</TableCell>}
           {selectedFields.cliente && <TableCell>{item.projectClientName || "N/A"}</TableCell>}
           {selectedFields.detalle && <TableCell>{item.PAY_description || "N/A"}</TableCell>}
-          {selectedFields.estado && (
+          {selectedFields.estadoProyecto && (
             <TableCell>{item.projectState ? translateProjectState(item.projectState) : "N/A"}</TableCell>
           )}
         </TableRow>
@@ -800,21 +799,21 @@ export default function ReportesPage() {
         headers.push("Método de Pago")
         fields.push("metodo")
       }
-      if (selectedFields.proyecto) {
+      if (selectedFields.numeroCaso) {
         headers.push("N° de Caso")
-        fields.push("proyecto")
+        fields.push("numeroCaso")
       }
       if (selectedFields.cliente) {
         headers.push("Cliente")
         fields.push("cliente")
       }
       if (selectedFields.detalle) {
-        headers.push("Descripción")
+        headers.push("Detalle del Pago")
         fields.push("detalle")
       }
-      if (selectedFields.estado) {
+      if (selectedFields.estadoProyecto) {
         headers.push("Estado del Proyecto")
-        fields.push("estado")
+        fields.push("estadoProyecto")
       }
 
       worksheet.getRow(5).values = headers
@@ -845,7 +844,7 @@ export default function ReportesPage() {
         if (selectedFields.metodo) {
           rowData.push(payment.PAY_method ? translatePaymentMethod(payment.PAY_method) : "N/A")
         }
-        if (selectedFields.proyecto) {
+        if (selectedFields.numeroCaso) {
           rowData.push(payment.projectCaseNumber || "N/A")
         }
         if (selectedFields.cliente) {
@@ -854,7 +853,7 @@ export default function ReportesPage() {
         if (selectedFields.detalle) {
           rowData.push(payment.PAY_description || "N/A")
         }
-        if (selectedFields.estado) {
+        if (selectedFields.estadoProyecto) {
           rowData.push(payment.projectState ? translateProjectState(payment.projectState) : "N/A")
         }
 
