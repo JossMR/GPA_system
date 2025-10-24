@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -18,10 +19,14 @@ import { GPAAddition } from "@/models/GPA_addition"
 import { useToast } from "@/hooks/use-toast"
 
 const metodoPago = {
-  transferencia: "Transferencia",
-  cheque: "Cheque",
-  efectivo: "Efectivo",
-  tarjeta: "Tarjeta",
+  Transfer: "Transferencia",
+  Check: "Cheque",
+  Cash: "Efectivo",
+  Card: "Tarjeta",
+  SINPE: "SINPE",
+  Credit: "Crédito",
+  Debit: "Débito",
+  Deposit: "Depósito",
 }
 
 export default function PagosPage() {
@@ -60,9 +65,11 @@ export default function PagosPage() {
   const [formData, setFormData] = useState({
     PAY_payment_date: "",
     PAY_amount_paid: "",
+    PAY_method: "",
     PAY_project_id: "",
     PAY_description: "",
   })
+  const [coverFullAmount, setCoverFullAmount] = useState(false)
 
   const stateLabels: Record<string, string> = {
     "Document Collection": "Recepción de documentos",
@@ -165,9 +172,11 @@ export default function PagosPage() {
         ? new Date(payment.PAY_payment_date).toISOString().split('T')[0]
         : "",
       PAY_amount_paid: payment.PAY_amount_paid?.toString() || "",
+      PAY_method: payment.PAY_method || "",
       PAY_project_id: payment.PAY_project_id?.toString() || "",
       PAY_description: payment.PAY_description || "",
     })
+    setCoverFullAmount(false)
     setViewMode(false)
     setIsDialogOpen(true)
   }
@@ -179,9 +188,11 @@ export default function PagosPage() {
         ? new Date(payment.PAY_payment_date).toISOString().split('T')[0]
         : "",
       PAY_amount_paid: payment.PAY_amount_paid?.toString() || "",
+      PAY_method: payment.PAY_method || "",
       PAY_project_id: payment.PAY_project_id?.toString() || "",
       PAY_description: payment.PAY_description || "",
     })
+    setCoverFullAmount(false)
     setViewMode(true)
     setIsDialogOpen(true)
   }
@@ -191,9 +202,11 @@ export default function PagosPage() {
     setFormData({
       PAY_payment_date: "",
       PAY_amount_paid: "",
+      PAY_method: "",
       PAY_project_id: "",
       PAY_description: "",
     })
+    setCoverFullAmount(false)
     setViewMode(false)
     setIsDialogOpen(true)
   }
@@ -204,6 +217,17 @@ export default function PagosPage() {
     const RemainingAmount = project.PRJ_remaining_amount - currentPaymentAmount
     return Math.max(0, RemainingAmount)
   }
+
+  // Effect to handle "cover full amount" checkbox
+  useEffect(() => {
+    if (coverFullAmount && formData.PAY_project_id) {
+      const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
+      if (project) {
+        const remainingAmount = Number(project.PRJ_remaining_amount || 0)
+        setFormData(prev => ({ ...prev, PAY_amount_paid: remainingAmount.toString() }))
+      }
+    }
+  }, [coverFullAmount, formData.PAY_project_id, projects])
 
   const handleSave = async () => {
     try {
@@ -226,6 +250,15 @@ export default function PagosPage() {
         return
       }
 
+      if (!formData.PAY_method) {
+        toast({
+          title: "Error",
+          description: "El método de pago es obligatorio",
+          variant: "destructive",
+        })
+        return
+      }
+
       if (!formData.PAY_project_id) {
         toast({
           title: "Error",
@@ -235,14 +268,28 @@ export default function PagosPage() {
         return
       }
 
+      // Validate payment doesn't exceed remaining amount
+      const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
+      const remainingAmount = Number(project?.PRJ_remaining_amount || 0)
+      const amountPaid = Number(formData.PAY_amount_paid)
+
+      if (amountPaid > remainingAmount) {
+        toast({
+          title: "Error",
+          description: `El monto a pagar (₡${amountPaid.toLocaleString()}) excede el saldo restante del proyecto (₡${remainingAmount.toLocaleString()})`,
+          variant: "destructive",
+        })
+        return
+      }
+
       setSaving(true)
 
       const projectId = Number(formData.PAY_project_id)
-      const amountPaid = Number(formData.PAY_amount_paid)
 
       const paymentData = {
         PAY_payment_date: formData.PAY_payment_date,
         PAY_amount_paid: amountPaid,
+        PAY_method: formData.PAY_method,
         PAY_project_id: projectId,
         PAY_description: formData.PAY_description || null,
       }
@@ -298,9 +345,11 @@ export default function PagosPage() {
       setFormData({
         PAY_payment_date: "",
         PAY_amount_paid: "",
+        PAY_method: "",
         PAY_project_id: "",
         PAY_description: "",
       })
+      setCoverFullAmount(false)
       updateInfo()
     } catch (error: any) {
       console.error("Error saving payment:", error)
@@ -437,6 +486,7 @@ export default function PagosPage() {
                     <TableHead>Número de Caso</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Monto</TableHead>
+                    <TableHead>Método</TableHead>
                     <TableHead>Estado del proyecto</TableHead>
                     <TableHead>Acciones</TableHead>
                   </TableRow>
@@ -459,11 +509,11 @@ export default function PagosPage() {
                       <TableCell>
                         <div className="font-semibold text-[#2e4600]">₡{(payment.PAY_amount_paid)?.toLocaleString()}</div>
                       </TableCell>
-                      {/*TODO <TableCell>
+                      <TableCell>
                         <Badge variant="outline" className="border-[#a2c523] text-[#486b00]">
-                          {metodoPago[(payment.metodo || payment.PAY_method) as keyof typeof metodoPago]}
+                          {metodoPago[payment.PAY_method as keyof typeof metodoPago] || "N/A"}
                         </Badge>
-                      </TableCell>*/}
+                      </TableCell>
                       <TableCell>
                         <Badge className="bg-[#486b00] text-white">
                           {stateLabels[payment.projectState || "N/A"]}
@@ -604,7 +654,7 @@ export default function PagosPage() {
                         }
                       }}
                       className={viewMode ? "pl-10 bg-gray-50 dark:bg-gray-800 border-[#a2c523]/30" : "pl-10 border-[#a2c523]/30 focus:border-[#486b00]"}
-                      disabled={viewMode}
+                      disabled={viewMode || coverFullAmount}
                       required={!viewMode}
                       min={!viewMode ? "0" : undefined}
                       step={!viewMode ? "0.01" : undefined}
@@ -612,6 +662,56 @@ export default function PagosPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Método de pago */}
+              <div className="grid gap-2">
+                <Label htmlFor="metodo">
+                  Método de Pago {!viewMode && <span className="text-red-500">*</span>}
+                </Label>
+                {viewMode ? (
+                  <Input
+                    value={metodoPago[formData.PAY_method as keyof typeof metodoPago] || "N/A"}
+                    disabled
+                    className="bg-gray-50 dark:bg-gray-800 border-[#a2c523]/30"
+                  />
+                ) : (
+                  <Select
+                    value={formData.PAY_method}
+                    onValueChange={(value) => setFormData({ ...formData, PAY_method: value })}
+                  >
+                    <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                      <SelectValue placeholder="Seleccionar método de pago" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Transfer">Transferencia</SelectItem>
+                      <SelectItem value="SINPE">SINPE</SelectItem>
+                      <SelectItem value="Check">Cheque</SelectItem>
+                      <SelectItem value="Cash">Efectivo</SelectItem>
+                      <SelectItem value="Card">Tarjeta</SelectItem>
+                      <SelectItem value="Credit">Crédito</SelectItem>
+                      <SelectItem value="Debit">Débito</SelectItem>
+                      <SelectItem value="Deposit">Depósito</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Opción de cubrir monto completo - solo visible al crear */}
+              {!viewMode && !selectedPayment && formData.PAY_project_id && (
+                <div className="flex items-center space-x-2 bg-[#c9e077]/10 p-3 rounded-md">
+                  <Checkbox
+                    id="coverFullAmount"
+                    checked={coverFullAmount}
+                    onCheckedChange={(checked) => setCoverFullAmount(checked as boolean)}
+                  />
+                  <Label
+                    htmlFor="coverFullAmount"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Cubrir todo el saldo restante del proyecto
+                  </Label>
+                </div>
+              )}
 
               {formData.PAY_project_id && (
                 <div className="bg-[#c9e077]/20 p-3 rounded-md space-y-2">
@@ -652,6 +752,26 @@ export default function PagosPage() {
                 </div>
               )}
 
+              {/* Advertencia si el monto excede el saldo restante */}
+              {!viewMode && formData.PAY_project_id && formData.PAY_amount_paid && (
+                (() => {
+                  const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
+                  const remainingAmount = Number(project?.PRJ_remaining_amount || 0)
+                  const amountPaid = Number(formData.PAY_amount_paid)
+                  
+                  if (amountPaid > remainingAmount) {
+                    return (
+                      <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-3 rounded-md">
+                        <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                          ⚠️ El monto a pagar (₡{amountPaid.toLocaleString()}) excede el saldo restante del proyecto (₡{remainingAmount.toLocaleString()})
+                        </p>
+                      </div>
+                    )
+                  }
+                  return null
+                })()
+              )}
+
               <div className="grid gap-2">
                 <Label htmlFor="detalle">Descripción del pago</Label>
                 <Input
@@ -673,9 +793,11 @@ export default function PagosPage() {
                     setIsDialogOpen(false)
                     setSelectedPayment(null)
                     setViewMode(false)
+                    setCoverFullAmount(false)
                     setFormData({
                       PAY_payment_date: "",
                       PAY_amount_paid: "",
+                      PAY_method: "",
                       PAY_project_id: "",
                       PAY_description: "",
                     })
@@ -692,9 +814,11 @@ export default function PagosPage() {
                     onClick={() => {
                       setIsDialogOpen(false)
                       setSelectedPayment(null)
+                      setCoverFullAmount(false)
                       setFormData({
                         PAY_payment_date: "",
                         PAY_amount_paid: "",
+                        PAY_method: "",
                         PAY_project_id: "",
                         PAY_description: "",
                       })

@@ -49,6 +49,7 @@ export async function PUT(
     const {
       PAY_amount_paid,
       PAY_payment_date,
+      PAY_method,
       PAY_description,
       PAY_project_id
     } = body
@@ -65,6 +66,11 @@ export async function PUT(
     if (PAY_payment_date !== undefined) {
       updateFields.push('PAY_payment_date = ?')
       updateValues.push(PAY_payment_date)
+    }
+
+    if (PAY_method !== undefined) {
+      updateFields.push('PAY_method = ?')
+      updateValues.push(PAY_method)
     }
 
     if (PAY_description !== undefined) {

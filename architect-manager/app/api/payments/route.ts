@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
     const paymentData: Omit<GPAPayment, 'PAY_id'> = {
       PAY_amount_paid: body.PAY_amount_paid ?? 0,
       PAY_payment_date: body.PAY_payment_date,
+      PAY_method: body.PAY_method,
       PAY_description: body.PAY_description || undefined,
       PAY_project_id: body.PAY_project_id
     }
@@ -67,14 +68,16 @@ export async function POST(request: NextRequest) {
       INSERT INTO GPA_Payments (
         PAY_amount_paid, 
         PAY_payment_date, 
+        PAY_method,
         PAY_description, 
         PAY_project_id
-      ) VALUES (?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?)
     `
 
     const result = await executeQuery(insertQuery, [
       paymentData.PAY_amount_paid,
       paymentData.PAY_payment_date,
+      paymentData.PAY_method || null,
       paymentData.PAY_description?.toString() || null,
       paymentData.PAY_project_id
     ]) as any
