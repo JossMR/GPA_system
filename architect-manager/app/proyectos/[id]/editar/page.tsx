@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ProjectDocumentManager } from "@/components/project-document-manager"
 import { ArrowLeft, Save, Building, Calendar, DollarSign, MapPin, FileText, Trash2, Plus, Edit } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
@@ -41,6 +42,24 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [isCostoDialogOpen, setIsCostoDialogOpen] = useState(false)
   const [selectedPago, setSelectedPago] = useState<any>(null)
   const [selectedCosto, setSelectedCosto] = useState<any>(null)
+  const [savingPago, setSavingPago] = useState(false)
+  const [savingCosto, setSavingCosto] = useState(false)
+  const [coverFullAmount, setCoverFullAmount] = useState(false)
+  
+  // Form data para pagos
+  const [pagoFormData, setPagoFormData] = useState({
+    PAY_payment_date: "",
+    PAY_amount_paid: "",
+    PAY_method: "",
+    PAY_description: "",
+  })
+  
+  // Form data para costos extra
+  const [costoFormData, setCostoFormData] = useState({
+    ATN_description: "",
+    ATN_cost: "",
+    ATN_date: "",
+  })
 
   // Form states
   const [province, setProvince] = useState("")
@@ -86,8 +105,20 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           const clientData = await responseClient.json() as { client: GPAClient | null }
           setClientSelectedObj(clientData.client ?? null)
         }
-        setPagos([])
-        setCostosExtra([]) // Cargar si tienes endpoint
+        
+        // Cargar pagos del proyecto
+        const paymentsRes = await fetch(`/api/payments?project_id=${id}`)
+        if (paymentsRes.ok) {
+          const paymentsData = await paymentsRes.json()
+          setPagos(paymentsData || [])
+        }
+        
+        // Cargar costos extra del proyecto
+        const additionsRes = await fetch(`/api/additions?project_id=${id}`)
+        if (additionsRes.ok) {
+          const additionsData = await additionsRes.json()
+          setCostosExtra(additionsData || [])
+        }
       } catch (error) {
         router.push("/proyectos")
       } finally {
@@ -179,53 +210,366 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     }
     setLoading(false)
   }
+  
+  // Effect para manejar el checkbox de "cubrir monto completo"
+  useEffect(() => {
+    if (coverFullAmount && project) {
+      const remainingAmount = Number(project.PRJ_remaining_amount || 0)
+      setPagoFormData(prev => ({ ...prev, PAY_amount_paid: remainingAmount.toString() }))
+    }
+  }, [coverFullAmount, project])
 
-  // Lógica de pagos y costos extra (igual que antes)
+  // Lógica de pagos y costos extra
   const handleNewPago = () => {
     setSelectedPago(null)
+    setPagoFormData({
+      PAY_payment_date: "",
+      PAY_amount_paid: "",
+      PAY_method: "",
+      PAY_description: "",
+    })
+    setCoverFullAmount(false)
     setIsPagoDialogOpen(true)
   }
+  
   const handleEditPago = (pago: any) => {
     setSelectedPago(pago)
+    setPagoFormData({
+      PAY_payment_date: pago.PAY_payment_date
+        ? new Date(pago.PAY_payment_date).toISOString().split('T')[0]
+        : "",
+      PAY_amount_paid: pago.PAY_amount_paid?.toString() || "",
+      PAY_method: pago.PAY_method || "",
+      PAY_description: pago.PAY_description || "",
+    })
+    setCoverFullAmount(false)
     setIsPagoDialogOpen(true)
   }
-  const handleDeletePago = (pagoId: number) => {
-    setPagos((prev) => prev.filter((p) => p.id !== pagoId))
-  }
-  const handleSavePago = (pagoData: any) => {
-    if (selectedPago) {
-      setPagos((prev) => prev.map((p) => (p.id === selectedPago.id ? { ...p, ...pagoData } : p)))
-    } else {
-      const newPago = {
-        id: pagos.length ? Math.max(...pagos.map((p) => p.id)) + 1 : 1,
-        ...pagoData,
-      }
-      setPagos((prev) => [...prev, newPago])
+  
+  const handleDeletePago = async (pagoId: number) => {
+    if (!confirm("¿Estás seguro de que quieres eliminar este pago?")) {
+      return
     }
-    setIsPagoDialogOpen(false)
+    
+    try {
+      const response = await fetch(`/api/payments/${pagoId}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        throw new Error("Error al eliminar el pago")
+      }
+      
+      toast({
+        title: "Pago eliminado",
+        description: "El pago fue eliminado correctamente",
+        variant: "success"
+      })
+      
+      // Recargar pagos
+      const paymentsRes = await fetch(`/api/payments?project_id=${id}`)
+      if (paymentsRes.ok) {
+        const paymentsData = await paymentsRes.json()
+        setPagos(paymentsData || [])
+      }
+      
+      // Recargar proyecto para actualizar saldo
+      const projectRes = await fetch(`/api/projects/${id}`)
+      if (projectRes.ok) {
+        const data = await projectRes.json()
+        setProject(data.project)
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el pago",
+        variant: "destructive"
+      })
+    }
   }
+  
+  const handleSavePago = async () => {
+    try {
+      // Validación
+      if (!pagoFormData.PAY_payment_date) {
+        toast({
+          title: "Error",
+          description: "La fecha de pago es obligatoria",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!pagoFormData.PAY_amount_paid || Number(pagoFormData.PAY_amount_paid) <= 0) {
+        toast({
+          title: "Error",
+          description: "El monto pagado es obligatorio y debe ser mayor a 0",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!pagoFormData.PAY_method) {
+        toast({
+          title: "Error",
+          description: "El método de pago es obligatorio",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Validar que no exceda el saldo restante
+      const remainingAmount = Number(project?.PRJ_remaining_amount || 0)
+      const amountPaid = Number(pagoFormData.PAY_amount_paid)
+
+      if (amountPaid > remainingAmount) {
+        toast({
+          title: "Error",
+          description: `El monto a pagar (₡${amountPaid.toLocaleString()}) excede el saldo restante del proyecto (₡${remainingAmount.toLocaleString()})`,
+          variant: "destructive",
+        })
+        return
+      }
+
+      setSavingPago(true)
+
+      const paymentData = {
+        PAY_payment_date: pagoFormData.PAY_payment_date,
+        PAY_amount_paid: amountPaid,
+        PAY_method: pagoFormData.PAY_method,
+        PAY_project_id: Number(id),
+        PAY_description: pagoFormData.PAY_description || null,
+      }
+      
+      let response
+      if (selectedPago?.PAY_id) {
+        // Actualizar pago existente
+        response = await fetch(`/api/payments/${selectedPago.PAY_id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(paymentData),
+        })
+      } else {
+        // Crear nuevo pago
+        response = await fetch("/api/payments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(paymentData),
+        })
+      }
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Error al guardar el pago")
+      }
+
+      toast({
+        title: "Éxito",
+        description: selectedPago
+          ? "Pago actualizado correctamente"
+          : "Pago registrado correctamente",
+        variant: "success"
+      })
+
+      // Recargar pagos
+      const paymentsRes = await fetch(`/api/payments?project_id=${id}`)
+      if (paymentsRes.ok) {
+        const paymentsData = await paymentsRes.json()
+        setPagos(paymentsData || [])
+      }
+      
+      // Recargar proyecto para actualizar saldo
+      const projectRes = await fetch(`/api/projects/${id}`)
+      if (projectRes.ok) {
+        const data = await projectRes.json()
+        setProject(data.project)
+      }
+
+      setIsPagoDialogOpen(false)
+      setSelectedPago(null)
+      setPagoFormData({
+        PAY_payment_date: "",
+        PAY_amount_paid: "",
+        PAY_method: "",
+        PAY_description: "",
+      })
+      setCoverFullAmount(false)
+    } catch (error: any) {
+      console.error("Error saving payment:", error)
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo guardar el pago",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingPago(false)
+    }
+  }
+  
   const handleNewCosto = () => {
     setSelectedCosto(null)
+    setCostoFormData({
+      ATN_description: "",
+      ATN_cost: "",
+      ATN_date: "",
+    })
     setIsCostoDialogOpen(true)
   }
+  
   const handleEditCosto = (costo: any) => {
     setSelectedCosto(costo)
+    setCostoFormData({
+      ATN_description: costo.ATN_description || "",
+      ATN_cost: costo.ATN_cost?.toString() || "",
+      ATN_date: costo.ATN_date
+        ? new Date(costo.ATN_date).toISOString().split('T')[0]
+        : "",
+    })
     setIsCostoDialogOpen(true)
   }
-  const handleDeleteCosto = (costoId: number) => {
-    setCostosExtra((prev) => prev.filter((c) => c.id !== costoId))
-  }
-  const handleSaveCosto = (costoData: any) => {
-    if (selectedCosto) {
-      setCostosExtra((prev) => prev.map((c) => (c.id === selectedCosto.id ? { ...c, ...costoData } : c)))
-    } else {
-      const newCosto = {
-        id: costosExtra.length ? Math.max(...costosExtra.map((c) => c.id)) + 1 : 1,
-        ...costoData,
-      }
-      setCostosExtra((prev) => [...prev, newCosto])
+  
+  const handleDeleteCosto = async (costoId: number) => {
+    if (!confirm("¿Estás seguro de que quieres eliminar este costo extra?")) {
+      return
     }
-    setIsCostoDialogOpen(false)
+    
+    try {
+      const response = await fetch(`/api/additions/${costoId}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        throw new Error("Error al eliminar el costo")
+      }
+      
+      toast({
+        title: "Costo eliminado",
+        description: "El costo extra fue eliminado correctamente",
+        variant: "success"
+      })
+      
+      // Recargar costos
+      const additionsRes = await fetch(`/api/additions?project_id=${id}`)
+      if (additionsRes.ok) {
+        const additionsData = await additionsRes.json()
+        setCostosExtra(additionsData || [])
+      }
+      
+      // Recargar proyecto para actualizar presupuesto total
+      const projectRes = await fetch(`/api/projects/${id}`)
+      if (projectRes.ok) {
+        const data = await projectRes.json()
+        setProject(data.project)
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el costo",
+        variant: "destructive"
+      })
+    }
+  }
+  
+  const handleSaveCosto = async () => {
+    try {
+      // Validación
+      if (!costoFormData.ATN_description || costoFormData.ATN_description.trim() === "") {
+        toast({
+          title: "Error",
+          description: "La descripción del costo es obligatoria",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!costoFormData.ATN_cost || Number(costoFormData.ATN_cost) <= 0) {
+        toast({
+          title: "Error",
+          description: "El costo debe ser mayor a 0",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!costoFormData.ATN_date) {
+        toast({
+          title: "Error",
+          description: "La fecha es obligatoria",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setSavingCosto(true)
+
+      const additionData = {
+        ATN_description: costoFormData.ATN_description.trim(),
+        ATN_cost: Number(costoFormData.ATN_cost),
+        ATN_date: costoFormData.ATN_date,
+        ATN_project_id: Number(id),
+      }
+      
+      let response
+      if (selectedCosto?.ATN_id) {
+        // Actualizar costo existente
+        response = await fetch(`/api/additions/${selectedCosto.ATN_id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(additionData),
+        })
+      } else {
+        // Crear nuevo costo
+        response = await fetch("/api/additions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(additionData),
+        })
+      }
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Error al guardar el costo")
+      }
+
+      toast({
+        title: "Éxito",
+        description: selectedCosto
+          ? "Costo actualizado correctamente"
+          : "Costo registrado correctamente",
+        variant: "success"
+      })
+
+      // Recargar costos
+      const additionsRes = await fetch(`/api/additions?project_id=${id}`)
+      if (additionsRes.ok) {
+        const additionsData = await additionsRes.json()
+        setCostosExtra(additionsData || [])
+      }
+      
+      // Recargar proyecto para actualizar presupuesto total
+      const projectRes = await fetch(`/api/projects/${id}`)
+      if (projectRes.ok) {
+        const data = await projectRes.json()
+        setProject(data.project)
+      }
+
+      setIsCostoDialogOpen(false)
+      setSelectedCosto(null)
+      setCostoFormData({
+        ATN_description: "",
+        ATN_cost: "",
+        ATN_date: "",
+      })
+    } catch (error: any) {
+      console.error("Error saving addition:", error)
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo guardar el costo",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingCosto(false)
+    }
   }
 
   // Categorías disponibles para asignar
@@ -689,53 +1033,80 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                       <TableHead>Fecha</TableHead>
                       <TableHead>Monto</TableHead>
                       <TableHead>Método</TableHead>
-                      <TableHead>Detalle</TableHead>
-                      <TableHead>N° Caso</TableHead>
+                      <TableHead>Descripción</TableHead>
                       <TableHead>Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pagos.map((pago) => (
-                      <TableRow key={pago.id}>
-                        <TableCell>{pago.fecha}</TableCell>
-                        <TableCell className="font-semibold text-[#2e4600]">₡{pago.monto.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="border-[#a2c523] text-[#486b00]">
-                            {pago.metodo}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{pago.detalle}</TableCell>
-                        <TableCell className="font-mono text-sm">{pago.numeroCaso}</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditPago(pago)}
-                              className="hover:bg-[#c9e077]/20"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeletePago(pago.id)}
-                              className="text-red-500 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                    {pagos.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>No hay pagos registrados</p>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      pagos.map((pago) => (
+                        <TableRow key={pago.PAY_id}>
+                          <TableCell>
+                            {new Date(pago.PAY_payment_date).toLocaleDateString('es-ES', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </TableCell>
+                          <TableCell className="font-semibold text-[#2e4600]">
+                            ₡{Number(pago.PAY_amount_paid || 0).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="border-[#a2c523] text-[#486b00]">
+                              {pago.PAY_method === "Transfer" ? "Transferencia" :
+                               pago.PAY_method === "SINPE" ? "SINPE" :
+                               pago.PAY_method === "Check" ? "Cheque" :
+                               pago.PAY_method === "Cash" ? "Efectivo" :
+                               pago.PAY_method === "Card" ? "Tarjeta" :
+                               pago.PAY_method === "Credit" ? "Crédito" :
+                               pago.PAY_method === "Debit" ? "Débito" :
+                               pago.PAY_method === "Deposit" ? "Depósito" :
+                               pago.PAY_method}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate">
+                            {pago.PAY_description || "Sin descripción"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleEditPago(pago)
+                                }}
+                                className="hover:bg-[#c9e077]/20"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleDeletePago(pago.PAY_id)
+                                }}
+                                className="text-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
-                {pagos.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No hay pagos registrados</p>
-                  </div>
-                )}
               </CardContent>
             </Card>
             {/* Extra Costs Management */}
@@ -762,47 +1133,59 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 </div>
               </CardHeader>
               <CardContent className="p-4 space-y-3">
-                {costosExtra.map((costo) => (
-                  <div key={costo.id} className="border rounded-lg p-3 border-[#7d4427]/20">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <span className="text-sm font-medium">{costo.descripcion}</span>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Badge className={`${costo.aprobado ? "bg-green-500" : "bg-yellow-500"} text-white text-xs`}>
-                            {costo.aprobado ? "Aprobado" : "Pendiente"}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">{costo.fecha}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-semibold text-[#7d4427]">${costo.monto.toLocaleString()}</span>
-                        <div className="flex space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditCosto(costo)}
-                            className="hover:bg-[#7d4427]/10"
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteCosto(costo.id)}
-                            className="text-red-500 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {costosExtra.length === 0 && (
+                {costosExtra.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Plus className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No hay costos extra registrados</p>
                   </div>
+                ) : (
+                  costosExtra.map((costo) => (
+                    <div key={costo.ATN_id} className="border rounded-lg p-3 border-[#7d4427]/20">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <span className="text-sm font-medium">{costo.ATN_description}</span>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(costo.ATN_date).toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-semibold text-[#7d4427]">₡{Number(costo.ATN_cost || 0).toLocaleString()}</span>
+                          <div className="flex space-x-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleEditCosto(costo)
+                              }}
+                              className="hover:bg-[#7d4427]/10"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleDeleteCosto(costo.ATN_id)
+                              }}
+                              className="text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
                 )}
               </CardContent>
             </Card>
@@ -844,37 +1227,32 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 <div className="text-sm space-y-3">
                   <div className="flex justify-between">
                     <span>Presupuesto base:</span>
-                    <span className="font-medium">₡{(project.PRJ_budget ?? 0).toLocaleString()}</span>
+                    <span className="font-medium">₡{Number(project.PRJ_budget ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Costos extra:</span>
                     <span className="font-medium text-[#7d4427]">
-                      +₡{costosExtra.reduce((sum, c) => sum + c.monto, 0).toLocaleString()}
+                      +₡{costosExtra.reduce((sum, c) => sum + (Number(c.ATN_cost) || 0), 0).toLocaleString()}
                     </span>
                   </div>
                   <hr className="border-[#a2c523]/30" />
                   <div className="flex justify-between">
                     <span>Total presupuestado:</span>
                     <span className="font-bold text-[#486b00]">
-                      ₡{((project.PRJ_budget ?? 0) + costosExtra.reduce((sum, c) => sum + c.monto, 0)).toLocaleString()}
+                      ₡{(Number(project.PRJ_budget ?? 0) + costosExtra.reduce((sum, c) => sum + (Number(c.ATN_cost) || 0), 0)).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Total pagado:</span>
                     <span className="font-medium text-green-600">
-                      ₡{pagos.reduce((sum, p) => sum + p.monto, 0).toLocaleString()}
+                      ₡{pagos.reduce((sum, p) => sum + (Number(p.PAY_amount_paid) || 0), 0).toLocaleString()}
                     </span>
                   </div>
                   <hr className="border-[#a2c523]/30" />
                   <div className="flex justify-between">
                     <span>Saldo restante:</span>
                     <span className="font-bold text-[#7d4427]">
-                      ₡
-                      {(
-                        (project.PRJ_budget ?? 0) +
-                        costosExtra.reduce((sum, c) => sum + c.monto, 0) -
-                        pagos.reduce((sum, p) => sum + p.monto, 0)
-                      ).toLocaleString()}
+                      ₡{Number(project.PRJ_remaining_amount ?? 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -913,6 +1291,344 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           }}
           selectedId={clientSelected}
         />
+        
+        {/* Dialog para Pagos */}
+        <Dialog open={isPagoDialogOpen} onOpenChange={setIsPagoDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="text-[#2e4600]">
+                {selectedPago ? "Editar Pago" : "Registrar Nuevo Pago"}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedPago ? "Modifica los datos del pago" : "Ingresa los detalles del nuevo pago"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="pago-fecha">
+                    Fecha del pago <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="pago-fecha"
+                    type="date"
+                    value={pagoFormData.PAY_payment_date}
+                    onChange={(e) => setPagoFormData({ ...pagoFormData, PAY_payment_date: e.target.value })}
+                    className="border-[#a2c523]/30 focus:border-[#486b00]"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="pago-monto">
+                    Monto Pagado <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-[#486b00]" />
+                    <Input
+                      id="pago-monto"
+                      type="number"
+                      placeholder="25000"
+                      value={pagoFormData.PAY_amount_paid}
+                      onChange={(e) => {
+                        let value = e.target.value
+                        if (value && !isNaN(Number(value))) {
+                          value = String(Number(value))
+                        }
+                        setPagoFormData({ ...pagoFormData, PAY_amount_paid: value })
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value
+                        if (value && !isNaN(Number(value))) {
+                          setPagoFormData({ ...pagoFormData, PAY_amount_paid: String(Number(value)) })
+                        }
+                      }}
+                      className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
+                      disabled={coverFullAmount}
+                      required
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Método de pago */}
+              <div className="grid gap-2">
+                <Label htmlFor="pago-metodo">
+                  Método de Pago <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={pagoFormData.PAY_method}
+                  onValueChange={(value) => setPagoFormData({ ...pagoFormData, PAY_method: value })}
+                >
+                  <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                    <SelectValue placeholder="Seleccionar método de pago" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Transfer">Transferencia</SelectItem>
+                    <SelectItem value="SINPE">SINPE</SelectItem>
+                    <SelectItem value="Check">Cheque</SelectItem>
+                    <SelectItem value="Cash">Efectivo</SelectItem>
+                    <SelectItem value="Card">Tarjeta</SelectItem>
+                    <SelectItem value="Credit">Crédito</SelectItem>
+                    <SelectItem value="Debit">Débito</SelectItem>
+                    <SelectItem value="Deposit">Depósito</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Opción de cubrir monto completo - solo visible al crear */}
+              {!selectedPago && (
+                <div className="flex items-center space-x-2 bg-[#c9e077]/10 p-3 rounded-md">
+                  <Checkbox
+                    id="coverFullAmount"
+                    checked={coverFullAmount}
+                    onCheckedChange={(checked) => setCoverFullAmount(checked as boolean)}
+                  />
+                  <Label
+                    htmlFor="coverFullAmount"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Cubrir todo el saldo restante del proyecto
+                  </Label>
+                </div>
+              )}
+
+              {/* Información del proyecto */}
+              {project && (
+                <div className="bg-[#c9e077]/20 p-3 rounded-md space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#2e4600]">Presupuesto inicial:</span>
+                    <span className="font-semibold">₡{Number(project.PRJ_budget || 0).toLocaleString()}</span>
+                  </div>
+                  {costosExtra.length > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#2e4600]">Costos extra:</span>
+                      <span className="font-semibold text-[#7d4427]">
+                        +₡{costosExtra.reduce((sum, c) => sum + (Number(c.ATN_cost) || 0), 0).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm border-t border-[#486b00]/20 pt-2">
+                    <span className="text-[#2e4600] font-medium">Total presupuestado:</span>
+                    <span className="font-bold">
+                      ₡{(Number(project.PRJ_budget || 0) + costosExtra.reduce((sum, c) => sum + (Number(c.ATN_cost) || 0), 0)).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="border-t border-[#486b00]/20 pt-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#2e4600]">Total pagado:</span>
+                      <span className="font-semibold text-green-600">₡{pagos.reduce((sum, p) => sum + (Number(p.PAY_amount_paid) || 0), 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mt-1">
+                      <span className="text-[#2e4600] font-medium">Saldo restante:</span>
+                      <span className="font-bold text-[#7d4427]">₡{Number(project.PRJ_remaining_amount || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Advertencia si el monto excede el saldo restante */}
+              {pagoFormData.PAY_amount_paid && project && (
+                (() => {
+                  const remainingAmount = Number(project.PRJ_remaining_amount || 0)
+                  const amountPaid = Number(pagoFormData.PAY_amount_paid)
+                  
+                  if (amountPaid > remainingAmount) {
+                    return (
+                      <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-3 rounded-md">
+                        <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                          ⚠️ El monto a pagar (₡{amountPaid.toLocaleString()}) excede el saldo restante del proyecto (₡{remainingAmount.toLocaleString()})
+                        </p>
+                      </div>
+                    )
+                  }
+                  return null
+                })()
+              )}
+
+              {(() => {
+                let descTimer: ReturnType<typeof setTimeout> | null = null
+                return (
+                  <div className="grid gap-2">
+                    <Label htmlFor="pago-descripcion">Descripción del pago</Label>
+                    <Input
+                      id="pago-descripcion"
+                      placeholder="Descripción o notas adicionales..."
+                      defaultValue={pagoFormData.PAY_description ?? ""}
+                      onChange={(e) => {
+                        const value = (e.target as HTMLInputElement).value
+                        if (descTimer) clearTimeout(descTimer)
+                        descTimer = setTimeout(() => {
+                          setPagoFormData(prev => ({ ...prev, PAY_description: value }))
+                        }, 600)
+                      }}
+                      onBlur={(e) => {
+                        const value = (e.target as HTMLInputElement).value
+                        if (descTimer) {
+                          clearTimeout(descTimer)
+                          descTimer = null
+                        }
+                        setPagoFormData(prev => ({ ...prev, PAY_description: value }))
+                      }}
+                      className="border-[#a2c523]/30 focus:border-[#486b00]"
+                    />
+                  </div>
+                )
+              })()}
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsPagoDialogOpen(false)
+                  setSelectedPago(null)
+                  setCoverFullAmount(false)
+                  setPagoFormData({
+                    PAY_payment_date: "",
+                    PAY_amount_paid: "",
+                    PAY_method: "",
+                    PAY_description: "",
+                  })
+                }}
+                className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
+                disabled={savingPago}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="gradient-primary text-white hover:opacity-90"
+                onClick={handleSavePago}
+                disabled={savingPago}
+              >
+                {savingPago ? "Guardando..." : (selectedPago ? "Actualizar" : "Registrar")} Pago
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Dialog para Costos Extra */}
+        <Dialog open={isCostoDialogOpen} onOpenChange={setIsCostoDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-[#7d4427]">
+                {selectedCosto ? "Editar Costo Extra" : "Agregar Costo Extra"}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedCosto ? "Modifica los datos del costo extra" : "Ingresa los detalles del nuevo costo"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="costo-descripcion">
+                  Descripción <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="costo-descripcion"
+                  placeholder="Ej: Materiales adicionales, honorarios extra..."
+                  value={costoFormData.ATN_description}
+                  onChange={(e) => setCostoFormData({ ...costoFormData, ATN_description: e.target.value })}
+                  className="border-[#7d4427]/30 focus:border-[#7d4427]"
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="costo-monto">
+                    Monto <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-[#7d4427]" />
+                    <Input
+                      id="costo-monto"
+                      type="number"
+                      placeholder="5000"
+                      value={costoFormData.ATN_cost}
+                      onChange={(e) => {
+                        let value = e.target.value
+                        if (value && !isNaN(Number(value))) {
+                          value = String(Number(value))
+                        }
+                        setCostoFormData({ ...costoFormData, ATN_cost: value })
+                      }}
+                      className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427]"
+                      required
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="costo-fecha">
+                    Fecha <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="costo-fecha"
+                    type="date"
+                    value={costoFormData.ATN_date}
+                    onChange={(e) => setCostoFormData({ ...costoFormData, ATN_date: e.target.value })}
+                    className="border-[#7d4427]/30 focus:border-[#7d4427]"
+                    required
+                  />
+                </div>
+              </div>
+              
+              {project && (
+                <div className="bg-[#7d4427]/10 p-3 rounded-md space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#7d4427]">Presupuesto actual:</span>
+                    <span className="font-semibold">₡{Number(project.PRJ_budget || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#7d4427]">Costos extra existentes:</span>
+                    <span className="font-semibold">
+                      ₡{costosExtra.reduce((sum, c) => sum + (Number(c.ATN_cost) || 0), 0).toLocaleString()}
+                    </span>
+                  </div>
+                  {costoFormData.ATN_cost && (
+                    <div className="flex justify-between text-sm border-t border-[#7d4427]/20 pt-2">
+                      <span className="text-[#7d4427] font-medium">Nuevo total:</span>
+                      <span className="font-bold">
+                        ₡{(
+                          Number(project.PRJ_budget || 0) + 
+                          costosExtra.reduce((sum, c) => sum + (Number(c.ATN_cost) || 0), 0) +
+                          Number(costoFormData.ATN_cost)
+                        ).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsCostoDialogOpen(false)
+                  setSelectedCosto(null)
+                  setCostoFormData({
+                    ATN_description: "",
+                    ATN_cost: "",
+                    ATN_date: "",
+                  })
+                }}
+                className="border-[#7d4427] text-[#7d4427] hover:bg-[#7d4427]/10"
+                disabled={savingCosto}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="bg-[#7d4427] text-white hover:bg-[#6a3a22]"
+                onClick={handleSaveCosto}
+                disabled={savingCosto}
+              >
+                {savingCosto ? "Guardando..." : (selectedCosto ? "Actualizar" : "Agregar")} Costo
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   )
