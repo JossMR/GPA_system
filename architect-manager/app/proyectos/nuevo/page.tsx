@@ -171,10 +171,8 @@ export default function NewProjectPage() {
         throw new Error(errorMessage)
       }
       const data = await response.json()
-      const registeredProject: GPAProject = data.project;
-      console.log("Registered project", registeredProject)
       
-      const projectId = registeredProject.PRJ_id!
+      const projectId = data.projectId!
       setCreatedProjectId(projectId)
       
       toast({
@@ -298,7 +296,7 @@ export default function NewProjectPage() {
     <MainLayout>
       <div className="container py-8 space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => router.back()} className="hover:bg-[#c9e077]/20">
+          <Button variant="ghost" onClick={() => router.push("/proyectos")} className="hover:bg-[#c9e077]/20">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>
@@ -735,7 +733,7 @@ export default function NewProjectPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.back()}
+                  onClick={() => router.push("/proyectos")}
                   disabled={loading || uploadingDocuments}
                   className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
                 >

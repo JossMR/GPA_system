@@ -89,7 +89,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
         <div className="container py-8">
           <div className="text-center">
             <p>Cliente no encontrado</p>
-            <Button onClick={() => router.back()} className="mt-4">
+            <Button onClick={() => router.push("/clientes")} className="mt-4">
               Volver
             </Button>
           </div>
@@ -114,7 +114,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
       <div className="container py-8 space-y-6">
         {/* Header */}
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => router.back()} className="hover:bg-[#c9e077]/20">
+          <Button variant="ghost" onClick={() => router.push("/clientes")} className="hover:bg-[#c9e077]/20">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver a Clientes
           </Button>

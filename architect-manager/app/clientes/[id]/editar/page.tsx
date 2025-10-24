@@ -146,7 +146,7 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
     <MainLayout>
       <div className="container py-8 space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => router.back()} className="hover:bg-[#c9e077]/20">
+          <Button variant="ghost" onClick={() => router.push("/clientes")} className="hover:bg-[#c9e077]/20">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>
@@ -374,7 +374,7 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => router.back()}
+                          onClick={() => router.push("/clientes")}
                           className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
                         >
                           Cancelar
