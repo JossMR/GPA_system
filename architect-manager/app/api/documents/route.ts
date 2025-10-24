@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
       DOC_name: body.DOC_name.trim(),
       DOC_file_path: body.DOC_file_path.trim(),
       DOC_upload_date: body.DOC_upload_date || new Date().toISOString(),
-      DOC_filetype_id: body.DOC_filetype_id
+      DOC_filetype_id: body.DOC_filetype_id,
+      DOC_image_for_promotion: 'N'
     }
     
     const insertQuery = `

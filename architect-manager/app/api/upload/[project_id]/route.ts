@@ -26,6 +26,7 @@ export async function GET(
         DOC_file_path,
         DOC_upload_date,
         DOC_filetype_id,
+        DOC_image_for_promotion,
         ft.FTP_name as filetype_name
       FROM GPA_Documents d
       LEFT JOIN GPA_FileTypes ft ON d.DOC_filetype_id = ft.FTP_id
@@ -45,7 +46,8 @@ export async function GET(
       uploadDate: doc.DOC_upload_date,
       lastModified: doc.DOC_upload_date,
       filetypeId: doc.DOC_filetype_id,
-      filetypeName: doc.filetype_name
+      filetypeName: doc.filetype_name,
+      isForPromotion: doc.DOC_image_for_promotion
     }))
 
     // Calculate file sizes for existing files
@@ -93,6 +95,7 @@ export async function POST(
     const formData = await request.formData()
     const file: File | null = formData.get('file') as unknown as File
     const documentName: string = (formData.get('documentName') as string) || file?.name || 'Unknown Document'
+    const isForPromotion: string = (formData.get('isForPromotion') as string) || 'N'
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
@@ -159,15 +162,17 @@ export async function POST(
         DOC_name,
         DOC_file_path,
         DOC_upload_date,
-        DOC_filetype_id
-      ) VALUES (?, ?, ?, NOW(), ?)
+        DOC_filetype_id,
+        DOC_image_for_promotion
+      ) VALUES (?, ?, ?, NOW(), ?, ?)
     `
 
     const documentResult = await executeQuery(insertDocumentQuery, [
       projectIdNum,
       documentName,
       publicPath,
-      filetypeId
+      filetypeId,
+      isForPromotion
     ]) as any
 
     return NextResponse.json({

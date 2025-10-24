@@ -92,6 +92,11 @@ export async function PUT(
       updateValues.push(body.DOC_filetype_id)
     }
     
+    if (body.DOC_image_for_promotion !== undefined) {
+      updateFields.push('DOC_image_for_promotion = ?')
+      updateValues.push(body.DOC_image_for_promotion)
+    }
+    
     if (updateFields.length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }

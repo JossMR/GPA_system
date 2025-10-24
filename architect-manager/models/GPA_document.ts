@@ -5,4 +5,5 @@ export interface GPADocument {
   DOC_file_path: string
   DOC_upload_date: string | Date
   DOC_filetype_id: number
+  DOC_image_for_promotion: 'Y' | 'N'
 }

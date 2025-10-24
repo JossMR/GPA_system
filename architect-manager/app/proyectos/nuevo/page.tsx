@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ProjectDocumentManager } from "@/components/project-document-manager"
 import { ArrowLeft, Save, Building, Calendar, DollarSign, MapPin, FileText } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
@@ -27,6 +28,7 @@ interface PendingDocument {
   file: File
   documentName: string
   id: string
+  isForPromotion: boolean
 }
 
 export default function NewProjectPage() {
@@ -197,6 +199,7 @@ export default function NewProjectPage() {
             const formData = new FormData()
             formData.append('file', doc.file)
             formData.append('documentName', doc.documentName)
+            formData.append('isForPromotion', doc.isForPromotion ? 'Y' : 'N')
 
             const uploadResponse = await fetch(`/api/upload/${projectId}`, {
               method: 'POST',
@@ -644,7 +647,8 @@ export default function NewProjectPage() {
                         const newDocs: PendingDocument[] = files.map(file => ({
                           file,
                           documentName: file.name.replace(/\.[^/.]+$/, ""),
-                          id: `${Date.now()}_${Math.random()}`
+                          id: `${Date.now()}_${Math.random()}`,
+                          isForPromotion: false
                         }))
                         setPendingDocuments([...pendingDocuments, ...newDocs])
                         e.target.value = '' // Reset input
@@ -668,7 +672,9 @@ export default function NewProjectPage() {
                   {/* Lista de documentos pendientes */}
                   {pendingDocuments.length > 0 && (
                     <div className="space-y-2 max-h-80 overflow-y-auto">
-                      {pendingDocuments.map((doc) => (
+                      {pendingDocuments.map((doc) => {
+                        const isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(doc.file.name)
+                        return (
                         <div
                           key={doc.id}
                           className="flex items-center justify-between p-3 border border-[#c9e077]/30 rounded-lg hover:bg-[#c9e077]/5"
@@ -689,6 +695,26 @@ export default function NewProjectPage() {
                               <p className="text-xs text-muted-foreground truncate">
                                 {doc.file.name} ({(doc.file.size / 1024 / 1024).toFixed(2)} MB)
                               </p>
+                              {isImage && (
+                                <div className="flex items-center space-x-2 pt-1">
+                                  <Checkbox
+                                    id={`promo-${doc.id}`}
+                                    checked={doc.isForPromotion}
+                                    onCheckedChange={(checked) => {
+                                      setPendingDocuments(pendingDocuments.map(d => 
+                                        d.id === doc.id ? { ...d, isForPromotion: checked === true } : d
+                                      ))
+                                    }}
+                                    className="border-[#a2c523]"
+                                  />
+                                  <label
+                                    htmlFor={`promo-${doc.id}`}
+                                    className="text-xs text-muted-foreground cursor-pointer"
+                                  >
+                                    Usar para promoción
+                                  </label>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <Button
@@ -704,7 +730,8 @@ export default function NewProjectPage() {
                             ✕
                           </Button>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
 

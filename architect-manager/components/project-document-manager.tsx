@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Upload, FileText, ImageIcon, File, Download, Eye, Trash2, X, Plus, Paperclip, Loader2, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -21,6 +22,7 @@ interface FileInfo {
     lastModified: string
     filetypeId?: number
     filetypeName?: string
+    isForPromotion?: 'Y' | 'N'
 }
 
 interface ProjectDocumentManagerProps {
@@ -72,6 +74,7 @@ export function ProjectDocumentManager({
     const [dragOver, setDragOver] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [documentName, setDocumentName] = useState<string>("")
+    const [isForPromotion, setIsForPromotion] = useState<boolean>(false)
 
     // Fetch documents when component mounts or projectId changes
     useEffect(() => {
@@ -148,6 +151,8 @@ export function ProjectDocumentManager({
             // Auto-fill document name with file name (without extension)
             const nameWithoutExtension = file.name.replace(/\.[^/.]+$/, "")
             setDocumentName(nameWithoutExtension)
+            // Reset promotion checkbox
+            setIsForPromotion(false)
         }
     }
 
@@ -166,6 +171,7 @@ export function ProjectDocumentManager({
             const formData = new FormData()
             formData.append('file', selectedFile)
             formData.append('documentName', documentName.trim())
+            formData.append('isForPromotion', isForPromotion ? 'Y' : 'N')
 
             const response = await fetch(`/api/upload/${projectId}`, {
                 method: 'POST',
@@ -182,6 +188,7 @@ export function ProjectDocumentManager({
                 })
                 setSelectedFile(null)
                 setDocumentName("")
+                setIsForPromotion(false)
                 // Reset file input
                 const fileInput = document.getElementById('file-upload-project') as HTMLInputElement
                 if (fileInput) fileInput.value = ''
@@ -215,6 +222,7 @@ export function ProjectDocumentManager({
             setSelectedFile(file)
             const nameWithoutExtension = file.name.replace(/\.[^/.]+$/, "")
             setDocumentName(nameWithoutExtension)
+            setIsForPromotion(false)
         }
     }
 
@@ -341,7 +349,7 @@ export function ProjectDocumentManager({
                                 size="sm"
                                 onClick={(e) => {
                                     e.preventDefault()
-                                    e.stopPropagation() // <-- Evita que se propague y dispare el submit
+                                    e.stopPropagation()
                                     document.getElementById("file-upload-project")?.click()
                                 }}
                                 disabled={isUploading}
@@ -398,6 +406,23 @@ export function ProjectDocumentManager({
                                         )}
                                     </Button>
                                 </div>
+                                {/* Checkbox para imágenes */}
+                                {selectedFile && /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(selectedFile.name) && (
+                                    <div className="flex items-center space-x-2 pt-1">
+                                        <Checkbox
+                                            id="promo-checkbox"
+                                            checked={isForPromotion}
+                                            onCheckedChange={(checked) => setIsForPromotion(checked === true)}
+                                            className="border-[#a2c523]"
+                                        />
+                                        <label
+                                            htmlFor="promo-checkbox"
+                                            className="text-sm text-muted-foreground cursor-pointer"
+                                        >
+                                            Usar esta imagen para promoción
+                                        </label>
+                                    </div>
+                                )}
                                 <div className="text-xs text-muted-foreground">
                                     Este nombre se usará para identificar el documento en la base de datos
                                 </div>
@@ -426,6 +451,7 @@ export function ProjectDocumentManager({
                             documents.map((doc, index) => {
                                 const IconComponent = getFileIcon(doc.fileName)
                                 const colorClass = getFileColor(doc.fileName)
+                                const isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(doc.fileName)
                                 return (
                                     <div
                                         key={doc.docId}
@@ -434,7 +460,14 @@ export function ProjectDocumentManager({
                                         <div className="flex items-center space-x-3 flex-1 min-w-0">
                                             <IconComponent className="h-5 w-5 text-[#486b00] flex-shrink-0" />
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium truncate">{doc.documentName}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-medium truncate">{doc.documentName}</p>
+                                                    {isImage && doc.isForPromotion === 'Y' && (
+                                                        <Badge className="bg-purple-500 text-white text-xs">
+                                                            Promoción
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                                 <p className="text-xs text-muted-foreground truncate">{doc.fileName}</p>
                                                 <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                                                     <span>{formatFileSize(doc.fileSize)}</span>
@@ -447,6 +480,57 @@ export function ProjectDocumentManager({
                                                         </>
                                                     )}
                                                 </div>
+                                                {/* Checkbox para cambiar estado de promoción en imágenes */}
+                                                {isImage && canEdit && (
+                                                    <div className="flex items-center space-x-2 pt-1">
+                                                        <Checkbox
+                                                            id={`promo-doc-${doc.docId}`}
+                                                            checked={doc.isForPromotion === 'Y'}
+                                                            onCheckedChange={async (checked) => {
+                                                                // Actualizar en la base de datos
+                                                                try {
+                                                                    const response = await fetch(`/api/documents/${doc.docId}`, {
+                                                                        method: 'PUT',
+                                                                        headers: { 'Content-Type': 'application/json' },
+                                                                        body: JSON.stringify({
+                                                                            DOC_image_for_promotion: checked ? 'Y' : 'N'
+                                                                        })
+                                                                    })
+                                                                    if (response.ok) {
+                                                                        toast({
+                                                                            title: "Estado actualizado",
+                                                                            description: checked 
+                                                                                ? "Imagen marcada para promoción" 
+                                                                                : "Imagen desmarcada de promoción",
+                                                                            variant: "success"
+                                                                        })
+                                                                        // Recargar documentos
+                                                                        await fetchDocuments()
+                                                                    } else {
+                                                                        toast({
+                                                                            title: "Error",
+                                                                            description: "No se pudo actualizar el estado",
+                                                                            variant: "destructive"
+                                                                        })
+                                                                    }
+                                                                } catch (error) {
+                                                                    toast({
+                                                                        title: "Error",
+                                                                        description: "Error de conexión",
+                                                                        variant: "destructive"
+                                                                    })
+                                                                }
+                                                            }}
+                                                            className="border-[#a2c523]"
+                                                        />
+                                                        <label
+                                                            htmlFor={`promo-doc-${doc.docId}`}
+                                                            className="text-xs text-muted-foreground cursor-pointer"
+                                                        >
+                                                            Usar para promoción
+                                                        </label>
+                                                    </div>
+                                                )}
                                             </div>
                                             <Badge className={`${colorClass} text-white text-xs flex-shrink-0`}>
                                                 {doc.filetypeName?.toUpperCase() || 'FILE'}

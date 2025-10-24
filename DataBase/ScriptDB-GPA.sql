@@ -1,6 +1,6 @@
 ﻿/*
 Created: 27/5/2025
-Modified: 15/10/2025
+Modified: 24/10/2025
 Model: RE MySQL 8.0
 Database: MySQL 8.0
 */
@@ -145,6 +145,7 @@ CREATE TABLE GPA_Documents
   DOC_file_path Text,
   DOC_upload_date Timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   DOC_filetype_id Int NOT NULL,
+  DOC_image_for_promotion Enum('Y','N') NOT NULL DEFAULT 'N',
   PRIMARY KEY (DOC_id)
 )
 ;

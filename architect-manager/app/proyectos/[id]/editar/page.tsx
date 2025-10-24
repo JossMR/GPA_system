@@ -667,9 +667,14 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     Historial de Pagos
                   </CardTitle>
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleNewPago}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleNewPago()
+                    }}
                     className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
                   >
                     <Plus className="mr-1 h-4 w-4" />
@@ -744,7 +749,11 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleNewCosto}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleNewCosto()
+                    }}
                     className="border-[#7d4427] text-[#7d4427] hover:bg-[#7d4427]/10"
                   >
                     <Plus className="mr-1 h-4 w-4" />
