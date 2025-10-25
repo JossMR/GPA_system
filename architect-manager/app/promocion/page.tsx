@@ -79,6 +79,50 @@ export default function PromocionPage() {
     fetchData()
   }, [])
 
+  const filteredProjects = projects.filter(project => {
+    const stateMatch = selectedStates.length === 0 || selectedStates.includes(project.PRJ_state)
+    const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(project.PRJ_type_id)
+    const categoryMatch = selectedCategories.length === 0 || 
+      project.categories?.some(cat => cat.CAT_id && selectedCategories.includes(cat.CAT_id))
+    
+    return stateMatch && typeMatch && categoryMatch
+  })
+
+  const totalImages = filteredProjects.reduce((sum, p) => sum + p.promotionImages.length, 0)
+
+  // Crear un array plano de todas las imágenes con su proyecto asociado
+  const allImages = filteredProjects.flatMap(project =>
+    project.promotionImages.map(doc => ({ document: doc, project }))
+  )
+
+  const handleNextImage = () => {
+    if (!selectedImage) return
+    const currentIndex = allImages.findIndex(
+      img => img.document.DOC_id === selectedImage.document.DOC_id
+    )
+    const nextIndex = (currentIndex + 1) % allImages.length
+    const nextImageData = allImages[nextIndex]
+    setSelectedImage({
+      document: nextImageData.document,
+      project: nextImageData.project,
+      imageIndex: nextIndex
+    })
+  }
+
+  const handlePreviousImage = () => {
+    if (!selectedImage) return
+    const currentIndex = allImages.findIndex(
+      img => img.document.DOC_id === selectedImage.document.DOC_id
+    )
+    const prevIndex = currentIndex === 0 ? allImages.length - 1 : currentIndex - 1
+    const prevImageData = allImages[prevIndex]
+    setSelectedImage({
+      document: prevImageData.document,
+      project: prevImageData.project,
+      imageIndex: prevIndex
+    })
+  }
+
   // Navegación con teclado
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -95,7 +139,7 @@ export default function PromocionPage() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [selectedImage])
+  }, [selectedImage, allImages, handleNextImage, handlePreviousImage])
 
   async function fetchData() {
     try {
@@ -138,64 +182,6 @@ export default function PromocionPage() {
       setLoading(false)
     }
   }
-
-  const filteredProjects = projects.filter(project => {
-    const stateMatch = selectedStates.length === 0 || selectedStates.includes(project.PRJ_state)
-    const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(project.PRJ_type_id)
-    const categoryMatch = selectedCategories.length === 0 || 
-      project.categories?.some(cat => cat.CAT_id && selectedCategories.includes(cat.CAT_id))
-    
-    return stateMatch && typeMatch && categoryMatch
-  })
-
-  const totalImages = filteredProjects.reduce((sum, p) => sum + p.promotionImages.length, 0)
-
-  // Crear un array plano de todas las imágenes con su proyecto asociado
-  const allImages = filteredProjects.flatMap(project =>
-    project.promotionImages.map(doc => ({ document: doc, project }))
-  )
-
-  const handleNextImage = () => {
-    if (!selectedImage) return
-    const currentIndex = allImages.findIndex(
-      img => img.document.DOC_id === selectedImage.document.DOC_id
-    )
-    const nextIndex = (currentIndex + 1) % allImages.length
-    setSelectedImage({
-      ...allImages[nextIndex],
-      imageIndex: nextIndex
-    })
-  }
-
-  const handlePreviousImage = () => {
-    if (!selectedImage) return
-    const currentIndex = allImages.findIndex(
-      img => img.document.DOC_id === selectedImage.document.DOC_id
-    )
-    const prevIndex = currentIndex === 0 ? allImages.length - 1 : currentIndex - 1
-    setSelectedImage({
-      ...allImages[prevIndex],
-      imageIndex: prevIndex
-    })
-  }
-
-  // Navegación con teclado
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedImage) return
-      
-      if (e.key === "ArrowLeft") {
-        handlePreviousImage()
-      } else if (e.key === "ArrowRight") {
-        handleNextImage()
-      } else if (e.key === "Escape") {
-        setSelectedImage(null)
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [selectedImage, allImages])
 
   return (
     <MainLayout>
@@ -341,7 +327,6 @@ export default function PromocionPage() {
                       </Badge>
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <div><span className="font-medium">Cliente:</span> {project.client_name}</div>
                       {(project.type?.TYP_name || allTypes.find(t => t.TYP_id === project.PRJ_type_id)?.TYP_name) && (
                         <div>
                           <span className="font-medium">Tipo:</span>{" "}
@@ -481,17 +466,47 @@ export default function PromocionPage() {
                       </div>
                     </div>
                     <div className="border-t pt-3">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div><span className="font-semibold">Proyecto:</span> #{selectedImage.project.PRJ_case_number}</div>
-                        <div><span className="font-semibold">Cliente:</span> {selectedImage.project.client_name}</div>
-                        {(selectedImage.project.type?.TYP_name || allTypes.find(t => t.TYP_id === selectedImage.project.PRJ_type_id)?.TYP_name) && (
+                      <div className="space-y-3">
+                        {/* Información del proyecto */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                           <div>
-                            <span className="font-semibold">Tipo:</span>{" "}
-                            {selectedImage.project.type?.TYP_name || allTypes.find(t => t.TYP_id === selectedImage.project.PRJ_type_id)?.TYP_name}
+                            <span className="font-semibold">Proyecto:</span> #{selectedImage.project.PRJ_case_number}
+                          </div>
+                          {selectedImage.project.PRJ_area_m2 && (
+                            <div>
+                              <span className="font-semibold">Área:</span> {Number(selectedImage.project.PRJ_area_m2).toLocaleString("es-CR")} m²
+                            </div>
+                          )}
+                          {selectedImage.project.PRJ_budget && (
+                            <div className="flex items-center gap-1">
+                              <DollarSign className="h-3 w-3" />
+                              <span className="font-semibold">Presupuesto:</span> {formatCurrency(Number(selectedImage.project.PRJ_budget))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Tipo de proyecto */}
+                        {(selectedImage.project.type?.TYP_name || allTypes.find(t => t.TYP_id === selectedImage.project.PRJ_type_id)?.TYP_name) && (
+                          <div className="border-t pt-3">
+                            <span className="font-semibold text-sm block mb-2">Tipo de Proyecto:</span>
+                            <Badge variant="outline" className="text-sm">
+                              {selectedImage.project.type?.TYP_name || allTypes.find(t => t.TYP_id === selectedImage.project.PRJ_type_id)?.TYP_name}
+                            </Badge>
                           </div>
                         )}
-                        {selectedImage.project.PRJ_area_m2 && (
-                          <div><span className="font-semibold">Área:</span> {Number(selectedImage.project.PRJ_area_m2).toLocaleString("es-CR")} m</div>
+
+                        {/* Categorías del proyecto */}
+                        {selectedImage.project.categories && selectedImage.project.categories.length > 0 && (
+                          <div className="border-t pt-3">
+                            <span className="font-semibold text-sm block mb-2">Categorías:</span>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedImage.project.categories.map((cat) => (
+                                <Badge key={cat.CAT_id} variant="secondary" className="text-xs">
+                                  {cat.CAT_name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
