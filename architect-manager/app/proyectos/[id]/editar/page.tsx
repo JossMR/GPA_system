@@ -56,6 +56,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   
   // Form data para costos extra
   const [costoFormData, setCostoFormData] = useState({
+    ATN_name: "",
     ATN_description: "",
     ATN_cost: "",
     ATN_date: "",
@@ -350,7 +351,6 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           body: JSON.stringify(paymentData),
         })
       } else {
-        // Crear nuevo pago
         response = await fetch("/api/payments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -409,6 +409,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const handleNewCosto = () => {
     setSelectedCosto(null)
     setCostoFormData({
+      ATN_name: "",
       ATN_description: "",
       ATN_cost: "",
       ATN_date: "",
@@ -419,6 +420,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const handleEditCosto = (costo: any) => {
     setSelectedCosto(costo)
     setCostoFormData({
+      ATN_name: costo.ATN_name || "",
       ATN_description: costo.ATN_description || "",
       ATN_cost: costo.ATN_cost?.toString() || "",
       ATN_date: costo.ATN_date
@@ -434,6 +436,35 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     }
     
     try {
+      // Verificar si el costo ya fue pagado
+      const costo = costosExtra.find(c => c.ATN_id === costoId)
+      if (!costo) return
+      
+      // Calcular cuánto del presupuesto original ya fue pagado
+      const presupuestoBase = Number(project?.PRJ_budget || 0)
+      const totalCostosExtra = costosExtra.reduce((sum, c) => sum + (Number(c.ATN_cost) || 0), 0)
+      const presupuestoTotal = presupuestoBase + totalCostosExtra
+      const totalPagado = pagos.reduce((sum, p) => sum + (Number(p.PAY_amount_paid) || 0), 0)
+      
+      // Si el total pagado excede el presupuesto base, significa que se ha pagado parte de los costos extra
+      if (totalPagado > presupuestoBase) {
+        const montoPagadoEnCostosExtra = totalPagado - presupuestoBase
+        
+        // Calcular qué proporción del costo a eliminar ya fue pagado
+        // Si hay múltiples costos extra, distribuimos proporcionalmente
+        const proporcionCostoActual = Number(costo.ATN_cost) / totalCostosExtra
+        const montoPagadoEsteCosto = montoPagadoEnCostosExtra * proporcionCostoActual
+        
+        if (montoPagadoEsteCosto > 0) {
+          toast({
+            title: "No se puede eliminar",
+            description: `Este costo extra ya fue pagado ${montoPagadoEsteCosto >= Number(costo.ATN_cost) ? 'completamente' : 'parcialmente'} (₡${Math.round(montoPagadoEsteCosto).toLocaleString()} de ₡${Number(costo.ATN_cost).toLocaleString()})`,
+            variant: "destructive",
+          })
+          return
+        }
+      }
+      
       const response = await fetch(`/api/additions/${costoId}`, {
         method: 'DELETE'
       })
@@ -473,10 +504,10 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const handleSaveCosto = async () => {
     try {
       // Validación
-      if (!costoFormData.ATN_description || costoFormData.ATN_description.trim() === "") {
+      if (!costoFormData.ATN_name || costoFormData.ATN_name.trim() === "") {
         toast({
           title: "Error",
-          description: "La descripción del costo es obligatoria",
+          description: "El nombre del costo es obligatorio",
           variant: "destructive",
         })
         return
@@ -503,7 +534,8 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       setSavingCosto(true)
 
       const additionData = {
-        ATN_description: costoFormData.ATN_description.trim(),
+        ATN_name: costoFormData.ATN_name.trim(),
+        ATN_description: costoFormData.ATN_description?.trim() || "",
         ATN_cost: Number(costoFormData.ATN_cost),
         ATN_date: costoFormData.ATN_date,
         ATN_project_id: Number(id),
@@ -539,23 +571,35 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         variant: "success"
       })
 
-      // Recargar costos
-      const additionsRes = await fetch(`/api/additions?project_id=${id}`)
-      if (additionsRes.ok) {
-        const additionsData = await additionsRes.json()
-        setCostosExtra(additionsData || [])
-      }
+      // Recargar costos y pagos en paralelo
+      const [additionsRes, paymentsRes, projectRes] = await Promise.all([
+        fetch(`/api/additions?project_id=${id}`),
+        fetch(`/api/payments?project_id=${id}`),
+        fetch(`/api/projects/${id}`)
+      ])
       
-      // Recargar proyecto para actualizar presupuesto total
-      const projectRes = await fetch(`/api/projects/${id}`)
+      const additionsData = additionsRes.ok ? await additionsRes.json() : []
+      const paymentsData = paymentsRes.ok ? await paymentsRes.json() : []
+      
+      setCostosExtra(additionsData)
+      setPagos(paymentsData)
+      
       if (projectRes.ok) {
         const data = await projectRes.json()
-        setProject(data.project)
+        const updatedProject = data.project
+        
+        // Recalcular PRJ_remaining_amount basado en los datos actualizados
+        const totalAdditions = additionsData.reduce((sum: number, a: any) => sum + (Number(a.ATN_cost) || 0), 0)
+        const totalPaid = paymentsData.reduce((sum: number, p: any) => sum + (Number(p.PAY_amount_paid) || 0), 0)
+        updatedProject.PRJ_remaining_amount = (Number(updatedProject.PRJ_budget) || 0) + totalAdditions - totalPaid
+        
+        setProject(updatedProject)
       }
 
       setIsCostoDialogOpen(false)
       setSelectedCosto(null)
       setCostoFormData({
+        ATN_name: "",
         ATN_description: "",
         ATN_cost: "",
         ATN_date: "",
@@ -1143,7 +1187,8 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     <div key={costo.ATN_id} className="border rounded-lg p-3 border-[#7d4427]/20">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
-                          <span className="text-sm font-medium">{costo.ATN_description}</span>
+                          <span className="text-sm font-semibold text-[#7d4427]">{costo.ATN_name}</span>
+                          <p className="text-sm text-muted-foreground mt-1">{costo.ATN_description}</p>
                           <div className="flex items-center space-x-2 mt-1">
                             <span className="text-xs text-muted-foreground">
                               {new Date(costo.ATN_date).toLocaleDateString('es-ES', {
@@ -1520,8 +1565,22 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
+                <Label htmlFor="costo-nombre">
+                  Nombre <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="costo-nombre"
+                  placeholder="Ej: Materiales extra, Permisos adicionales..."
+                  value={costoFormData.ATN_name}
+                  onChange={(e) => setCostoFormData({ ...costoFormData, ATN_name: e.target.value })}
+                  className="border-[#7d4427]/30 focus:border-[#7d4427]"
+                  required
+                />
+              </div>
+              
+              <div className="grid gap-2">
                 <Label htmlFor="costo-descripcion">
-                  Descripción <span className="text-red-500">*</span>
+                  Descripción
                 </Label>
                 <Input
                   id="costo-descripcion"
@@ -1529,7 +1588,6 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   value={costoFormData.ATN_description}
                   onChange={(e) => setCostoFormData({ ...costoFormData, ATN_description: e.target.value })}
                   className="border-[#7d4427]/30 focus:border-[#7d4427]"
-                  required
                 />
               </div>
               
@@ -1609,6 +1667,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   setIsCostoDialogOpen(false)
                   setSelectedCosto(null)
                   setCostoFormData({
+                    ATN_name: "",
                     ATN_description: "",
                     ATN_cost: "",
                     ATN_date: "",
