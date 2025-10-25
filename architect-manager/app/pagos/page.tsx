@@ -17,6 +17,7 @@ import { GPAPayment } from "@/models/GPA_payment"
 import { GPAProject } from "@/models/GPA_project"
 import { GPAAddition } from "@/models/GPA_addition"
 import { useToast } from "@/hooks/use-toast"
+import { formatCurrency } from "@/lib/formatters"
 
 const metodoPago = {
   Transfer: "Transferencia",
@@ -276,7 +277,7 @@ export default function PagosPage() {
       if (amountPaid > remainingAmount) {
         toast({
           title: "Error",
-          description: `El monto a pagar (₡${amountPaid.toLocaleString()}) excede el saldo restante del proyecto (₡${remainingAmount.toLocaleString()})`,
+          description: `El monto a pagar (${formatCurrency(amountPaid)}) excede el saldo restante del proyecto (${formatCurrency(remainingAmount)})`,
           variant: "destructive",
         })
         return
@@ -391,7 +392,7 @@ export default function PagosPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">₡{totalIngresos.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-green-600">{formatCurrency(totalIngresos)}</div>
             </CardContent>
           </Card>
           <Card className="card-hover border-yellow-200">
@@ -403,7 +404,7 @@ export default function PagosPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-600">
-                ₡{sumPendingAmounts.toLocaleString()}
+                {formatCurrency(sumPendingAmounts)}
               </div>
             </CardContent>
           </Card>
@@ -507,7 +508,7 @@ export default function PagosPage() {
                       </TableCell>
                       <TableCell>{payment.projectClientName || "N/A"}</TableCell>
                       <TableCell>
-                        <div className="font-semibold text-[#2e4600]">₡{(payment.PAY_amount_paid)?.toLocaleString()}</div>
+                        <div className="font-semibold text-[#2e4600]">{formatCurrency(payment.PAY_amount_paid)}</div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="border-[#a2c523] text-[#486b00]">
@@ -573,7 +574,7 @@ export default function PagosPage() {
                     value={(() => {
                       const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
                       return project 
-                        ? `${project.PRJ_case_number} - ${project.client_name} - ₡${Number(project.PRJ_budget || 0).toLocaleString()}`
+                        ? `${project.PRJ_case_number} - ${project.client_name} - ${formatCurrency(project.PRJ_budget)}`
                         : "N/A"
                     })()}
                     disabled
@@ -590,7 +591,7 @@ export default function PagosPage() {
                     <SelectContent>
                       {projects.map((project) => (
                         <SelectItem key={project.PRJ_id} value={project.PRJ_id?.toString() || ""}>
-                          {project.PRJ_case_number} - {project.client_name} - ₡{Number(project.PRJ_budget || 0).toLocaleString()}
+                          {project.PRJ_case_number} - {project.client_name} - {formatCurrency(project.PRJ_budget)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -631,7 +632,7 @@ export default function PagosPage() {
                       type={viewMode ? "text" : "number"}
                       placeholder="25000"
                       value={viewMode 
-                        ? `₡${Number(formData.PAY_amount_paid).toLocaleString()}`
+                        ? formatCurrency(formData.PAY_amount_paid)
                         : formData.PAY_amount_paid
                       }
                       onChange={(e) => {
@@ -726,24 +727,24 @@ export default function PagosPage() {
                       <>
                         <div className="flex justify-between text-sm">
                           <span className="text-[#2e4600]">Presupuesto inicial:</span>
-                          <span className="font-semibold">₡{budget.toLocaleString()}</span>
+                          <span className="font-semibold">{formatCurrency(budget)}</span>
                         </div>
                         {totalAdditions > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-[#2e4600]">Adiciones ({projectAdditions.length}):</span>
-                            <span className="font-semibold">₡{totalAdditions.toLocaleString()}</span>
+                            <span className="font-semibold">{formatCurrency(totalAdditions)}</span>
                           </div>
                         )}
                         <div className="flex justify-between text-sm border-t border-[#486b00]/20 pt-2">
                           <span className="text-[#2e4600] font-medium">Costo total del proyecto:</span>
-                          <span className="font-bold">₡{totalProjectCost.toLocaleString()}</span>
+                          <span className="font-bold">{formatCurrency(totalProjectCost)}</span>
                         </div>
                         <div className="border-t border-[#486b00]/20 pt-2">
                           <div className="text-sm font-medium text-[#2e4600]">
                             Saldo restante total:
                           </div>
                           <div className="text-2xl font-bold text-[#486b00]">
-                            ₡{Number(project?.PRJ_remaining_amount || 0).toLocaleString()}
+                            {formatCurrency(project?.PRJ_remaining_amount)}
                           </div>
                         </div>
                       </>
@@ -763,7 +764,7 @@ export default function PagosPage() {
                     return (
                       <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-3 rounded-md">
                         <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                          ⚠️ El monto a pagar (₡{amountPaid.toLocaleString()}) excede el saldo restante del proyecto (₡{remainingAmount.toLocaleString()})
+                          ⚠️ El monto a pagar ({formatCurrency(amountPaid)}) excede el saldo restante del proyecto ({formatCurrency(remainingAmount)})
                         </p>
                       </div>
                     )

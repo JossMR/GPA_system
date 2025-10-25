@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { formatCurrency } from "@/lib/formatters"
 
 const reportTypes = [
   {
@@ -358,13 +359,13 @@ export default function ReportesPage() {
           {selectedFields.tipo && <TableCell>{item.type?.TYP_name || "N/A"}</TableCell>}
           {selectedFields.categorias && <TableCell>{item.categories_names?.join(", ") || "N/A"}</TableCell>}
           {selectedFields.presupuesto && (
-            <TableCell className="text-right">₡{parseFloat(item.PRJ_budget || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}</TableCell>
+            <TableCell className="text-right">{formatCurrency(item.PRJ_budget)}</TableCell>
           )}
           {selectedFields.precioFinal && (
-            <TableCell className="text-right">₡{parseFloat(item.PRJ_final_price || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}</TableCell>
+            <TableCell className="text-right">{formatCurrency(item.PRJ_final_price)}</TableCell>
           )}
           {selectedFields.restante && (
-            <TableCell className="text-right">₡{parseFloat(item.PRJ_remaining_amount || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}</TableCell>
+            <TableCell className="text-right">{formatCurrency(item.PRJ_remaining_amount)}</TableCell>
           )}
           {selectedFields.area && (
             <TableCell className="text-right">{parseFloat(item.PRJ_area_m2 || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })} m²</TableCell>
@@ -397,7 +398,7 @@ export default function ReportesPage() {
             <TableCell>{item.PAY_payment_date ? format(new Date(item.PAY_payment_date), "dd/MM/yyyy") : "N/A"}</TableCell>
           )}
           {selectedFields.monto && (
-            <TableCell className="text-right">₡{parseFloat(item.PAY_amount_paid || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}</TableCell>
+            <TableCell className="text-right">{formatCurrency(item.PAY_amount_paid)}</TableCell>
           )}
           {selectedFields.metodo && (
             <TableCell>{item.PAY_method ? translatePaymentMethod(item.PAY_method) : "N/A"}</TableCell>
@@ -840,15 +841,15 @@ export default function ReportesPage() {
         if (selectedFields.presupuesto) {
           const budget = parseFloat(project.PRJ_budget) || 0
           totalBudget += budget
-          rowData.push(`₡${budget.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`)
+          rowData.push(formatCurrency(budget))
         }
         if (selectedFields.precioFinal) {
-          rowData.push(project.PRJ_final_price ? `₡${parseFloat(project.PRJ_final_price).toLocaleString("es-CR", { minimumFractionDigits: 2 })}` : "N/A")
+          rowData.push(project.PRJ_final_price ? formatCurrency(project.PRJ_final_price) : "N/A")
         }
         if (selectedFields.restante) {
           const remaining = parseFloat(project.PRJ_remaining_amount) || 0
           totalRemaining += remaining
-          rowData.push(`₡${remaining.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`)
+          rowData.push(formatCurrency(remaining))
         }
         if (selectedFields.area) {
           rowData.push(project.PRJ_area_m2 ? `${parseFloat(project.PRJ_area_m2).toLocaleString("es-CR", { minimumFractionDigits: 2 })} m²` : "N/A")
@@ -924,7 +925,7 @@ export default function ReportesPage() {
       const summaryRow = rowIndex + 1
       worksheet.mergeCells(`A${summaryRow}:${String.fromCharCode(64 + headers.length)}${summaryRow}`)
       const summaryCell = worksheet.getCell(`A${summaryRow}`)
-      summaryCell.value = `Total de proyectos: ${projects.length} | Presupuesto total: ₡${totalBudget.toLocaleString("es-CR", { minimumFractionDigits: 2 })} | Monto restante: ₡${totalRemaining.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`
+      summaryCell.value = `Total de proyectos: ${projects.length} | Presupuesto total: ${formatCurrency(totalBudget)} | Monto restante: ${formatCurrency(totalRemaining)}`
       summaryCell.font = { bold: true, size: 11 }
       summaryCell.fill = {
         type: "pattern",
@@ -1066,7 +1067,7 @@ export default function ReportesPage() {
         if (selectedFields.monto) {
           const amount = parseFloat(payment.PAY_amount_paid) || 0
           totalAmount += amount
-          rowData.push(`₡${amount.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`)
+          rowData.push(formatCurrency(amount))
         }
         if (selectedFields.metodo) {
           rowData.push(payment.PAY_method ? translatePaymentMethod(payment.PAY_method) : "N/A")
@@ -1121,7 +1122,7 @@ export default function ReportesPage() {
       const summaryRow = rowIndex + 1
       worksheet.mergeCells(`A${summaryRow}:${String.fromCharCode(64 + headers.length)}${summaryRow}`)
       const summaryCell = worksheet.getCell(`A${summaryRow}`)
-      summaryCell.value = `Total de pagos: ${payments.length} | Monto total recibido: ₡${totalAmount.toLocaleString("es-CR", { minimumFractionDigits: 2 })}`
+      summaryCell.value = `Total de pagos: ${payments.length} | Monto total recibido: ${formatCurrency(totalAmount)}`
       summaryCell.font = { bold: true, size: 11 }
       summaryCell.fill = {
         type: "pattern",
@@ -1473,13 +1474,13 @@ export default function ReportesPage() {
                           <div>
                             <p className="text-sm text-muted-foreground">Presupuesto Total</p>
                             <p className="text-2xl font-bold text-primary-dark">
-                              ₡{previewData.reduce((sum, p) => sum + (parseFloat(p.PRJ_budget) || 0), 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}
+                              {formatCurrency(previewData.reduce((sum, p) => sum + (parseFloat(p.PRJ_budget) || 0), 0))}
                             </p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Monto Restante</p>
                             <p className="text-2xl font-bold text-primary-dark">
-                              ₡{previewData.reduce((sum, p) => sum + (parseFloat(p.PRJ_remaining_amount) || 0), 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}
+                              {formatCurrency(previewData.reduce((sum, p) => sum + (parseFloat(p.PRJ_remaining_amount) || 0), 0))}
                             </p>
                           </div>
                         </>
@@ -1488,7 +1489,7 @@ export default function ReportesPage() {
                         <div className="md:col-span-2">
                           <p className="text-sm text-muted-foreground">Monto Total Recibido</p>
                           <p className="text-2xl font-bold text-primary-dark">
-                            ₡{previewData.reduce((sum, p) => sum + (parseFloat(p.PAY_amount_paid) || 0), 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })}
+                            {formatCurrency(previewData.reduce((sum, p) => sum + (parseFloat(p.PAY_amount_paid) || 0), 0))}
                           </p>
                         </div>
                       )}

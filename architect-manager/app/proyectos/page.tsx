@@ -13,6 +13,7 @@ import { Plus, Search, Edit, Eye, Calendar, DollarSign, PawPrint } from "lucide-
 import { useAuth } from "@/components/auth-provider"
 import Link from "next/link"
 import { GPAProject } from "@/models/GPA_project"
+import { formatCurrency } from "@/lib/formatters"
 
 const stateLabels = {
   "Document Collection": "Recepción de Documentos",
@@ -116,9 +117,8 @@ export default function ProjectsPage() {
               <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold flex">
-                <p>₡</p>
-                {projects?.reduce((sum, p) => sum + Number(p.PRJ_budget ?? 0), 0).toLocaleString("es-CR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div className="text-2xl font-bold">
+                {formatCurrency(projects?.reduce((sum, p) => sum + Number(p.PRJ_budget ?? 0), 0))}
               </div>
             </CardContent>
           </Card>
@@ -187,7 +187,7 @@ export default function ProjectsPage() {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center text-sm">
-                            ₡{(project.PRJ_budget ?? 0).toLocaleString()}
+                            {formatCurrency(project.PRJ_budget)}
                           </div>
                         </div>
                       </TableCell>

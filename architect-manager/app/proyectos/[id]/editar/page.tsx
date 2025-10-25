@@ -24,6 +24,7 @@ import { ClientSelector } from "@/components/client-selector"
 import { useToast } from "@/hooks/use-toast"
 import { ProjectTypeManager } from "@/components/projectTypeManager"
 import { Category, ProjectCategoryTags } from "@/components/projectCategoryTags"
+import { formatCurrency } from "@/lib/formatters"
 
 export default function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { isAdmin } = useAuth()
@@ -326,7 +327,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       if (amountPaid > remainingAmount) {
         toast({
           title: "Error",
-          description: `El monto a pagar (₡${amountPaid.toLocaleString()}) excede el saldo restante del proyecto (₡${remainingAmount.toLocaleString()})`,
+          description: `El monto a pagar (${formatCurrency(amountPaid)}) excede el saldo restante del proyecto (${formatCurrency(remainingAmount)})`,
           variant: "destructive",
         })
         return
@@ -458,7 +459,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         if (montoPagadoEsteCosto > 0) {
           toast({
             title: "No se puede eliminar",
-            description: `Este costo extra ya fue pagado ${montoPagadoEsteCosto >= Number(costo.ATN_cost) ? 'completamente' : 'parcialmente'} (₡${Math.round(montoPagadoEsteCosto).toLocaleString()} de ₡${Number(costo.ATN_cost).toLocaleString()})`,
+            description: `Este costo extra ya fue pagado ${montoPagadoEsteCosto >= Number(costo.ATN_cost) ? 'completamente' : 'parcialmente'} (${formatCurrency(Math.round(montoPagadoEsteCosto))} de ${formatCurrency(Number(costo.ATN_cost))})`,
             variant: "destructive",
           })
           return
@@ -1100,7 +1101,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                             })}
                           </TableCell>
                           <TableCell className="font-semibold text-[#2e4600]">
-                            ₡{Number(pago.PAY_amount_paid || 0).toLocaleString()}
+                            {formatCurrency(pago.PAY_amount_paid)}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className="border-[#a2c523] text-[#486b00]">

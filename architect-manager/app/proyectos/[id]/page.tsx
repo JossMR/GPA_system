@@ -29,6 +29,7 @@ import {
 import { useAuth } from "@/components/auth-provider"
 import Link from "next/link"
 import { GPAProject } from "@/models/GPA_project"
+import { formatCurrency } from "@/lib/formatters"
 const estadoProyectoES: Record<string, string> = {
   "Document Collection": "Recolección de Documentos",
   "Technical Inspection": "Inspección Técnica",
@@ -288,7 +289,7 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Presupuesto Base:</span>
-                    <span className="font-semibold">₡{(project.PRJ_budget ?? 0).toLocaleString()}</span>
+                    <span className="font-semibold">{formatCurrency(project.PRJ_budget)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -301,37 +302,35 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
                 <div className="text-sm space-y-3">
                   <div className="flex justify-between">
                     <span>Presupuesto base:</span>
-                    <span className="font-medium">${mockProyecto.presupuesto.toLocaleString()}</span>
+                    <span className="font-medium">{formatCurrency(mockProyecto.presupuesto)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Costos extra:</span>
                     <span className="font-medium text-[#7d4427]">
-                      +${costosExtra.reduce((sum, c) => sum + c.monto, 0).toLocaleString()}
+                      +{formatCurrency(costosExtra.reduce((sum, c) => sum + c.monto, 0))}
                     </span>
                   </div>
                   <hr className="border-[#a2c523]/30" />
                   <div className="flex justify-between">
                     <span>Total presupuestado:</span>
                     <span className="font-bold text-[#486b00]">
-                      ${(mockProyecto.presupuesto + costosExtra.reduce((sum, c) => sum + c.monto, 0)).toLocaleString()}
+                      {formatCurrency(mockProyecto.presupuesto + costosExtra.reduce((sum, c) => sum + c.monto, 0))}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Total pagado:</span>
                     <span className="font-medium text-green-600">
-                      ${pagos.reduce((sum, p) => sum + p.monto, 0).toLocaleString()}
+                      {formatCurrency(pagos.reduce((sum, p) => sum + p.monto, 0))}
                     </span>
                   </div>
                   <hr className="border-[#a2c523]/30" />
                   <div className="flex justify-between">
                     <span>Saldo restante:</span>
                     <span className="font-bold text-[#7d4427]">
-                      $
-                      {(
-                        mockProyecto.presupuesto +
+                      {formatCurrency(mockProyecto.presupuesto +
                         costosExtra.reduce((sum, c) => sum + c.monto, 0) -
                         pagos.reduce((sum, p) => sum + p.monto, 0)
-                      ).toLocaleString()}
+                      )}
                     </span>
                   </div>
                 </div>
