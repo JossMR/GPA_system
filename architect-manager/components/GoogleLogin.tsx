@@ -3,7 +3,9 @@
 //import { useUser } from "@/context/UserContext"
 import { GoogleLogin } from "@react-oauth/google"
 import { useState, useEffect } from "react"
-import { User, useAuth } from "@/components/auth-provider";
+import { User, useAuth } from "@/components/auth-provider"
+import { Loader2 } from "lucide-react"
+
 interface GoogleLoginButtonProps {
   onSuccessRedirect: () => void
   setLoading: (value: boolean) => void
@@ -13,6 +15,7 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
   //const { setUser } = useUser()
   const [error, setError] = useState<string | null>(null)
   const [csrfToken, setCsrfToken] = useState<string>("")
+  const [isLoading, setIsLoading] = useState(false)
   const { login } = useAuth()
 
   // Generate CSRF token on component mount
@@ -28,6 +31,7 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
 
   const handleLogin = async (credentialResponse: any) => {
     setLoading(true)
+    setIsLoading(true)
     setError(null)
     try {
       // Send the Google credential to our backend for verification
@@ -53,6 +57,7 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
           setError(data.error || "Failed to authenticate with Google")
         }
         setLoading(false)
+        setIsLoading(false)
         return
       }
       // Update last access date
@@ -89,23 +94,32 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
       console.error("Error during Google authentication:", error)
       setError("An unexpected error occurred. Please try again.")
       setLoading(false)
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="w-full flex justify-center">
-      {error && <div className="text-red-500 mb-4 text-sm">{error}</div>}
+    <div className="w-full flex flex-col items-center space-y-4">
+      {error && <div className="text-red-500 text-sm text-center">{error}</div>}
 
-      <GoogleLogin
-        onSuccess={handleLogin}
-        onError={() => {
-          setError("Failed to authenticate with Google. Please try again.")
-          setLoading(false)
-        }}
-        useOneTap
-        size="large"
-        width={300}
-      />
+      {isLoading ? (
+        <div className="flex items-center justify-center bg-white border border-gray-300 rounded px-6 py-3 shadow-sm" style={{ width: '300px', height: '50px' }}>
+          <Loader2 className="h-5 w-5 animate-spin text-[#486b00] mr-2" />
+          <span className="text-sm font-medium text-gray-700">Iniciando sesión...</span>
+        </div>
+      ) : (
+        <GoogleLogin
+          onSuccess={handleLogin}
+          onError={() => {
+            setError("Failed to authenticate with Google. Please try again.")
+            setLoading(false)
+            setIsLoading(false)
+          }}
+          useOneTap
+          size="large"
+          width={300}
+        />
+      )}
     </div>
   )
 }
