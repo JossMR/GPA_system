@@ -267,8 +267,6 @@ export default function ReportesPage() {
         const response = await fetch("/api/projects")
         const result = await response.json()
         let projects = result.projects || []
-        console.log("Projects fetcheds on reportes:", projects)
-        // Aplicar filtro de fecha
         const dateFilter = getDateFilter(dateRange)
         if (dateFilter) {
           projects = projects.filter((p: any) => {
