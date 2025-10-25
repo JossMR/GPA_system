@@ -15,6 +15,7 @@ export default function clientsPage() {
   const { isAdmin } = useAuth()
   const [clients, setClients] = useState<GPAClient[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
+  const [loading, setLoading] = useState(true)
 
   const filteredClients = clients.filter(
     (client) =>
@@ -25,13 +26,26 @@ export default function clientsPage() {
 
   useEffect(() => {
     const fetchClients = async () => {
+      setLoading(true)
       const response = await fetch("/api/clients")
       const data = await response.json()
       const requestedClients: GPAClient[] = data.clients
       setClients(requestedClients)
+      setLoading(false)
     }
     fetchClients()
   }, [])
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#486b00] mr-4" />
+          <span className="text-muted-foreground">Cargando información de clientes...</span>
+        </div>
+      </MainLayout>
+    )
+  }
 
   return (
     <MainLayout>

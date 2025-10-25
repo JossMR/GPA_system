@@ -37,6 +37,7 @@ export default function UsersPage() {
   const [roles, setRoles] = useState<GPARole[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(false)
+  const [fetchingData, setFetchingData] = useState(true)
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
@@ -60,6 +61,17 @@ export default function UsersPage() {
     )
   }
 
+  if (fetchingData) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#486b00] mr-4" />
+          <span className="text-muted-foreground">Cargando información de usuarios...</span>
+        </div>
+      </MainLayout>
+    )
+  }
+
   const filteredUsers = users.filter(
     (user) =>
       user.USR_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -76,7 +88,12 @@ export default function UsersPage() {
         setUsers(requestedUsers)
       }
       useEffect(() => {
-      fetchUsers()
+      const loadData = async () => {
+        setFetchingData(true)
+        await fetchUsers()
+        setFetchingData(false)
+      }
+      loadData()
     }, [])
 
     // Fetch roles for the select dropdown
