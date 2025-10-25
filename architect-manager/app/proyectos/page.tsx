@@ -83,8 +83,8 @@ export default function ProjectsPage() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
+        <div className="flex flex-col md:flex-row gap-4">
+          <Card className="md:w-auto">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total Proyectos</CardTitle>
             </CardHeader>
@@ -92,33 +92,65 @@ export default function ProjectsPage() {
               <div className="text-2xl font-bold">{projects?.length}</div>
             </CardContent>
           </Card>
-          <Card>
+          
+          <Card className="flex-1">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">En Construcción</CardTitle>
+              <CardTitle className="text-sm font-medium">Proyectos por Estado</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {projects?.filter((p) => p.PRJ_state === "Under Construction").length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Completados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {projects?.filter((p) => p.PRJ_state === "Completed").length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(projects?.reduce((sum, p) => sum + Number(p.PRJ_budget ?? 0), 0))}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 text-sm">
+                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <span className="text-gray-700 font-medium text-xs">Recepción Doc.</span>
+                  <span className="text-lg font-bold text-gray-600">{projects?.filter((p) => p.PRJ_state === "Document Collection").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-yellow-50 rounded">
+                  <span className="text-yellow-700 font-medium text-xs">Inspección Téc.</span>
+                  <span className="text-lg font-bold text-yellow-600">{projects?.filter((p) => p.PRJ_state === "Technical Inspection").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-orange-50 rounded">
+                  <span className="text-orange-700 font-medium text-xs">Revisión Doc.</span>
+                  <span className="text-lg font-bold text-orange-600">{projects?.filter((p) => p.PRJ_state === "Document Review").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-purple-50 rounded">
+                  <span className="text-purple-700 font-medium text-xs">Planos/Presup.</span>
+                  <span className="text-lg font-bold text-purple-600">{projects?.filter((p) => p.PRJ_state === "Plans and Budget").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-pink-50 rounded">
+                  <span className="text-pink-700 font-medium text-xs">Rev. Entidad</span>
+                  <span className="text-lg font-bold text-pink-600">{projects?.filter((p) => p.PRJ_state === "Entity Review").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-indigo-50 rounded">
+                  <span className="text-indigo-700 font-medium text-xs">APC/Permisos</span>
+                  <span className="text-lg font-bold text-indigo-600">{projects?.filter((p) => p.PRJ_state === "APC and Permits").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-teal-50 rounded">
+                  <span className="text-teal-700 font-medium text-xs">Desembolso</span>
+                  <span className="text-lg font-bold text-teal-600">{projects?.filter((p) => p.PRJ_state === "Disbursement").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-blue-50 rounded">
+                  <span className="text-blue-700 font-medium text-xs">En Construc.</span>
+                  <span className="text-lg font-bold text-blue-600">{projects?.filter((p) => p.PRJ_state === "Under Construction").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-green-50 rounded">
+                  <span className="text-green-700 font-medium text-xs">Completados</span>
+                  <span className="text-lg font-bold text-green-600">{projects?.filter((p) => p.PRJ_state === "Completed").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-emerald-50 rounded">
+                  <span className="text-emerald-700 font-medium text-xs">Bitác. Cerrada</span>
+                  <span className="text-lg font-bold text-emerald-600">{projects?.filter((p) => p.PRJ_state === "Logbook Closed").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-red-50 rounded">
+                  <span className="text-red-700 font-medium text-xs">Rechazados</span>
+                  <span className="text-lg font-bold text-red-600">{projects?.filter((p) => p.PRJ_state === "Rejected").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                  <span className="text-slate-700 font-medium text-xs">Retiro Prof.</span>
+                  <span className="text-lg font-bold text-slate-600">{projects?.filter((p) => p.PRJ_state === "Professional Withdrawal").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-amber-50 rounded">
+                  <span className="text-amber-700 font-medium text-xs">Condicionados</span>
+                  <span className="text-lg font-bold text-amber-600">{projects?.filter((p) => p.PRJ_state === "Conditioned").length}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -165,11 +197,14 @@ export default function ProjectsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Numero de Caso</TableHead>
-                    <TableHead>Nombre del Cliente</TableHead>
-                    <TableHead>Tipo de Proyecto</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>Estado</TableHead>
-                    <TableHead>Presupuesto</TableHead>
-                    <TableHead>Fechas</TableHead>
+                    <TableHead className="text-right">Área (m²)</TableHead>
+                    <TableHead className="text-right">Presupuesto</TableHead>
+                    <TableHead className="text-right">Saldo Restante</TableHead>
+                    <TableHead>Fecha de Inicio</TableHead>
+                    <TableHead>Fecha de Conclusión</TableHead>
                     <TableHead>Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -177,27 +212,60 @@ export default function ProjectsPage() {
                   {filteredProjects?.map((project) => (
                     <TableRow key={project.PRJ_id} className="animate-fade-in">
                       <TableCell>
+                        <div className="font-medium">{project.PRJ_case_number}</div>
+                      </TableCell>
+                      <TableCell>
                         <div>
-                          <div className="font-medium">{project.PRJ_case_number}</div>
+                          <div className="font-medium">{project.client_name}</div>
+                          <div className="text-xs text-muted-foreground">{project.client_identification}</div>
                         </div>
                       </TableCell>
-                      <TableCell>{project.client_name}</TableCell>
-                      <TableCell>{project.type?.TYP_name}</TableCell>
-                      <TableCell>{stateLabels[project.PRJ_state] ?? project.PRJ_state}</TableCell>
+                      <TableCell>{project.type?.TYP_name || "N/A"}</TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center text-sm">
-                            {formatCurrency(project.PRJ_budget)}
-                          </div>
+                        <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-[#a2c523]/10 text-[#486b00]">
+                          {stateLabels[project.PRJ_state] ?? project.PRJ_state}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {project.PRJ_area_m2 
+                          ? Number(project.PRJ_area_m2).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          : "N/A"
+                        }
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="font-semibold text-[#2e4600]">
+                          {formatCurrency(project.PRJ_budget)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className={`font-semibold ${Number(project.PRJ_remaining_amount || 0) > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                          {formatCurrency(project.PRJ_remaining_amount)}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center text-sm">
-                            <Calendar className="mr-1 h-3 w-3" />
-                            {project.PRJ_start_construction_date ? new Date(project.PRJ_start_construction_date).toLocaleDateString() : "N/A"}
-                          </div>
-                          <div className="text-xs text-muted-foreground">Conclusión: {project.PRJ_completion_date ? new Date(project.PRJ_completion_date).toLocaleDateString() : "N/A"}</div>
+                        <div className="flex items-center text-sm">
+                          <Calendar className="mr-1 h-3 w-3 text-[#486b00]" />
+                          {project.PRJ_start_construction_date 
+                            ? new Date(project.PRJ_start_construction_date).toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                            : "N/A"
+                          }
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center text-sm">
+                          <Calendar className="mr-1 h-3 w-3 text-[#486b00]" />
+                          {project.PRJ_completion_date 
+                            ? new Date(project.PRJ_completion_date).toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                            : "N/A"
+                          }
                         </div>
                       </TableCell>
                       <TableCell>
