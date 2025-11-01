@@ -1,6 +1,6 @@
 ﻿/*
 Created: 27/5/2025
-Modified: 24/10/2025
+Modified: 31/10/2025
 Model: RE MySQL 8.0
 Database: MySQL 8.0
 */
@@ -13,6 +13,7 @@ CREATE TABLE GPA_Roles
 (
   ROL_id Int AUTO_INCREMENT,
   ROL_name Varchar(50) NOT NULL,
+  ROL_notifications_for Enum('E'.'O') NOT NULL DEFAULT 'E',
   PRIMARY KEY (ROL_id)
 )
 ;
@@ -155,12 +156,22 @@ CREATE TABLE GPA_Documents
 CREATE TABLE GPA_Notifications
 (
   NOT_id Int AUTO_INCREMENT,
-  NOT_user_id Int,
-  NOT_message Text NOT NULL,
+  NOT_creator_user_id Int NOT NULL,
+  NOT_nombre Text NOT NULL,
   NOT_read Bool DEFAULT FALSE,
   NOT_created_at Timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  NOT_date Datetime,
+  PRJ_id Int,
+  NOT_descripcion Text,
+  NTP_id Int NOT NULL,
   PRIMARY KEY (NOT_id)
 )
+;
+
+CREATE INDEX fk_GPA_Notifications_GPA_Projects_0 ON GPA_Notifications (PRJ_id)
+;
+
+CREATE INDEX fk_GPA_Notifications_GPA_Notifications_types_0 ON GPA_Notifications (NTP_id)
 ;
 
 -- Table GPA_Observations
@@ -211,6 +222,89 @@ CREATE TABLE GPA_ProjectsXGPA_Categories
 ALTER TABLE GPA_ProjectsXGPA_Categories ADD PRIMARY KEY (PRJ_id, CAT_id)
 ;
 
+-- Table GPA_Notifications_types
+
+CREATE TABLE GPA_Notifications_types
+(
+  NTP_id Int NOT NULL AUTO_INCREMENT,
+  NTP_name Text NOT NULL,
+  PRIMARY KEY (NTP_id)
+)
+;
+
+-- Table GPA_RolesXGPA_Notifications_types
+
+CREATE TABLE GPA_RolesXGPA_Notifications_types
+(
+  ROL_id Int,
+  NTP_id Int NOT NULL
+)
+;
+
+ALTER TABLE GPA_RolesXGPA_Notifications_types ADD PRIMARY KEY (ROL_id, NTP_id)
+;
+
+-- Table GPA_Permission_type
+
+CREATE TABLE GPA_Permission_type
+(
+  PTY_name Enum('Edit'.'View'.'Create','All') NOT NULL,
+  PTY_id Int NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (PTY_id)
+)
+;
+
+-- Table GPA_Permission
+
+CREATE TABLE GPA_Permission
+(
+  PTY_id Int NOT NULL,
+  SCN_id Int NOT NULL,
+  PSN_id Int NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (PSN_id)
+)
+;
+
+CREATE INDEX IX_fk_GPA_Screen_GPA_Permission_1 ON GPA_Permission (SCN_id)
+;
+
+CREATE INDEX IX_fk_GPA_Permission_GPA_Permission_type_0 ON GPA_Permission (PTY_id)
+;
+
+-- Table GPA_UsersXGPA_Notifications
+
+CREATE TABLE GPA_UsersXGPA_Notifications
+(
+  USR_id Int,
+  NOT_id Int
+)
+;
+
+ALTER TABLE GPA_UsersXGPA_Notifications ADD PRIMARY KEY (USR_id, NOT_id)
+;
+
+-- Table GPA_Screen
+
+CREATE TABLE GPA_Screen
+(
+  SCN_id Int NOT NULL AUTO_INCREMENT,
+  SCN_name Varchar(50) NOT NULL,
+  PRIMARY KEY (SCN_id)
+)
+;
+
+-- Table GPA_PermissionXGPA_User
+
+CREATE TABLE GPA_PermissionXGPA_User
+(
+  ROL_id Int,
+  PSN_id Int NOT NULL
+)
+;
+
+ALTER TABLE GPA_PermissionXGPA_User ADD PRIMARY KEY (ROL_id, PSN_id)
+;
+
 -- Create foreign keys (relationships) section -------------------------------------------------
 
 ALTER TABLE GPA_Users ADD CONSTRAINT fk_GPA_Roles_GPA_Users_0 FOREIGN KEY (USR_role_id) REFERENCES GPA_Roles (ROL_id) ON DELETE RESTRICT ON UPDATE RESTRICT
@@ -228,7 +322,7 @@ ALTER TABLE GPA_Projects ADD CONSTRAINT fk_GPA_Types_GPA_Projects_2 FOREIGN KEY 
 ALTER TABLE GPA_Documents ADD CONSTRAINT fk_GPA_Projects_GPA_Documents_0 FOREIGN KEY (DOC_project_id) REFERENCES GPA_Projects (PRJ_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ;
 
-ALTER TABLE GPA_Notifications ADD CONSTRAINT fk_GPA_Users_GPA_Notifications_0 FOREIGN KEY (NOT_user_id) REFERENCES GPA_Users (USR_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+ALTER TABLE GPA_Notifications ADD CONSTRAINT fk_GPA_Users_GPA_Notifications_0 FOREIGN KEY (NOT_creator_user_id) REFERENCES GPA_Users (USR_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ;
 
 ALTER TABLE GPA_Observations ADD CONSTRAINT fk_GPA_Projects_GPA_Observation_0 FOREIGN KEY (OST_project_id) REFERENCES GPA_Projects (PRJ_id) ON DELETE RESTRICT ON UPDATE RESTRICT
@@ -250,5 +344,35 @@ ALTER TABLE GPA_ProjectsXGPA_Categories ADD CONSTRAINT fk_GPA_Categories_GPA_Pro
 ;
 
 ALTER TABLE GPA_Projects ADD CONSTRAINT fk_GPA_Users_GPA_Projects_0 FOREIGN KEY (PRJ_last_modification_user_id) REFERENCES GPA_Users (USR_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_Notifications ADD CONSTRAINT fk_GPA_Notifications_GPA_Projects FOREIGN KEY (PRJ_id) REFERENCES GPA_Projects (PRJ_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_Notifications ADD CONSTRAINT fk_GPA_Notifications_GPA_Notifications_types_0 FOREIGN KEY (NTP_id) REFERENCES GPA_Notifications_types (NTP_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_RolesXGPA_Notifications_types ADD CONSTRAINT fk_GPA_RolesXGPA_Notifications_types_1 FOREIGN KEY (ROL_id) REFERENCES GPA_Roles (ROL_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_RolesXGPA_Notifications_types ADD CONSTRAINT fk_GPA_RolesXGPA_Notifications_types_0 FOREIGN KEY (NTP_id) REFERENCES GPA_Notifications_types (NTP_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_Permission ADD CONSTRAINT fk_GPA_Permission_GPA_Permission_type_0 FOREIGN KEY (PTY_id) REFERENCES GPA_Permission_type (PTY_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_UsersXGPA_Notifications ADD CONSTRAINT fk_UsersXGPA_Notifications_0 FOREIGN KEY (USR_id) REFERENCES GPA_Users (USR_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_UsersXGPA_Notifications ADD CONSTRAINT fk_UsersXGPA_Notifications_1 FOREIGN KEY (NOT_id) REFERENCES GPA_Notifications (NOT_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_Permission ADD CONSTRAINT fk_GPA_Screen_GPA_Permission_1 FOREIGN KEY (SCN_id) REFERENCES GPA_Screen (SCN_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_PermissionXGPA_User ADD CONSTRAINT fk_GPA_Roles_GPA_Permission_1 FOREIGN KEY (ROL_id) REFERENCES GPA_Roles (ROL_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+;
+
+ALTER TABLE GPA_PermissionXGPA_User ADD CONSTRAINT fk_GPA_Roles_GPA_Permission_0 FOREIGN KEY (PSN_id) REFERENCES GPA_Permission (PSN_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ;
 
