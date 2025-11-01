@@ -1,6 +1,6 @@
 ﻿/*
 Created: 27/5/2025
-Modified: 31/10/2025
+Modified: 1/11/2025
 Model: RE MySQL 8.0
 Database: MySQL 8.0
 */
@@ -13,7 +13,7 @@ CREATE TABLE GPA_Roles
 (
   ROL_id Int AUTO_INCREMENT,
   ROL_name Varchar(50) NOT NULL,
-  ROL_notifications_for Enum('E'.'O') NOT NULL DEFAULT 'E',
+  ROL_notifications_for Enum('E','O') NOT NULL DEFAULT 'E',
   PRIMARY KEY (ROL_id)
 )
 ;
@@ -248,7 +248,7 @@ ALTER TABLE GPA_RolesXGPA_Notifications_types ADD PRIMARY KEY (ROL_id, NTP_id)
 
 CREATE TABLE GPA_Permission_type
 (
-  PTY_name Enum('Edit'.'View'.'Create','All') NOT NULL,
+  PTY_name Enum('Edit','View','Create','All') NOT NULL,
   PTY_id Int NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (PTY_id)
 )
