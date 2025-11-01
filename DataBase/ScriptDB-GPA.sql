@@ -157,12 +157,12 @@ CREATE TABLE GPA_Notifications
 (
   NOT_id Int AUTO_INCREMENT,
   NOT_creator_user_id Int NOT NULL,
-  NOT_nombre Text NOT NULL,
+  NOT_name Varchar(50) NOT NULL,
   NOT_read Bool DEFAULT FALSE,
   NOT_created_at Timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   NOT_date Datetime,
   PRJ_id Int,
-  NOT_descripcion Text,
+  NOT_description Text,
   NTP_id Int NOT NULL,
   PRIMARY KEY (NOT_id)
 )
