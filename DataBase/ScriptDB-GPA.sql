@@ -159,7 +159,7 @@ CREATE TABLE GPA_Notifications
   NOT_creator_user_id Int NOT NULL,
   NOT_name Varchar(50) NOT NULL,
   NOT_read Bool DEFAULT FALSE,
-  NOT_created_at Timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  NOT_created_at Datetime DEFAULT CURRENT_TIMESTAMP,
   NOT_date Datetime,
   PRJ_id Int,
   NOT_description Text,
