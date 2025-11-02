@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect,useState } from "react"
+import { useEffect, useState } from "react"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -61,17 +61,6 @@ export default function UsersPage() {
     )
   }
 
-  if (fetchingData) {
-    return (
-      <MainLayout>
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#486b00] mr-4" />
-          <span className="text-muted-foreground">Cargando información de usuarios...</span>
-        </div>
-      </MainLayout>
-    )
-  }
-
   const filteredUsers = users.filter(
     (user) =>
       user.USR_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -81,36 +70,36 @@ export default function UsersPage() {
   )
 
   // Fetch users from API
-      const fetchUsers = async () => {
-        const response = await fetch("/api/users")
-        const data = await response.json()
-        const requestedUsers: GPAUser[] = data.users
-        setUsers(requestedUsers)
-      }
-      useEffect(() => {
-      const loadData = async () => {
-        setFetchingData(true)
-        await fetchUsers()
-        setFetchingData(false)
-      }
-      loadData()
-    }, [])
-
-    // Fetch roles for the select dropdown
+  const fetchUsers = async () => {
+    const response = await fetch("/api/users")
+    const data = await response.json()
+    const requestedUsers: GPAUser[] = data.users
+    setUsers(requestedUsers)
+  }
   useEffect(() => {
-      const fetchRoles = async () => {
-        const response = await fetch("/api/roles");
-        const data = await response.json();
-        const requestedRoles: GPARole[] = data.roles
-        setRoles(requestedRoles);
-        if (requestedRoles.length > 0) {
-          setSelectedRoleId(String(requestedRoles[0].ROL_id));
-        }
-      };
-      fetchRoles();
-    }, []);
+    const loadData = async () => {
+      setFetchingData(true)
+      await fetchUsers()
+      setFetchingData(false)
+    }
+    loadData()
+  }, [])
 
-    // Handlers for dialog open/close and form submission
+  // Fetch roles for the select dropdown
+  useEffect(() => {
+    const fetchRoles = async () => {
+      const response = await fetch("/api/roles");
+      const data = await response.json();
+      const requestedRoles: GPARole[] = data.roles
+      setRoles(requestedRoles);
+      if (requestedRoles.length > 0) {
+        setSelectedRoleId(String(requestedRoles[0].ROL_id));
+      }
+    };
+    fetchRoles();
+  }, []);
+
+  // Handlers for dialog open/close and form submission
   const handleEdit = (user: any) => {
     setSelectedUser(user)
     setSelectedRoleId(String(user.USR_role_id))
@@ -166,36 +155,52 @@ export default function UsersPage() {
       USR_role_id: Number(selectedRoleId),
       ROL_name: selectedRole?.ROL_name || "",
       ...(selectedUser && { USR_id: selectedUser.USR_id })
-    };    
+    };
     // if editing, include the user ID
-  if (selectedUser) {
-    userData["USR_id"] = selectedUser.USR_id;
-  }
-
-  try {
-    const response = await fetch("/api/users", {
-      method: selectedUser ? "PUT" : "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(userData),
-    });
-    if (!response.ok) {
-      throw new Error(selectedUser ? "Error updating user" : "Error creating user");
+    if (selectedUser) {
+      userData["USR_id"] = selectedUser.USR_id;
     }
-    const data = await response.json();
-    setIsDialogOpen(false);
-    toast({
-        title: "Guardado exitoso",
-        description: "El usuario fue guardado exitosamente.",
-       // variant: "success"
-      })
-    await fetchUsers();
-    router.push("/usuarios");
-  } catch (error) {
-    console.error("API error:", error);
-  }
-  setLoading(false);
+
+    try {
+      const response = await fetch("/api/users", {
+        method: selectedUser ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+      if (!response.ok) {
+        toast({
+          title: "Error en el guardado",
+          description: "Ocurrió un error al guardar el usuario.",
+          variant: "destructive",
+        });
+        throw new Error(selectedUser ? "Error updating user" : "Error creating user");
+      }
+      const data = await response.json();
+      if (response.ok) {
+        const savedUserFromApi = data.user;
+        const savedUser = { ...userData, ...savedUserFromApi };
+
+        setUsers((prev) => {
+          if (selectedUser) {
+            return prev.map((u) => (u.USR_id === savedUser.USR_id ? savedUser : u));
+          } else {
+            return [savedUser, ...prev];
+          }
+        });
+        setIsDialogOpen(false);
+        setSelectedUser(null);
+        toast({
+          title: "Guardado exitoso",
+          description: "El usuario fue guardado exitosamente.",
+          variant: "success",
+        });
+      }
+    } catch (error) {
+      console.error("API error:", error);
+    }
+    setLoading(false);
   }
 
   return (
@@ -206,7 +211,7 @@ export default function UsersPage() {
             <h1 className="text-3xl font-bold text-primary-dark">Usuarios</h1>
             <p className="text-muted-foreground">Administra los usuarios del sistema</p>
           </div>
-          <Button onClick={handleNew} className="bg-primary-medium hover:bg-primary-dark">
+          <Button onClick={handleNew} className="bg-primary-medium hover:bg-primary-dark" disabled={fetchingData}>
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Usuario
           </Button>
@@ -285,80 +290,84 @@ export default function UsersPage() {
             <CardDescription>Todos los usuarios registrados en el sistema</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuario</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Fechas</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.USR_id} className="animate-fade-in">
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{user.USR_name + " " + user.USR_f_lastname + " " + user.USR_s_lastname}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-sm">
-                        <Mail className="mr-1 h-3 w-3" />
-                        {user.USR_email}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={user.ROL_name === "admin" ? "default" : "secondary"}
-                        className={user.ROL_name === "admin" ? "bg-primary-medium" : ""}
-                      >
-                        {user.ROL_name === "admin" ? "Administrador" : "Usuario"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={user.USR_active === 1}
-                          onCheckedChange={() => user.USR_id !== undefined && toggleUserStatus(user.USR_id)}
-                        />
-                        <Badge
-                          variant={user.USR_active === 1 ? "default" : "secondary"}
-                          className={user.USR_active === 1 ? "bg-green-500" : ""}
-                        >
-                          {user.USR_active === 1 ? "activo" : "inactivo"}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm">
-                          <Calendar className="mr-1 h-3 w-3" />
-                          Creado: {formatDate(user.USR_creation_date ?? "")}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Último acceso: {formatDate(user.USR_last_access_date ?? "")}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => user.USR_id !== undefined && toggleUserStatus(user.USR_id)}>
-                          {user.USR_active === 1 ? (
-                            <UserX className="h-4 w-4 text-red-500" />
-                          ) : (
-                            <UserCheck className="h-4 w-4 text-green-500" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
+            {fetchingData ? (
+              <div className="text-center py-8 text-muted-foreground">Cargando usuarios...</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Rol</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Fechas</TableHead>
+                    <TableHead>Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.USR_id} className="animate-fade-in">
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{user.USR_name + " " + user.USR_f_lastname + " " + user.USR_s_lastname}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center text-sm">
+                          <Mail className="mr-1 h-3 w-3" />
+                          {user.USR_email}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={user.ROL_name === "admin" ? "default" : "secondary"}
+                          className={user.ROL_name === "admin" ? "bg-primary-medium" : ""}
+                        >
+                          {user.ROL_name === "admin" ? "Administrador" : "Usuario"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={user.USR_active === 1}
+                            onCheckedChange={() => user.USR_id !== undefined && toggleUserStatus(user.USR_id)}
+                          />
+                          <Badge
+                            variant={user.USR_active === 1 ? "default" : "secondary"}
+                            className={user.USR_active === 1 ? "bg-green-500" : ""}
+                          >
+                            {user.USR_active === 1 ? "activo" : "inactivo"}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center text-sm">
+                            <Calendar className="mr-1 h-3 w-3" />
+                            Creado: {formatDate(user.USR_creation_date ?? "")}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Último acceso: {formatDate(user.USR_last_access_date ?? "")}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => user.USR_id !== undefined && toggleUserStatus(user.USR_id)}>
+                            {user.USR_active === 1 ? (
+                              <UserX className="h-4 w-4 text-red-500" />
+                            ) : (
+                              <UserCheck className="h-4 w-4 text-green-500" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -375,15 +384,15 @@ export default function UsersPage() {
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Nombre</Label>
-                  <Input id="name" name="name" defaultValue={selectedUser?.USR_name || ""} placeholder="Nombre" required/>
+                  <Input id="name" name="name" defaultValue={selectedUser?.USR_name || ""} placeholder="Nombre" required />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="f_lastname">Primer Apellido</Label>
-                  <Input id="f_lastname" name="f_lastname" defaultValue={selectedUser?.USR_f_lastname || ""} placeholder="Primer Apellido" required/>
+                  <Input id="f_lastname" name="f_lastname" defaultValue={selectedUser?.USR_f_lastname || ""} placeholder="Primer Apellido" required />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="s_lastname">Segundo Apellido</Label>
-                  <Input id="s_lastname" name="s_lastname" defaultValue={selectedUser?.USR_s_lastname || ""} placeholder="Segundo Apellido" required/>
+                  <Input id="s_lastname" name="s_lastname" defaultValue={selectedUser?.USR_s_lastname || ""} placeholder="Segundo Apellido" required />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
@@ -420,10 +429,10 @@ export default function UsersPage() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button 
-                type="submit"
-                disabled={loading}
-                className="bg-primary-medium hover:bg-primary-dark">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-primary-medium hover:bg-primary-dark">
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
@@ -431,7 +440,7 @@ export default function UsersPage() {
                     </>
                   ) : (
                     <>
-                    {selectedUser ? "Actualizar" : "Crear"}
+                      {selectedUser ? "Actualizar" : "Crear"}
                     </>
                   )}
                 </Button>
