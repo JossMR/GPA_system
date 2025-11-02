@@ -6,9 +6,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('user_id')
-    let query = `SELECT n.*, CONCAT (u.USR_name, " ", u.USR_f_lastname, " ", u.USR_s_lastname) AS creator_name 
+    let query = `SELECT n.*, CONCAT (u.USR_name, " ", u.USR_f_lastname, " ", u.USR_s_lastname) AS creator_name,
+                    nt.NTP_name AS notification_type_name
                   FROM GPA_Notifications n
-                  LEFT JOIN GPA_Users u ON u.USR_id = n.NOT_creator_user_id`
+                  LEFT JOIN GPA_Users u ON u.USR_id = n.NOT_creator_user_id
+                  LEFT JOIN GPA_Notifications_Types nt ON nt.NTP_id = n.NTP_id`
     const params: any[] = []
     if (userId) {
           const userIdNum = parseInt(userId)
@@ -20,7 +22,7 @@ export async function GET(request: NextRequest) {
           }
         }
         
-        query += ' ORDER BY n.NOT_created_at DESC'
+        query += ' ORDER BY n.NOT_date DESC'
         
         const notifications = await executeQuery(query, params) as GPANotification[]
     return NextResponse.json({

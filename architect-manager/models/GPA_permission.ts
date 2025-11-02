@@ -5,6 +5,7 @@ export interface GPAPermission {
   
   screen_name?: string
   permission_type?: 
+    | 'View'
     | 'Edit'
     | 'Create'
     | 'All'

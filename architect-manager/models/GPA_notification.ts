@@ -9,6 +9,7 @@ export interface GPANotification {
   NOT_description: string
   NTP_id: number
 
+  notification_type_name?: string
   creator_name?: string
   destination_users_ids?: number[]
 }
