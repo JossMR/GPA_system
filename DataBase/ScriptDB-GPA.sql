@@ -1,6 +1,6 @@
 ﻿/*
 Created: 27/5/2025
-Modified: 1/11/2025
+Modified: 2/11/2025
 Model: RE MySQL 8.0
 Database: MySQL 8.0
 */
@@ -293,16 +293,16 @@ CREATE TABLE GPA_Screen
 )
 ;
 
--- Table GPA_PermissionXGPA_User
+-- Table GPA_PermissionXGPA_Roles
 
-CREATE TABLE GPA_PermissionXGPA_User
+CREATE TABLE GPA_PermissionXGPA_Roles
 (
   ROL_id Int,
   PSN_id Int NOT NULL
 )
 ;
 
-ALTER TABLE GPA_PermissionXGPA_User ADD PRIMARY KEY (ROL_id, PSN_id)
+ALTER TABLE GPA_PermissionXGPA_Roles ADD PRIMARY KEY (ROL_id, PSN_id)
 ;
 
 -- Create foreign keys (relationships) section -------------------------------------------------
@@ -370,9 +370,9 @@ ALTER TABLE GPA_UsersXGPA_Notifications ADD CONSTRAINT fk_UsersXGPA_Notification
 ALTER TABLE GPA_Permission ADD CONSTRAINT fk_GPA_Screen_GPA_Permission_1 FOREIGN KEY (SCN_id) REFERENCES GPA_Screen (SCN_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ;
 
-ALTER TABLE GPA_PermissionXGPA_User ADD CONSTRAINT fk_GPA_Roles_GPA_Permission_1 FOREIGN KEY (ROL_id) REFERENCES GPA_Roles (ROL_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+ALTER TABLE GPA_PermissionXGPA_Roles ADD CONSTRAINT fk_GPA_Roles_GPA_Permission_1 FOREIGN KEY (ROL_id) REFERENCES GPA_Roles (ROL_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ;
 
-ALTER TABLE GPA_PermissionXGPA_User ADD CONSTRAINT fk_GPA_Roles_GPA_Permission_0 FOREIGN KEY (PSN_id) REFERENCES GPA_Permission (PSN_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+ALTER TABLE GPA_PermissionXGPA_Roles ADD CONSTRAINT fk_GPA_Roles_GPA_Permission_0 FOREIGN KEY (PSN_id) REFERENCES GPA_Permission (PSN_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ;
 
