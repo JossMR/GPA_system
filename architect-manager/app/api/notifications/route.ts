@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery, executeTransaction } from '@/lib/database'
-import { GPAProject, getLocalMySQLDateTime } from '@/models/GPA_project'
-import { GPANotification } from '@/models/GPA_notification'
-import { GPAcategory } from '@/models/GPA_category'
-import { get } from 'http'
+import { GPANotification, getLocalMySQLDateTime } from '@/models/GPA_notification'
 
 export async function GET(request: NextRequest) {
   try {
