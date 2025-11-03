@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
+import { GPARole } from '@/models/GPA_role';
+import { GPAPermission } from '@/models/GPA_permission';
 
 export async function DELETE(
   request: NextRequest,
@@ -43,6 +45,91 @@ export async function DELETE(
     return NextResponse.json({ 
       message: 'Role deleted successfully'
     }, { status: 200 })
+
+  } catch (error) {
+    console.error('Database error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const resolvedParams = await params;
+    const roleId = parseInt(resolvedParams.id)
+
+    if (isNaN(roleId)) {
+      return NextResponse.json({ error: 'Invalid role ID' }, { status: 400 })
+    }
+
+    const body = await request.json()
+    let {
+      ROL_name,
+      ROL_notifications_for,
+      permissions,
+      notifications_types
+    } = body as GPARole
+
+    const updateQuery = `
+
+      UPDATE GPA_Roles SET
+        ROL_name = ?,
+        ROL_notifications_for = ?
+      WHERE ROL_id = ?
+    `
+
+    await executeQuery(updateQuery, [
+      ROL_name,
+      ROL_notifications_for || 'O',
+      roleId
+    ])
+    // Update permissions
+    const rolePermissions = await fetch(`${new URL(request.url).origin}/api/permission?rol_id=${roleId}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const permissionsDataRaw = rolePermissions.ok ? await rolePermissions.json() : [];
+    const permissionsData: GPAPermission[] = Array.isArray(permissionsDataRaw)
+      ? permissionsDataRaw
+      : Array.isArray(permissionsDataRaw?.data)
+      ? permissionsDataRaw.data
+      : Array.isArray(permissionsDataRaw?.permissions)
+      ? permissionsDataRaw.permissions
+      : [];
+
+    const existingPermissionsIds: number[] = permissionsData
+      .map((psn: GPAPermission) => psn.PSN_id)
+      .filter((id): id is number => id !== undefined);
+    const newPermissionsIds: number[] = permissions
+      ? permissions.map((psn: GPAPermission) => psn.PSN_id).filter((id): id is number => id !== undefined)
+      : [];
+
+    const permissionsToAdd = newPermissionsIds
+      ? newPermissionsIds.filter(psn => !existingPermissionsIds.includes(psn))
+      : [];
+
+    const permissionsToRemove = existingPermissionsIds
+      ? existingPermissionsIds.filter(psn => !newPermissionsIds.includes(psn))
+      : [];
+
+    for (const psnId of permissionsToAdd) {
+      await executeQuery(
+        `INSERT INTO GPA_PermissionXGPA_Roles (ROL_id, PSN_id) VALUES (?, ?)`,
+        [roleId, psnId]
+      );
+    }
+
+    for (const psnId of permissionsToRemove) {
+      await executeQuery(
+        `DELETE FROM GPA_PermissionXGPA_Roles WHERE ROL_id = ? AND PSN_id = ?`,
+        [roleId, psnId]
+      );
+    }
+    return NextResponse.json({ message: 'Role updated successfully' }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)

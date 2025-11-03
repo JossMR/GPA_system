@@ -62,6 +62,19 @@ export async function POST(request: NextRequest) {
                   { status: 400 }
               );
           }
+          if(!newRole.permissions || newRole.permissions.length === 0){
+              return NextResponse.json(
+                  { error: "Role permissions not received for registration." },
+                  { status: 400 }
+              );
+          }
+
+          if(!newRole.notifications_types || newRole.notifications_types.length === 0){
+              return NextResponse.json(
+                  { error: "Role notification types not received for registration." },
+                  { status: 400 }
+              );
+          }
 
           const results = await executeTransaction([
               {
