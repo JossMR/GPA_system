@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery, executeTransaction } from '@/lib/database'
-import { GPAPermission } from '@/models/GPA_permission'
+import { GPANotificationsTypes } from '@/models/GPA_notificationType'
 
 export async function GET(request: NextRequest) {
     try {
@@ -8,33 +8,29 @@ export async function GET(request: NextRequest) {
         const roleId = searchParams.get('rol_id')
         let query = 
             `SELECT 
-                p.PSN_id,
-                p.PTY_id,
-                p.SCN_id,
-                s.SCN_name as screen_name,
-                pt.PTY_name as permission_type
-            FROM gpa_permission p LEFT JOIN gpa_screen s on p.SCN_id=s.SCN_id
-            LEFT JOIN gpa_permission_type pt on p.PTY_id=pt.PTY_id`
+                nt.NTP_id,
+                nt.NTP_name
+            FROM gpa_notifications_types nt`
 
         const params: any[] = []
         if (roleId) {
             const rolIdNum = parseInt(roleId)
           if (!isNaN(rolIdNum)) {
-            query += ` JOIN gpa_permissionXGPA_roles pr ON pr.PSN_id = p.PSN_id 
-                        WHERE pr.ROL_id = ?`
+            query += ` JOIN gpa_rolesXGPA_notifications_types rn ON rn.NTP_id = nt.NTP_id
+                        WHERE rn.ROL_id = ?`
             params.push(rolIdNum)
             }        
         }
-        const permissions: GPAPermission[] = await executeQuery(
+        const notificationsTypes: GPANotificationsTypes[] = await executeQuery(
             query, params
         );
         return NextResponse.json({
-            message: "Permissions requested successfully",
-            permissions
+            message: "Notifications types requested successfully",
+            notificationsTypes
         }, { status: 200 });
     } catch {
         return NextResponse.json(
-            { error: "Server Error: Error in the permissions request" },
+            { error: "Server Error: Error in the notifications types request" },
             { status: 500 }
         );
     }
