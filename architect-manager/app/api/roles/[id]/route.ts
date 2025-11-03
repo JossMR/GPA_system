@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
 import { GPARole } from '@/models/GPA_role';
 import { GPAPermission } from '@/models/GPA_permission';
+import { GPANotificationsTypes } from '@/models/GPA_notificationType';
 
 export async function DELETE(
   request: NextRequest,
@@ -67,6 +68,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid role ID' }, { status: 400 })
     }
 
+    if (roleId === 1) {
+      return NextResponse.json(
+        { error: 'Cannot modify the Admin role' },
+        { status: 400 }
+      )
+    }
     const body = await request.json()
     let {
       ROL_name,
@@ -93,14 +100,13 @@ export async function PUT(
       headers: { 'Content-Type': 'application/json' }
     });
     const permissionsDataRaw = rolePermissions.ok ? await rolePermissions.json() : [];
-    const permissionsData: GPAPermission[] = Array.isArray(permissionsDataRaw)
-      ? permissionsDataRaw
-      : Array.isArray(permissionsDataRaw?.data)
-      ? permissionsDataRaw.data
-      : Array.isArray(permissionsDataRaw?.permissions)
+    
+    const permissionsData: GPAPermission[] = 
+      Array.isArray(permissionsDataRaw?.permissions)
       ? permissionsDataRaw.permissions
       : [];
 
+      // Ensure permissionsData is an array
     const existingPermissionsIds: number[] = permissionsData
       .map((psn: GPAPermission) => psn.PSN_id)
       .filter((id): id is number => id !== undefined);
@@ -116,6 +122,7 @@ export async function PUT(
       ? existingPermissionsIds.filter(psn => !newPermissionsIds.includes(psn))
       : [];
 
+      // Add new permissions
     for (const psnId of permissionsToAdd) {
       await executeQuery(
         `INSERT INTO GPA_PermissionXGPA_Roles (ROL_id, PSN_id) VALUES (?, ?)`,
@@ -123,10 +130,53 @@ export async function PUT(
       );
     }
 
+    // Remove old permissions
     for (const psnId of permissionsToRemove) {
       await executeQuery(
         `DELETE FROM GPA_PermissionXGPA_Roles WHERE ROL_id = ? AND PSN_id = ?`,
         [roleId, psnId]
+      );
+    }
+
+    // Update notification types
+    const roleNotificationsTypes = await fetch(`${new URL(request.url).origin}/api/notifications_types?rol_id=${roleId}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const notificationsTypesDataRaw = roleNotificationsTypes.ok ? await roleNotificationsTypes.json() : [];
+    const notificationsTypesData: GPANotificationsTypes[] = 
+      Array.isArray(notificationsTypesDataRaw?.notificationsTypes)
+      ? notificationsTypesDataRaw.notificationsTypes
+      : [];
+
+      // Ensure notificationsTypesData is an array
+    const existingNotificationsTypesIds: number[] = notificationsTypesData
+      .map((ntp: GPANotificationsTypes) => ntp.NTP_id)
+      .filter((id): id is number => id !== undefined);
+    const newNotificationsTypesIds: number[] = notifications_types
+      ? notifications_types.map((ntp: GPANotificationsTypes) => ntp.NTP_id).filter((id): id is number => id !== undefined)
+      : [];
+
+    const notificationsTypesToAdd = newNotificationsTypesIds
+      ? newNotificationsTypesIds.filter(ntp => !existingNotificationsTypesIds.includes(ntp))
+      : [];
+
+    const notificationsTypesToRemove = existingNotificationsTypesIds
+      ? existingNotificationsTypesIds.filter(ntp => !newNotificationsTypesIds.includes(ntp))
+      : [];
+
+      // Add new notification types
+    for (const ntpId of notificationsTypesToAdd) {
+      await executeQuery(
+        `INSERT INTO GPA_RolesXGPA_Notifications_types (ROL_id, NTP_id) VALUES (?, ?)`,
+        [roleId, ntpId]
+      );
+    }
+
+    // Remove old notification types
+    for (const ntpId of notificationsTypesToRemove) {
+      await executeQuery(
+        `DELETE FROM GPA_RolesXGPA_Notifications_types WHERE ROL_id = ? AND NTP_id = ?`,
+        [roleId, ntpId]
       );
     }
     return NextResponse.json({ message: 'Role updated successfully' }, { status: 200 })
