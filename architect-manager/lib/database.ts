@@ -7,7 +7,6 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'GPA',
   
-  // 👇 CONFIGURACIÓN CRÍTICA PARA EVITAR "TOO MANY CONNECTIONS"
   connectionLimit: 10,              // Máximo de conexiones simultáneas
   maxIdle: 10,                      // Máximo de conexiones inactivas en el pool
   idleTimeout: 60000,               // Cerrar conexiones inactivas después de 60 segundos
@@ -15,15 +14,12 @@ const pool = mysql.createPool({
   enableKeepAlive: true,            // Mantener conexiones vivas con pings
   keepAliveInitialDelay: 10000,    // Primer ping después de 10 segundos
   
-  // 👇 CONFIGURACIÓN ADICIONAL PARA PREVENIR TIMEOUTS
   waitForConnections: true,         // Esperar si no hay conexiones disponibles
   connectTimeout: 10000,            // Timeout de conexión: 10 segundos
   
-  // 👇 CONFIGURACIÓN PARA MANEJAR DESCONEXIONES
   multipleStatements: false,        // Por seguridad
 });
 
-// 👇 EVENTO: Monitorear conexiones y detectar problemas
 pool.on('connection', (connection) => {
   console.log('Nueva conexión establecida al pool MySQL');
   
@@ -40,7 +36,6 @@ pool.on('release', (connection) => {
   console.log('Conexión liberada al pool (ID: %d)', connection.threadId);
 });
 
-// 👇 MONITOREO: Ver estado del pool (útil para debugging)
 export async function getPoolStatus() {
   const connection = await pool.getConnection();
   try {
@@ -62,7 +57,6 @@ export async function getConnection() {
   } catch (error) {
     console.error('Error al conectar con la base de datos:', error);
     
-    // 👇 Si hay error por conexiones, intentar limpiar el pool
     if (error instanceof Error && error.message.includes('Too many connections')) {
       console.error('⚠️ ALERTA: Demasiadas conexiones. Limpiando pool...');
       await cleanupPool();
@@ -72,7 +66,6 @@ export async function getConnection() {
   }
 }
 
-// 👇 NUEVO: Función para ejecutar consultas con timeout y retry
 export async function executeQuery<T = any>(
   query: string, 
   params: any[] = [],
@@ -123,7 +116,6 @@ export async function executeQueryWithConnection<T = any>(
   const connection = await getConnection();
   
   try {
-    // 👇 Agregar timeout a nivel de conexión
     await connection.query('SET SESSION max_execution_time = 30000'); // 30 segundos
     
     const [results] = await connection.execute(query, params);
@@ -137,7 +129,6 @@ export async function executeQueryWithConnection<T = any>(
     throw error;
     
   } finally {
-    // 👇 CRÍTICO: Siempre liberar la conexión
     connection.release();
     console.log('🔓 Conexión liberada al pool');
   }
@@ -167,13 +158,11 @@ export async function executeTransaction(queries: Array<{query: string, params?:
     throw error;
     
   } finally {
-    // 👇 CRÍTICO: Siempre liberar la conexión
     connection.release();
     console.log('🔓 Conexión de transacción liberada al pool');
   }
 }
 
-// 👇 NUEVO: Función para limpiar conexiones inactivas
 export async function cleanupPool() {
   try {
     console.log('🧹 Iniciando limpieza del pool...');
@@ -190,7 +179,6 @@ export async function cleanupPool() {
   }
 }
 
-// 👇 NUEVO: Función para cerrar el pool completamente (usar en shutdown)
 export async function closePool() {
   try {
     console.log('🛑 Cerrando pool de conexiones...');
@@ -201,7 +189,6 @@ export async function closePool() {
   }
 }
 
-// 👇 NUEVO: Función para verificar la salud del pool
 export async function checkPoolHealth() {
   try {
     const connection = await pool.getConnection();
@@ -222,7 +209,6 @@ export async function checkPoolHealth() {
   }
 }
 
-// 👇 NUEVO: Middleware para monitorear uso del pool
 export function logPoolStats() {
   setInterval(() => {
     const stats = {
@@ -234,7 +220,6 @@ export function logPoolStats() {
   }, 60000); // Cada minuto
 }
 
-// 👇 IMPORTANTE: Manejar cierre graceful de la aplicación
 if (typeof process !== 'undefined') {
   process.on('SIGINT', async () => {
     console.log('🛑 Recibida señal SIGINT, cerrando pool...');
