@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,105 +24,68 @@ import {
   FileText,
 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
-
-const mockNotificaciones = [
-  {
-    id: 1,
-    titulo: "Pago pendiente - Villa Moderna",
-    mensaje: "El cliente María González tiene un pago pendiente de $25,000 con vencimiento mañana",
-    tipo: "warning",
-    fecha: "2024-12-13",
-    leida: false,
-    proyecto: "Villa Moderna",
-    accion: "ir_proyecto",
-  },
-  {
-    id: 2,
-    titulo: "Documentos faltantes - Casa Familiar",
-    mensaje: "Faltan permisos de construcción para continuar con el proyecto",
-    tipo: "error",
-    fecha: "2024-12-12",
-    leida: false,
-    proyecto: "Casa Familiar",
-    accion: "ir_proyecto",
-  },
-  {
-    id: 3,
-    titulo: "Reunión programada",
-    mensaje: "Reunión con Carlos Rodríguez mañana a las 10:00 AM para revisar planos",
-    tipo: "info",
-    fecha: "2024-12-13",
-    leida: true,
-    proyecto: "Oficina Corporativa",
-    accion: "marcar_calendario",
-  },
-  {
-    id: 4,
-    titulo: "Proyecto completado",
-    mensaje: "El proyecto Residencia Ecológica ha sido marcado como completado",
-    tipo: "success",
-    fecha: "2024-12-11",
-    leida: true,
-    proyecto: "Residencia Ecológica",
-    accion: "ver_reporte",
-  },
-  {
-    id: 5,
-    titulo: "Nuevo cliente registrado",
-    mensaje: "Se ha registrado un nuevo cliente: Laura Fernández",
-    tipo: "info",
-    fecha: "2024-12-10",
-    leida: true,
-    proyecto: null,
-    accion: "ver_cliente",
-  },
-]
+import { GPANotification } from "@/models/GPA_notification"
 
 const tipoIcons = {
   warning: AlertTriangle,
   error: X,
-  info: Info,
+  proyectos: Info,
   success: CheckCircle,
 }
 
 const tipoColors = {
   warning: "bg-yellow-500",
   error: "bg-red-500",
-  info: "bg-blue-500",
+  proyectos: "bg-blue-500",
   success: "bg-green-500",
 }
 
 const tipoLabels = {
   warning: "Advertencia",
   error: "Error",
-  info: "Información",
+  proyectos: "Información",
   success: "Éxito",
 }
 
-export default function NotificacionesPage() {
+export default function NotificationsPage() {
   const { isAdmin } = useAuth()
-  const [notificaciones, setNotificaciones] = useState(mockNotificaciones)
+  const [notifications, setNotifications] = useState<GPANotification[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [tipoFilter, setTipoFilter] = useState("todas")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  const filteredNotificaciones = notificaciones.filter((notif) => {
+  const filteredNotifications = notifications.filter((not) => {
     const matchesSearch =
-      notif.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      notif.mensaje.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesTipo = tipoFilter === "todas" || notif.tipo === tipoFilter
-    return matchesSearch && matchesTipo
+      not.NOT_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      not.NOT_description.toLowerCase().includes(searchTerm.toLowerCase())
+    //const matchesTipo = tipoFilter === "todas" || not.tipo === tipoFilter
+    //return matchesSearch && matchesTipo
+    return matchesSearch
   })
 
-  const marcarComoLeida = (id: number) => {
-    setNotificaciones((prev) => prev.map((notif) => (notif.id === id ? { ...notif, leida: true } : notif)))
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setLoading(true)
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const response = await fetch("/api/notifications?user_id=2")
+      const data = await response.json()
+      const requestedNotifications: GPANotification[] = data.notifications
+      setNotifications(requestedNotifications)
+      setLoading(false)
+    }
+    fetchNotifications()
+  }, [])
+
+  const markAsRead = (id: number) => {
+    setNotifications((prev) => prev.map((not) => (not.NOT_id === id ? { ...not, leida: true } : not)))
   }
 
-  const eliminarNotificacion = (id: number) => {
-    setNotificaciones((prev) => prev.filter((notif) => notif.id !== id))
+  const deleteNotifications = (id: number) => {
+    setNotifications((prev) => prev.filter((not) => not.NOT_id !== id))
   }
 
-  const noLeidasCount = notificaciones.filter((n) => !n.leida).length
+  const noReadCount = notifications.filter((n) => !n.NOT_read).length
 
   return (
     <MainLayout>
@@ -152,7 +115,7 @@ export default function NotificacionesPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#486b00]">{notificaciones.length}</div>
+              <div className="text-2xl font-bold text-[#486b00]">{notifications.length}</div>
             </CardContent>
           </Card>
           <Card className="card-hover border-yellow-200">
@@ -163,33 +126,7 @@ export default function NotificacionesPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{noLeidasCount}</div>
-            </CardContent>
-          </Card>
-          <Card className="card-hover border-red-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <X className="mr-2 h-4 w-4 text-red-600" />
-                Urgentes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {notificaciones.filter((n) => n.tipo === "error").length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="card-hover border-green-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                Completadas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {notificaciones.filter((n) => n.tipo === "success").length}
-              </div>
+              <div className="text-2xl font-bold text-yellow-600">{noReadCount}</div>
             </CardContent>
           </Card>
         </div>
@@ -224,7 +161,7 @@ export default function NotificacionesPage() {
                     <SelectItem value="todas">Todas</SelectItem>
                     <SelectItem value="warning">Advertencias</SelectItem>
                     <SelectItem value="error">Errores</SelectItem>
-                    <SelectItem value="info">Información</SelectItem>
+                    <SelectItem value="proyectos">Información</SelectItem>
                     <SelectItem value="success">Éxito</SelectItem>
                   </SelectContent>
                 </Select>
@@ -234,66 +171,71 @@ export default function NotificacionesPage() {
         </Card>
 
         {/* Lista de Notificaciones */}
-        <div className="space-y-4">
-          {filteredNotificaciones.map((notificacion, index) => {
-            const IconComponent = tipoIcons[notificacion.tipo as keyof typeof tipoIcons]
-            return (
-              <Card
-                key={notificacion.id}
-                className={`card-hover animate-slide-up ${
-                  !notificacion.leida ? "border-l-4 border-l-[#a2c523] bg-[#c9e077]/5" : "border-[#c9e077]/20"
-                }`}
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4 flex-1">
-                      <div
-                        className={`p-2 rounded-full ${tipoColors[notificacion.tipo as keyof typeof tipoColors]} text-white`}
-                      >
-                        <IconComponent className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <h3
-                            className={`font-semibold ${!notificacion.leida ? "text-[#2e4600]" : "text-muted-foreground"}`}
-                          >
-                            {notificacion.titulo}
-                          </h3>
-                          {!notificacion.leida && <Badge className="bg-[#a2c523] text-white text-xs">Nueva</Badge>}
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${tipoColors[notificacion.tipo as keyof typeof tipoColors]} text-white border-0`}
-                          >
-                            {tipoLabels[notificacion.tipo as keyof typeof tipoLabels]}
-                          </Badge>
+        {loading ? (
+          <div className="flex justify-center items-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#486b00] mr-4" />
+            <span className="text-muted-foreground">Cargando notificaciones...</span>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredNotifications.map((notification, index) => {
+              const IconComponent = tipoIcons[notification.notification_type_name as keyof typeof tipoIcons]
+              return (
+                <Card
+                  key={notification.NOT_id}
+                  className={`card-hover animate-slide-up ${!notification.NOT_read ? "border-l-4 border-l-[#a2c523] bg-[#c9e077]/5" : "border-[#c9e077]/20"
+                    }`}
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-4 flex-1">
+                        <div
+                          className={`p-2 rounded-full ${tipoColors[notification.notification_type_name as keyof typeof tipoColors]} text-white`}
+                        >
+                          <IconComponent className="h-4 w-4" />
                         </div>
-                        <p className="text-sm text-muted-foreground">{notificacion.mensaje}</p>
-                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                          <span className="flex items-center">
-                            <Calendar className="mr-1 h-3 w-3" />
-                            {notificacion.fecha}
-                          </span>
-                          {notificacion.proyecto && (
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <h3
+                              className={`font-semibold ${!notification.NOT_read ? "text-[#2e4600]" : "text-muted-foreground"}`}
+                            >
+                              {notification.NOT_name}
+                            </h3>
+                            {!notification.NOT_read && <Badge className="bg-[#a2c523] text-white text-xs">Nueva</Badge>}
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${tipoColors[notification.notification_type_name as keyof typeof tipoColors]} text-white border-0`}
+                            >
+                              {tipoLabels[notification.notification_type_name as keyof typeof tipoLabels]}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{notification.NOT_description}</p>
+                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                             <span className="flex items-center">
-                              <FileText className="mr-1 h-3 w-3" />
-                              {notificacion.proyecto}
+                              <Calendar className="mr-1 h-3 w-3" />
+                              {notification.NOT_date?.toLocaleString()}
                             </span>
-                          )}
+                            {notification.PRJ_id && (
+                              <span className="flex items-center">
+                                <FileText className="mr-1 h-3 w-3" />
+                                {notification.PRJ_id}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
+                      {/*<div className="flex items-center space-x-2">
                       {notificacion.accion === "ir_proyecto" && (
                         <Button variant="ghost" size="sm" className="text-[#486b00] hover:bg-[#c9e077]/20">
                           <ExternalLink className="h-4 w-4" />
                         </Button>
                       )}
-                      {!notificacion.leida && (
+                      {!notificacion.NOT_read && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => marcarComoLeida(notificacion.id)}
+                          onClick={() => markAsRead(notificacion.NOT_id || 0)}
                           className="text-green-600 hover:bg-green-50"
                         >
                           <Check className="h-4 w-4" />
@@ -302,20 +244,20 @@ export default function NotificacionesPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => eliminarNotificacion(notificacion.id)}
+                        onClick={() => deleteNotifications(notificacion.NOT_id || 0)}
                         className="text-red-600 hover:bg-red-50"
                       >
                         <X className="h-4 w-4" />
                       </Button>
+                    </div>*/}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-
-        {filteredNotificaciones.length === 0 && (
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+        {filteredNotifications.length === 0 && !loading && (
           <Card>
             <CardContent className="text-center py-8">
               <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
