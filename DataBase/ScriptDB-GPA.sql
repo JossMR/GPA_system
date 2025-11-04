@@ -1,6 +1,6 @@
 ﻿/*
 Created: 27/5/2025
-Modified: 2/11/2025
+Modified: 3/11/2025
 Model: RE MySQL 8.0
 Database: MySQL 8.0
 */
@@ -158,7 +158,6 @@ CREATE TABLE GPA_Notifications
   NOT_id Int AUTO_INCREMENT,
   NOT_creator_user_id Int NOT NULL,
   NOT_name Varchar(50) NOT NULL,
-  NOT_read Bool DEFAULT FALSE,
   NOT_created_at Datetime DEFAULT CURRENT_TIMESTAMP,
   NOT_date Datetime,
   PRJ_id Int,
@@ -276,7 +275,8 @@ CREATE INDEX IX_fk_GPA_Permission_GPA_Permission_type_0 ON GPA_Permission (PTY_i
 CREATE TABLE GPA_UsersXGPA_Notifications
 (
   USR_id Int,
-  NOT_id Int
+  NOT_id Int,
+  UXN_read Bool NOT NULL DEFAULT FALSE
 )
 ;
 
