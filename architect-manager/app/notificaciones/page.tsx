@@ -85,7 +85,9 @@ export default function NotificationsPage() {
     setNotifications((prev) => prev.filter((not) => not.NOT_id !== id))
   }
 
-  const noReadCount = notifications.filter((n) => !n.NOT_read).length
+  const noReadCount = notifications.filter((n) => 
+    n.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false)
+  ).length
 
   return (
     <MainLayout>
@@ -183,7 +185,7 @@ export default function NotificationsPage() {
               return (
                 <Card
                   key={notification.NOT_id}
-                  className={`card-hover animate-slide-up ${!notification.NOT_read ? "border-l-4 border-l-[#a2c523] bg-[#c9e077]/5" : "border-[#c9e077]/20"
+                  className={`card-hover animate-slide-up ${notification.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false) ? "border-l-4 border-l-[#a2c523] bg-[#c9e077]/5" : "border-[#c9e077]/20"
                     }`}
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
@@ -198,11 +200,11 @@ export default function NotificationsPage() {
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center space-x-2">
                             <h3
-                              className={`font-semibold ${!notification.NOT_read ? "text-[#2e4600]" : "text-muted-foreground"}`}
+                              className={`font-semibold ${notification.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false) ? "text-[#2e4600]" : "text-muted-foreground"}`}
                             >
                               {notification.NOT_name}
                             </h3>
-                            {!notification.NOT_read && <Badge className="bg-[#a2c523] text-white text-xs">Nueva</Badge>}
+                            {notification.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false)  && <Badge className="bg-[#a2c523] text-white text-xs">Nueva</Badge>}
                             <Badge
                               variant="outline"
                               className={`text-xs ${tipoColors[notification.notification_type_name as keyof typeof tipoColors]} text-white border-0`}

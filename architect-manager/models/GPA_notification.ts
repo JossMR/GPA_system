@@ -2,7 +2,6 @@ export interface GPANotification {
   NOT_id?: number
   NOT_creator_user_id: number
   NOT_name: string
-  NOT_read: boolean
   NOT_created_at?: string | Date
   NOT_date?:string | Date
   PRJ_id?: number
@@ -11,7 +10,7 @@ export interface GPANotification {
 
   notification_type_name?: string
   creator_name?: string
-  destination_users_ids?: number[]
+  destination_users_ids?: Array<[number, boolean]>
 }
 export function getLocalMySQLDateTime() {
   const localDate = new Date();

@@ -25,6 +25,18 @@ export async function GET(request: NextRequest) {
         query += ' ORDER BY n.NOT_date DESC'
         
         const notifications = await executeQuery(query, params) as GPANotification[]
+
+        // Fetch destination users for each notification
+        if (notifications && notifications.length > 0) {
+          for (const notif of notifications) {
+            const rows = await executeQuery(
+              `SELECT USR_id, uxn_read FROM gpa_usersxgpa_notifications WHERE NOT_id = ?`,
+              [notif.NOT_id]
+            ) as Array<{ USR_id: number, uxn_read: number | boolean }>
+            notif.destination_users_ids = (rows || []).map(r => [Number(r.USR_id), Boolean(r.uxn_read)]) as Array<[number, boolean]>
+          }
+        }
+
     return NextResponse.json({
       message: "Notifications requested successfully",
       notifications
@@ -58,18 +70,16 @@ export async function POST(request: NextRequest) {
                       INSERT INTO gpa_notifications (
                       NOT_name,
                       NOT_creator_user_id,
-                      NOT_read,
                       NOT_created_at,
                       NOT_date,
                       NOT_description,
                       PRJ_id,
                       NTP_id
-                      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                      ) VALUES (?, ?, ?, ?, ?, ?, ?)
                   `,
                   params: [
                       newNotification.NOT_name,
                       newNotification.NOT_creator_user_id,
-                      newNotification.NOT_read || false,
                       getLocalMySQLDateTime() || null,
                       newNotification.NOT_date || getLocalMySQLDateTime(),
                       newNotification.NOT_description || null,
@@ -83,10 +93,10 @@ export async function POST(request: NextRequest) {
           // Insert into GPA_UsersXGPA_Notifications for each destination user
           const userNotificationInserts = newNotification.destination_users_ids.map(userId => ({
               query: `
-                  INSERT INTO gpa_usersxgpa_notifications (USR_id, NOT_id)
-                  VALUES (?, ?)
+                  INSERT INTO gpa_usersxgpa_notifications (USR_id, NOT_id, uxn_read)
+                  VALUES (?, ?, ?)
               `,
-              params: [userId, insertId]
+              params: [userId[0], insertId, false]
           }));
           await executeTransaction(userNotificationInserts);
           
@@ -94,7 +104,6 @@ export async function POST(request: NextRequest) {
               `SELECT 
                   NOT_name,
                   NOT_creator_user_id,
-                  NOT_read,
                   NOT_created_at,
                   NOT_date,
                   NOT_description,
