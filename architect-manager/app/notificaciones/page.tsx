@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { GPANotification } from "@/models/GPA_notification"
+import { useRouter } from "next/navigation"
 
 const tipoIcons = {
   warning: AlertTriangle,
@@ -49,6 +50,7 @@ const tipoLabels = {
 
 export default function NotificationsPage() {
   const { isAdmin, user } = useAuth()
+  const router = useRouter()
   const [notifications, setNotifications] = useState<GPANotification[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [tipoFilter, setTipoFilter] = useState("todas")
@@ -271,8 +273,13 @@ export default function NotificationsPage() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        {notification.PRJ_id && (
-                          <Button variant="ghost" size="sm" className="text-[#486b00] hover:bg-[#c9e077]/20">
+                        {notification.notification_type_name === "proyectos" && notification.PRJ_id && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-[#486b00] hover:bg-[#c9e077]/20"
+                            onClick={() => router.push(`/proyectos/${notification.PRJ_id}/editar`)}
+                          >
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         )}
