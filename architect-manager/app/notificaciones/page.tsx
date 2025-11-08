@@ -179,7 +179,7 @@ export default function NotificationsPage() {
             <span className="text-muted-foreground">Cargando notificaciones...</span>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredNotifications.map((notification, index) => {
               const IconComponent = tipoIcons[notification.notification_type_name as keyof typeof tipoIcons]
               return (
@@ -204,7 +204,11 @@ export default function NotificationsPage() {
                             >
                               {notification.NOT_name}
                             </h3>
-                            {notification.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false)  && <Badge className="bg-[#a2c523] text-white text-xs">Nueva</Badge>}
+                            {notification.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false) ? (
+                              <Badge className="bg-[#a2c523] text-white text-xs">Nueva</Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-gray-100 text-gray-600 text-xs border-gray-300">Leído</Badge>
+                            )}
                             <Badge
                               variant="outline"
                               className={`text-xs ${tipoColors[notification.notification_type_name as keyof typeof tipoColors]} text-white border-0`}
