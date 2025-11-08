@@ -144,8 +144,7 @@ export async function PUT(request: NextRequest,
       // Update read status for destination users
       for (const [userId, readStatus] of destination_users_ids) {
         const existingUser = existingDestinationUsers.find(eu => eu.USR_id === userId);
-
-        if (existingUser && existingUser.UXN_read !== readStatus) {
+        if (existingUser && Boolean(existingUser.UXN_read) !== readStatus) {
           await executeQuery(
             `UPDATE GPA_UsersXGPA_Notifications SET UXN_read = ? WHERE USR_id = ? AND NOT_id = ?`,
             [readStatus, userId, notificationId]

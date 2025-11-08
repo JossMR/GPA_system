@@ -77,8 +77,44 @@ export default function NotificationsPage() {
     fetchNotifications()
   }, [])
 
-  const markAsRead = (id: number) => {
-    setNotifications((prev) => prev.map((not) => (not.NOT_id === id ? { ...not, leida: true } : not)))
+  const markAsRead = async (id: number) => {
+    try {
+      // Find the notification to update
+      const notification = notifications.find(not => not.NOT_id === id)
+      
+      if (!notification) {
+        throw new Error('Notificación no encontrada')
+      }
+
+      // Actualizar el estado de lectura en destination_users_ids
+      const updatedNotification = {
+        ...notification,
+        destination_users_ids: notification.destination_users_ids?.map(([userId, isRead]) =>
+          userId === 2 ? [userId, true] : [userId, isRead]
+        ) as [number, boolean][]
+      }
+
+      console.log('Updated Notification:', updatedNotification)
+      const response = await fetch(`/api/notifications/${id}?update_read=Y`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedNotification)
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al actualizar la notificación')
+      }
+
+      // Actualizar el estado local después de una respuesta exitosa
+      setNotifications((prev) =>
+        prev.map((not) => not.NOT_id === id ? updatedNotification : not)
+      )
+    } catch (error) {
+      console.error('Error al marcar como leída:', error)
+      // Aquí podrías agregar un toast o notificación de error
+    }
   }
 
   const deleteNotifications = (id: number) => {
@@ -182,11 +218,12 @@ export default function NotificationsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredNotifications.map((notification, index) => {
               const IconComponent = tipoIcons[notification.notification_type_name as keyof typeof tipoIcons]
+              const isUnread = notification.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false)
+              
               return (
                 <Card
                   key={notification.NOT_id}
-                  className={`card-hover animate-slide-up ${notification.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false) ? "border-l-4 border-l-[#a2c523] bg-[#c9e077]/5" : "border-[#c9e077]/20"
-                    }`}
+                  className={`card-hover animate-slide-up ${isUnread ? "border-l-4 border-l-[#a2c523] bg-[#c9e077]/5" : "border-[#c9e077]/20"}`}
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <CardContent className="p-6">
@@ -200,11 +237,11 @@ export default function NotificationsPage() {
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center space-x-2">
                             <h3
-                              className={`font-semibold ${notification.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false) ? "text-[#2e4600]" : "text-muted-foreground"}`}
+                              className={`font-semibold ${isUnread ? "text-[#2e4600]" : "text-muted-foreground"}`}
                             >
                               {notification.NOT_name}
                             </h3>
-                            {notification.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false) ? (
+                            {isUnread ? (
                               <Badge className="bg-[#a2c523] text-white text-xs">Nueva</Badge>
                             ) : (
                               <Badge variant="outline" className="bg-gray-100 text-gray-600 text-xs border-gray-300">Leído</Badge>
@@ -231,31 +268,24 @@ export default function NotificationsPage() {
                           </div>
                         </div>
                       </div>
-                      {/*<div className="flex items-center space-x-2">
-                      {notificacion.accion === "ir_proyecto" && (
-                        <Button variant="ghost" size="sm" className="text-[#486b00] hover:bg-[#c9e077]/20">
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {!notificacion.NOT_read && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => markAsRead(notificacion.NOT_id || 0)}
-                          className="text-green-600 hover:bg-green-50"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteNotifications(notificacion.NOT_id || 0)}
-                        className="text-red-600 hover:bg-red-50"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>*/}
+                      <div className="flex items-center space-x-2">
+                        {notification.PRJ_id && (
+                          <Button variant="ghost" size="sm" className="text-[#486b00] hover:bg-[#c9e077]/20">
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isUnread && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => markAsRead(notification.NOT_id || 0)}
+                            className="text-green-600 hover:bg-green-50"
+                            title="Marcar como leída"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
