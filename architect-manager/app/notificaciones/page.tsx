@@ -48,7 +48,7 @@ const tipoLabels = {
 }
 
 export default function NotificationsPage() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, user } = useAuth()
   const [notifications, setNotifications] = useState<GPANotification[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [tipoFilter, setTipoFilter] = useState("todas")
@@ -66,13 +66,15 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     const fetchNotifications = async () => {
+      if (!user) return
       setLoading(true)
       await new Promise((resolve) => setTimeout(resolve, 2000))
-      const response = await fetch("/api/notifications?user_id=2")
+      const response = await fetch(`/api/notifications?user_id=${user.id}`)
       const data = await response.json()
       const requestedNotifications: GPANotification[] = data.notifications
       setNotifications(requestedNotifications)
-      setLoading(false)
+      console.log("Fetched Notifications:", notifications)
+      setLoading(false)  
     }
     fetchNotifications()
   }, [])
@@ -90,7 +92,7 @@ export default function NotificationsPage() {
       const updatedNotification = {
         ...notification,
         destination_users_ids: notification.destination_users_ids?.map(([userId, isRead]) =>
-          userId === 2 ? [userId, true] : [userId, isRead]
+          userId === user?.id ? [userId, true] : [userId, isRead]
         ) as [number, boolean][]
       }
 
@@ -122,7 +124,7 @@ export default function NotificationsPage() {
   }
 
   const noReadCount = notifications.filter((n) => 
-    n.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false)
+    n.destination_users_ids?.some(([userId, isRead]) => userId === user?.id && isRead === false)
   ).length
 
   return (
@@ -190,7 +192,7 @@ export default function NotificationsPage() {
                 </div>
               </div>
               <div className="w-48">
-                <Label htmlFor="tipo">Tipo</Label>
+                <Label>Tipo</Label>
                 <Select value={tipoFilter} onValueChange={setTipoFilter}>
                   <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
                     <SelectValue placeholder="Filtrar por tipo" />
@@ -218,7 +220,7 @@ export default function NotificationsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredNotifications.map((notification, index) => {
               const IconComponent = tipoIcons[notification.notification_type_name as keyof typeof tipoIcons]
-              const isUnread = notification.destination_users_ids?.some(([userId, isRead]) => userId === 2 && isRead === false)
+              const isUnread = notification.destination_users_ids?.some(([userId, isRead]) => userId === user?.id && isRead === false)
               
               return (
                 <Card
@@ -332,7 +334,7 @@ export default function NotificationsPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="tipo">Tipo</Label>
+                <Label>Tipo</Label>
                 <Select defaultValue="info">
                   <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
                     <SelectValue />
