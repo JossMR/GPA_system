@@ -1,7 +1,7 @@
 export interface GPAUser {
   USR_id?: number
   USR_role_id: number
-  ROL_name: string
+  ROL_name?: string
   USR_email: string
   USR_name: string
   USR_active: number
