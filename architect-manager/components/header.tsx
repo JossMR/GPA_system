@@ -17,12 +17,14 @@ import {
 import { User, Settings, LogOut, Shield, Menu, X, Home, Bell } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useAuth } from "./auth-provider"
+import { useNotifications } from "./notifications-provider"
 import { ThemeToggle } from "./theme-toggle"
 
 export function Header() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const { user, isAdmin, logout, toggleAdminMode } = useAuth()
+  const { unreadCount } = useNotifications()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const navigation = [
@@ -77,10 +79,11 @@ export function Header() {
             <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-primary/10 transition-colors duration-300">
               <Bell className="h-5 w-5" />
             </Button>
-            {/* contador estático por ahora; reemplazar por valor dinámico si lo tienes */}
-            <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-600 text-white text-xs font-semibold">
-              3
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-600 text-white text-xs font-semibold">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </Link>
 
           <ThemeToggle />

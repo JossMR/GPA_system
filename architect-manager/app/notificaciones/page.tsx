@@ -26,6 +26,9 @@ import {
 import { useAuth } from "@/components/auth-provider"
 import { GPANotification } from "@/models/GPA_notification"
 import { useRouter } from "next/navigation"
+import { useNotifications } from "@/components/notifications-provider"
+import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 
 const tipoIcons = {
   warning: AlertTriangle,
@@ -50,7 +53,9 @@ const tipoLabels = {
 
 export default function NotificationsPage() {
   const { isAdmin, user } = useAuth()
+  const { toast } = useToast()
   const router = useRouter()
+  const { refreshNotifications } = useNotifications()
   const [notifications, setNotifications] = useState<GPANotification[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [tipoFilter, setTipoFilter] = useState("todas")
@@ -73,7 +78,7 @@ export default function NotificationsPage() {
       not.NOT_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       not.NOT_description.toLowerCase().includes(searchTerm.toLowerCase())
     
-    // Filtrar por fecha - mostrar solo si la fecha es actual o pasada
+    // Filter by date (valid only past dates)
     const notificationDate = not.NOT_date ? new Date(not.NOT_date) : null
     const now = new Date()
     const isDateValid = !notificationDate || notificationDate <= now
@@ -105,7 +110,7 @@ export default function NotificationsPage() {
         throw new Error('Notificación no encontrada')
       }
 
-      // Actualizar el estado de lectura en destination_users_ids
+      // Update the destination_users_ids to mark as read for the current user
       const updatedNotification = {
         ...notification,
         destination_users_ids: notification.destination_users_ids?.map(([userId, isRead]) =>
@@ -126,13 +131,19 @@ export default function NotificationsPage() {
         throw new Error('Error al actualizar la notificación')
       }
 
-      // Actualizar el estado local después de una respuesta exitosa
+      // Update the local state after successful update
       setNotifications((prev) =>
         prev.map((not) => not.NOT_id === id ? updatedNotification : not)
       )
+      
+      // Refresh the counter in the notifications provider
+      await refreshNotifications()
     } catch (error) {
-      console.error('Error al marcar como leída:', error)
-      // Aquí podrías agregar un toast o notificación de error
+      toast({
+          title: "Error",
+          description: "No se pudo marcar la notificación como leída.",
+          variant: "destructive",
+        })
     }
   }
 
@@ -162,7 +173,7 @@ export default function NotificationsPage() {
           )}
         </div>
 
-        {/* Estadísticas */}
+        {/* Stadistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="card-hover border-[#a2c523]/20">
             <CardHeader className="pb-2">
@@ -188,7 +199,7 @@ export default function NotificationsPage() {
           </Card>
         </div>
 
-        {/* Filtros */}
+        {/* Filters */}
         <Card className="border-[#c9e077]/30">
           <CardHeader>
             <CardTitle className="text-[#2e4600]">Filtros</CardTitle>
@@ -227,7 +238,7 @@ export default function NotificationsPage() {
           </CardContent>
         </Card>
 
-        {/* Lista de Notificaciones */}
+        {/* Notifications List */}
         {loading ? (
           <div className="flex justify-center items-center min-h-[400px]">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#486b00] mr-4" />
@@ -331,7 +342,7 @@ export default function NotificationsPage() {
           </Card>
         )}
 
-        {/* Dialog para Nueva Notificación */}
+        {/* Dialog for New Notification */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
