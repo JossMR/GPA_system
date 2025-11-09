@@ -57,13 +57,28 @@ export default function NotificationsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
+  const formatDate = (date: string | Date | undefined) => {
+    if (!date) return ''
+    const d = new Date(date)
+    const day = d.getDate().toString().padStart(2, '0')
+    const month = (d.getMonth() + 1).toString().padStart(2, '0')
+    const year = d.getFullYear()
+    const hours = d.getHours().toString().padStart(2, '0')
+    const minutes = d.getMinutes().toString().padStart(2, '0')
+    return `${day}/${month}/${year} ${hours}:${minutes}`
+  }
+
   const filteredNotifications = notifications.filter((not) => {
     const matchesSearch =
       not.NOT_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       not.NOT_description.toLowerCase().includes(searchTerm.toLowerCase())
-    //const matchesTipo = tipoFilter === "todas" || not.tipo === tipoFilter
-    //return matchesSearch && matchesTipo
-    return matchesSearch
+    
+    // Filtrar por fecha - mostrar solo si la fecha es actual o pasada
+    const notificationDate = not.NOT_date ? new Date(not.NOT_date) : null
+    const now = new Date()
+    const isDateValid = !notificationDate || notificationDate <= now
+    
+    return matchesSearch && isDateValid
   })
 
   useEffect(() => {
@@ -261,7 +276,7 @@ export default function NotificationsPage() {
                           <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                             <span className="flex items-center">
                               <Calendar className="mr-1 h-3 w-3" />
-                              {notification.NOT_date?.toLocaleString()}
+                              {"Programada para: "+formatDate(notification.NOT_date)}
                             </span>
                             {notification.PRJ_id && (
                               <span className="flex items-center">
