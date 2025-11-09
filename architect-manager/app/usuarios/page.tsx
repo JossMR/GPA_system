@@ -66,7 +66,7 @@ export default function UsersPage() {
       user.USR_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.USR_f_lastname.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.USR_s_lastname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.ROL_name.toLowerCase().includes(searchTerm.toLowerCase())
+      user.ROL_name?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   // Fetch users from API
@@ -211,10 +211,19 @@ export default function UsersPage() {
             <h1 className="text-3xl font-bold text-primary-dark">Usuarios</h1>
             <p className="text-muted-foreground">Administra los usuarios del sistema</p>
           </div>
-          <Button onClick={handleNew} className="bg-primary-medium hover:bg-primary-dark" disabled={fetchingData}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Usuario
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button onClick={handleNew} className="bg-primary-medium hover:bg-primary-dark" disabled={fetchingData}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Usuario
+            </Button>
+            <Button 
+              onClick={() => router.push('/administrar-roles')} 
+              variant="outline"
+              disabled={fetchingData}
+            >
+              Administrar Roles
+            </Button>
+          </div>
         </div>
 
         {/* Statistics */}
