@@ -6,62 +6,62 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Bell,
-  Plus,
   Search,
-  Check,
-  X,
   ExternalLink,
   AlertTriangle,
-  Info,
-  CheckCircle,
   User,
   Calendar,
   FileText,
+  Trash2,
 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { GPANotification } from "@/models/GPA_notification"
 import { useRouter } from "next/navigation"
-import { useNotifications } from "@/components/notifications-provider"
-import { toast } from "sonner"
 import { useToast } from "@/hooks/use-toast"
 
 const tipoIcons = {
   warning: AlertTriangle,
-  error: X,
   proyectos: FileText,
   personal: User,
 }
 
 const tipoColors = {
   warning: "bg-yellow-500",
-  error: "bg-red-500",
   proyectos: "bg-blue-500",
   personal: "bg-green-500",
 }
 
-const tipoLabels = {
-  warning: "Advertencia",
-  error: "Error",
-  proyectos: "Proyectos",
-  personal: "Personal",
-}
-
-export default function NotificationsPage() {
+export default function AdminNotificationsPage() {
   const { isAdmin, user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
-  const { refreshNotifications } = useNotifications()
   const [notifications, setNotifications] = useState<GPANotification[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [tipoFilter, setTipoFilter] = useState("todas")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [notificationToDelete, setNotificationToDelete] = useState<number | null>(null)
+
+  // Redirect if not admin
+  useEffect(() => {
+    if (!isAdmin) {
+      router.push('/notificaciones')
+    }
+  }, [isAdmin, router])
 
   const formatDate = (date: string | Date | undefined) => {
     if (!date) return ''
@@ -79,85 +79,74 @@ export default function NotificationsPage() {
       not.NOT_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       not.NOT_description.toLowerCase().includes(searchTerm.toLowerCase())
 
-      // Filter by type
     const matchesType = tipoFilter === "todas" || not.notification_type_name === tipoFilter
     
-    // Filter by date (valid only past dates)
-    const notificationDate = not.NOT_date ? new Date(not.NOT_date) : null
-    const now = new Date()
-    const isDateValid = !notificationDate || notificationDate <= now
-    
-    return matchesSearch && matchesType && isDateValid
+    return matchesSearch && matchesType
   })
 
   useEffect(() => {
     const fetchNotifications = async () => {
-      if (!user) return
       setLoading(true)
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      const response = await fetch(`/api/notifications?user_id=${user.id}`)
-      const data = await response.json()
-      const requestedNotifications: GPANotification[] = data.notifications
-      setNotifications(requestedNotifications)
-      console.log("Fetched Notifications:", notifications)
-      setLoading(false)  
+      try {
+        const response = await fetch('/api/notifications')
+        const data = await response.json()
+        const allNotifications: GPANotification[] = data.notifications
+        setNotifications(allNotifications)
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las notificaciones.",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
     }
-    fetchNotifications()
-  }, [])
+    
+    if (isAdmin) {
+      fetchNotifications()
+    }
+  }, [isAdmin, toast])
 
-  const markAsRead = async (id: number) => {
+  const handleDeleteClick = (id: number) => {
+    setNotificationToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!notificationToDelete) return
+
     try {
-      // Find the notification to update
-      const notification = notifications.find(not => not.NOT_id === id)
-      
-      if (!notification) {
-        throw new Error('Notificación no encontrada')
-      }
-
-      // Update the destination_users_ids to mark as read for the current user
-      const updatedNotification = {
-        ...notification,
-        destination_users_ids: notification.destination_users_ids?.map(([userId, isRead]) =>
-          userId === user?.id ? [userId, true] : [userId, isRead]
-        ) as [number, boolean][]
-      }
-
-      console.log('Updated Notification:', updatedNotification)
-      const response = await fetch(`/api/notifications/${id}?update_read=Y`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedNotification)
+      const response = await fetch(`/api/notifications/${notificationToDelete}`, {
+        method: 'DELETE',
       })
 
       if (!response.ok) {
-        throw new Error('Error al actualizar la notificación')
+        throw new Error('Error al eliminar la notificación')
       }
 
-      // Update the local state after successful update
-      setNotifications((prev) =>
-        prev.map((not) => not.NOT_id === id ? updatedNotification : not)
-      )
+      setNotifications((prev) => prev.filter((not) => not.NOT_id !== notificationToDelete))
       
-      // Refresh the counter in the notifications provider
-      await refreshNotifications()
+      toast({
+        title: "Notificación eliminada",
+        description: "La notificación ha sido eliminada exitosamente.",
+        variant: "success",
+      })
     } catch (error) {
       toast({
-          title: "Error",
-          description: "No se pudo marcar la notificación como leída.",
-          variant: "destructive",
-        })
+        title: "Error",
+        description: "No se pudo eliminar la notificación.",
+        variant: "destructive",
+      })
+    } finally {
+      setDeleteDialogOpen(false)
+      setNotificationToDelete(null)
     }
   }
 
-  const deleteNotifications = (id: number) => {
-    setNotifications((prev) => prev.filter((not) => not.NOT_id !== id))
+  if (!isAdmin) {
+    return null
   }
-
-  const noReadCount = filteredNotifications.filter((n) => 
-    n.destination_users_ids?.some(([userId, isRead]) => userId === user?.id && isRead === false)
-  ).length
 
   return (
     <MainLayout>
@@ -165,49 +154,56 @@ export default function NotificationsPage() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-[#2e4600] to-[#486b00] bg-clip-text text-transparent">
-              Notificaciones
+              Administrar Notificaciones
             </h1>
-            <p className="text-muted-foreground">Gestiona tus recordatorios y alertas del sistema</p>
+            <p className="text-muted-foreground">Gestiona todas las notificaciones del sistema</p>
           </div>
-          {isAdmin && (
-            <div className="flex flex-col gap-2">
-              <Button onClick={() => setIsDialogOpen(true)} className="gradient-primary text-white hover:opacity-90">
-                <Plus className="mr-2 h-4 w-4" />
-                Nueva Notificación
-              </Button>
-              <Button 
-                variant="outline" 
-                className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
-                onClick={() => router.push('/administrar-notificaciones')}
-              >
-                Administrar notificaciones
-              </Button>
-            </div>
-          )}
+          <Button 
+            variant="outline"
+            onClick={() => router.push('/notificaciones')}
+            className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
+          >
+            Volver a mis notificaciones
+          </Button>
         </div>
 
-        {/* Stadistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="card-hover border-[#a2c523]/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center">
                 <Bell className="mr-2 h-4 w-4 text-[#486b00]" />
-                Total
+                Total de Notificaciones
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#486b00]">{filteredNotifications.length}</div>
             </CardContent>
           </Card>
-          <Card className="card-hover border-yellow-200">
+          <Card className="card-hover border-blue-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center">
-                <AlertTriangle className="mr-2 h-4 w-4 text-yellow-600" />
-                No Leídas
+                <FileText className="mr-2 h-4 w-4 text-blue-600" />
+                De Proyectos
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{noReadCount}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {filteredNotifications.filter(n => n.notification_type_name === "proyectos").length}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="card-hover border-green-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center">
+                <User className="mr-2 h-4 w-4 text-green-600" />
+                Personales
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {filteredNotifications.filter(n => n.notification_type_name === "personal").length}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -256,16 +252,15 @@ export default function NotificationsPage() {
             <span className="text-muted-foreground">Cargando notificaciones...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {filteredNotifications.map((notification, index) => {
               const IconComponent = tipoIcons[notification.notification_type_name as keyof typeof tipoIcons]
-              const isUnread = notification.destination_users_ids?.some(([userId, isRead]) => userId === user?.id && isRead === false)
               
               return (
                 <Card
                   key={notification.NOT_id}
-                  className={`card-hover animate-slide-up ${isUnread ? "border-l-4 border-l-[#a2c523] bg-[#c9e077]/5" : "border-[#c9e077]/20"}`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
+                  className="card-hover animate-slide-up border-[#c9e077]/20"
+                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
@@ -277,16 +272,9 @@ export default function NotificationsPage() {
                         </div>
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center space-x-2">
-                            <h3
-                              className={`text-lg font-semibold ${isUnread ? "text-[#2e4600]" : "text-muted-foreground"}`}
-                            >
+                            <h3 className="text-lg font-semibold text-[#2e4600]">
                               {notification.NOT_name}
                             </h3>
-                            {isUnread ? (
-                              <Badge className="bg-[#a2c523] text-white text-xs">Nueva</Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-gray-100 text-gray-600 text-xs border-gray-300">Leído</Badge>
-                            )}
                             <Badge
                               variant="outline"
                               className={`text-xs ${tipoColors[notification.notification_type_name as keyof typeof tipoColors]} text-white border-0`}
@@ -298,12 +286,12 @@ export default function NotificationsPage() {
                           <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                             <span className="flex items-center">
                               <Calendar className="mr-1 h-3 w-3" />
-                              {"Programada para: "+formatDate(notification.NOT_date)}
+                              {formatDate(notification.NOT_date)}
                             </span>
                             {notification.creator_name && (
                               <span className="flex items-center">
                                 <User className="mr-1 h-3 w-3" />
-                                {"Creada por: "+notification.creator_name}
+                                {"Creada por: " + notification.creator_name}
                               </span>
                             )}
                           </div>
@@ -321,17 +309,15 @@ export default function NotificationsPage() {
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         )}
-                        {isUnread && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => markAsRead(notification.NOT_id || 0)}
-                            className="text-green-600 hover:bg-green-50"
-                            title="Marcar como leída"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(notification.NOT_id || 0)}
+                          className="text-red-600 hover:bg-red-50"
+                          title="Eliminar notificación"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -340,6 +326,7 @@ export default function NotificationsPage() {
             })}
           </div>
         )}
+
         {filteredNotifications.length === 0 && !loading && (
           <Card>
             <CardContent className="text-center py-8">
@@ -348,63 +335,34 @@ export default function NotificationsPage() {
               <p className="text-muted-foreground">
                 {searchTerm || tipoFilter !== "todas"
                   ? "No se encontraron notificaciones con los filtros aplicados"
-                  : "Todas las notificaciones están al día"}
+                  : "No existen notificaciones en el sistema"}
               </p>
             </CardContent>
           </Card>
         )}
 
-        {/* Dialog for New Notification */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle className="text-[#2e4600]">Nueva Notificación</DialogTitle>
-              <DialogDescription>Crea un recordatorio manual para el sistema</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="titulo">Título</Label>
-                <Input
-                  id="titulo"
-                  placeholder="Título de la notificación"
-                  className="border-[#a2c523]/30 focus:border-[#486b00]"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="mensaje">Mensaje</Label>
-                <Textarea
-                  id="mensaje"
-                  placeholder="Describe el recordatorio..."
-                  className="border-[#a2c523]/30 focus:border-[#486b00]"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Tipo</Label>
-                <Select defaultValue="info">
-                  <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="proyectos">Proyectos</SelectItem>
-                    <SelectItem value="personal">Personal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
-              >
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción no se puede deshacer. La notificación será eliminada permanentemente del sistema.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20">
                 Cancelar
-              </Button>
-              <Button className="gradient-primary text-white hover:opacity-90" onClick={() => setIsDialogOpen(false)}>
-                Crear Notificación
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   )
