@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   Info,
   CheckCircle,
+  User,
   Calendar,
   FileText,
 } from "lucide-react"
@@ -33,22 +34,22 @@ import { useToast } from "@/hooks/use-toast"
 const tipoIcons = {
   warning: AlertTriangle,
   error: X,
-  proyectos: Info,
-  success: CheckCircle,
+  proyectos: FileText,
+  personal: User,
 }
 
 const tipoColors = {
   warning: "bg-yellow-500",
   error: "bg-red-500",
   proyectos: "bg-blue-500",
-  success: "bg-green-500",
+  personal: "bg-green-500",
 }
 
 const tipoLabels = {
   warning: "Advertencia",
   error: "Error",
-  proyectos: "Información",
-  success: "Éxito",
+  proyectos: "Proyectos",
+  personal: "Personal",
 }
 
 export default function NotificationsPage() {
@@ -77,13 +78,16 @@ export default function NotificationsPage() {
     const matchesSearch =
       not.NOT_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       not.NOT_description.toLowerCase().includes(searchTerm.toLowerCase())
+
+      // Filter by type
+    const matchesType = tipoFilter === "todas" || not.notification_type_name === tipoFilter
     
     // Filter by date (valid only past dates)
     const notificationDate = not.NOT_date ? new Date(not.NOT_date) : null
     const now = new Date()
     const isDateValid = !notificationDate || notificationDate <= now
     
-    return matchesSearch && isDateValid
+    return matchesSearch && matchesType && isDateValid
   })
 
   useEffect(() => {
@@ -212,7 +216,7 @@ export default function NotificationsPage() {
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#486b00]" />
                   <Input
                     id="search"
-                    placeholder="Buscar notificaciones..."
+                    placeholder="Buscar notificaciones por título o descripción..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-8 border-[#a2c523]/30 focus:border-[#486b00]"
@@ -227,10 +231,8 @@ export default function NotificationsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todas">Todas</SelectItem>
-                    <SelectItem value="warning">Advertencias</SelectItem>
-                    <SelectItem value="error">Errores</SelectItem>
-                    <SelectItem value="proyectos">Información</SelectItem>
-                    <SelectItem value="success">Éxito</SelectItem>
+                    <SelectItem value="proyectos">Proyectos</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -267,7 +269,7 @@ export default function NotificationsPage() {
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center space-x-2">
                             <h3
-                              className={`font-semibold ${isUnread ? "text-[#2e4600]" : "text-muted-foreground"}`}
+                              className={`text-lg font-semibold ${isUnread ? "text-[#2e4600]" : "text-muted-foreground"}`}
                             >
                               {notification.NOT_name}
                             </h3>
@@ -280,7 +282,7 @@ export default function NotificationsPage() {
                               variant="outline"
                               className={`text-xs ${tipoColors[notification.notification_type_name as keyof typeof tipoColors]} text-white border-0`}
                             >
-                              {tipoLabels[notification.notification_type_name as keyof typeof tipoLabels]}
+                              {notification.notification_type_name}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">{notification.NOT_description}</p>
@@ -289,10 +291,10 @@ export default function NotificationsPage() {
                               <Calendar className="mr-1 h-3 w-3" />
                               {"Programada para: "+formatDate(notification.NOT_date)}
                             </span>
-                            {notification.PRJ_id && (
+                            {notification.creator_name && (
                               <span className="flex items-center">
-                                <FileText className="mr-1 h-3 w-3" />
-                                {notification.PRJ_id}
+                                <User className="mr-1 h-3 w-3" />
+                                {"Creada por: "+notification.creator_name}
                               </span>
                             )}
                           </div>
@@ -305,6 +307,7 @@ export default function NotificationsPage() {
                             size="sm" 
                             className="text-[#486b00] hover:bg-[#c9e077]/20"
                             onClick={() => router.push(`/proyectos/${notification.PRJ_id}/editar`)}
+                            title="Ir al proyecto"
                           >
                             <ExternalLink className="h-4 w-4" />
                           </Button>
@@ -373,10 +376,8 @@ export default function NotificationsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="info">Información</SelectItem>
-                    <SelectItem value="warning">Advertencia</SelectItem>
-                    <SelectItem value="error">Urgente</SelectItem>
-                    <SelectItem value="success">Éxito</SelectItem>
+                    <SelectItem value="proyectos">Proyectos</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
