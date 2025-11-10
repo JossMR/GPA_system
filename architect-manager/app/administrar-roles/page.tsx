@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Shield, Search, ChevronDown, ChevronRight } from "lucide-react"
+import { ArrowLeft, Shield, Search, ChevronDown, ChevronRight, Edit, Trash2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { GPARole } from "@/models/GPA_role"
 import { useRouter } from "next/navigation"
@@ -70,6 +70,20 @@ export default function RolesPage() {
       }
       return newSet
     })
+  }
+
+  // Handle edit role
+  const handleEditRole = (e: React.MouseEvent, roleId: number) => {
+    e.stopPropagation() // Prevent accordion toggle
+    // TODO: Implement edit functionality
+    console.log("Edit role:", roleId)
+  }
+
+  // Handle delete role
+  const handleDeleteRole = (e: React.MouseEvent, roleId: number) => {
+    e.stopPropagation() // Prevent accordion toggle
+    // TODO: Implement delete functionality
+    console.log("Delete role:", roleId)
   }
 
   return (
@@ -157,6 +171,7 @@ export default function RolesPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {filteredRoles.map((role) => {
                   const isExpanded = expandedRoles.has(role.ROL_id!)
+                  const isSystemRole = role.ROL_id === 1
                   
                   return (
                     <Card key={role.ROL_id} className="border-2">
@@ -164,22 +179,44 @@ export default function RolesPage() {
                         className="cursor-pointer hover:bg-slate-50 transition-colors"
                         onClick={() => toggleRole(role.ROL_id!)}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
                             {isExpanded ? (
-                              <ChevronDown className="h-5 w-5 text-primary-medium" />
+                              <ChevronDown className="h-5 w-5 text-primary-medium flex-shrink-0" />
                             ) : (
-                              <ChevronRight className="h-5 w-5 text-primary-medium" />
+                              <ChevronRight className="h-5 w-5 text-primary-medium flex-shrink-0" />
                             )}
-                            <Shield className="h-6 w-6 text-primary-medium" />
-                            <CardTitle className="text-xl">{role.ROL_name}</CardTitle>
+                            <Shield className="h-6 w-6 text-primary-medium flex-shrink-0" />
+                            <CardTitle className="text-xl truncate">{role.ROL_name}</CardTitle>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">Notificaciones para:</span>
-                            <Badge variant={role.ROL_notifications_for === 'E' ? "default" : "secondary"}>
-                              {role.ROL_notifications_for === 'E' ? 'Todos' : 'Sí mismo'}
-                            </Badge>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {!isSystemRole && (
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => handleEditRole(e, role.ROL_id!)}
+                                  className="h-8 w-8"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => handleDeleteRole(e, role.ROL_id!)}
+                                  className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
                           </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-sm text-muted-foreground">Notificaciones para:</span>
+                          <Badge variant={role.ROL_notifications_for === 'E' ? "default" : "secondary"}>
+                            {role.ROL_notifications_for === 'E' ? 'Todos' : 'Sí mismo'}
+                          </Badge>
                         </div>
                       </CardHeader>
                       
