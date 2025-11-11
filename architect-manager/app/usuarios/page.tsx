@@ -217,7 +217,7 @@ export default function UsersPage() {
               Nuevo Usuario
             </Button>
             <Button 
-              onClick={() => router.push('/administrar-roles')} 
+              onClick={() => router.push('/usuarios/administrar-roles')} 
               variant="outline"
               disabled={fetchingData}
             >

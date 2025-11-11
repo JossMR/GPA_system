@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, use } from "react"
+import { useEffect, useState } from "react"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -17,15 +17,12 @@ import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
-export default function EditRolePage({ params }: { params: Promise<{ id: string }> }) {
+export default function NewRolePage() {
   const router = useRouter()
   const { isAdmin } = useAuth()
   const { toast } = useToast()
-  const { id } = use(params)
 
   const [loading, setLoading] = useState(false)
-  const [fetchingData, setFetchingData] = useState(true)
-  const [role, setRole] = useState<GPARole | null>(null)
   const [roleName, setRoleName] = useState("")
   const [notificationsFor, setNotificationsFor] = useState<"E" | "O">("O")
   const [permissions, setPermissions] = useState<GPAPermission[]>([])
@@ -39,38 +36,9 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
 
   // Redirect if not admin
   if (!isAdmin) {
-    router.push("/administrar-roles")
+    router.push("/usuarios/administrar-roles")
     return null
   }
-
-  // Fetch role data
-  useEffect(() => {
-    const fetchRole = async () => {
-      setFetchingData(true)
-      try {
-        const response = await fetch(`/api/roles/${id}`)
-        if (!response.ok) throw new Error("No se pudo cargar el rol")
-        const data = await response.json()
-        const roleData = data.role as GPARole
-
-        setRole(roleData)
-        setRoleName(roleData.ROL_name || "")
-        setNotificationsFor(roleData.ROL_notifications_for || "O")
-        setPermissions(roleData.permissions || [])
-        setNotificationTypes(roleData.notifications_types || [])
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "No se pudo cargar el rol",
-          variant: "destructive"
-        })
-        router.push("/administrar-roles")
-      } finally {
-        setFetchingData(false)
-      }
-    }
-    fetchRole()
-  }, [id, router, toast])
 
   // Fetch available notification types
   useEffect(() => {
@@ -102,14 +70,6 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
 
   // Handle remove permission
   const handleRemovePermission = (index: number) => {
-    if (permissions.length <= 1) {
-      toast({
-        title: "No se puede eliminar",
-        description: "El rol debe tener al menos un permiso",
-        variant: "destructive"
-      })
-      return
-    }
     setPermissions(permissions.filter((_, i) => i !== index))
   }
 
@@ -135,14 +95,6 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
 
   // Handle remove notification type
   const handleRemoveNotificationType = (ntpId: number) => {
-    if (notificationTypes.length <= 1) {
-      toast({
-        title: "No se puede eliminar",
-        description: "El rol debe tener al menos un tipo de notificación",
-        variant: "destructive"
-      })
-      return
-    }
     setNotificationTypes(notificationTypes.filter(nt => nt.NTP_id !== ntpId))
   }
 
@@ -200,75 +152,40 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
     setLoading(true)
 
     try {
-      const updatedRole: GPARole = {
-        ...role,
+      const newRole: GPARole = {
         ROL_name: roleName.trim(),
         ROL_notifications_for: notificationsFor,
         permissions,
         notifications_types: notificationTypes
       }
 
-      const response = await fetch(`/api/roles/${id}`, {
-        method: "PUT",
+      const response = await fetch("/api/roles", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedRole),
+        body: JSON.stringify(newRole),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || "Error actualizando el rol")
+        throw new Error(errorData.error || "Error creando el rol")
       }
 
       toast({
-        title: "Rol actualizado",
-        description: "Los cambios fueron guardados correctamente",
+        title: "Rol creado",
+        description: "El nuevo rol fue creado correctamente",
         variant: "success"
       })
 
-      router.push("/administrar-roles")
+      router.push("/usuarios/administrar-roles")
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Ocurrió un error al actualizar el rol",
+        description: error.message || "Ocurrió un error al crear el rol",
         variant: "destructive"
       })
     } finally {
       setLoading(false)
     }
-  }
-
-  if (fetchingData) {
-    return (
-      <MainLayout>
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-medium mr-4" />
-          <span className="text-muted-foreground">Cargando información del rol...</span>
-        </div>
-      </MainLayout>
-    )
-  }
-
-  if (!role) return null
-
-  // Prevent editing system role (ID 1)
-  if (role.ROL_id === 1) {
-    return (
-      <MainLayout>
-        <div className="container py-8">
-          <Card>
-            <CardContent className="text-center py-8">
-              <h2 className="text-2xl font-bold mb-4">No se puede editar</h2>
-              <p className="text-muted-foreground mb-4">
-                El rol de Administrador del Sistema no puede ser modificado.
-              </p>
-              <Button onClick={() => router.push("/administrar-roles")}>
-                Volver a Roles
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </MainLayout>
-    )
   }
 
   // Filter available permissions and notification types
@@ -286,16 +203,16 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
         <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
-            onClick={() => router.push("/administrar-roles")}
+            onClick={() => router.push("/usuarios/administrar-roles")}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-primary-dark">
-              Editar Rol: {role.ROL_name}
+              Crear Nuevo Rol
             </h1>
-            <p className="text-muted-foreground">Modifica los datos del rol</p>
+            <p className="text-muted-foreground">Define los permisos y configuración del nuevo rol</p>
           </div>
         </div>
 
@@ -467,23 +384,24 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push("/administrar-roles")}
+              onClick={() => router.push("/usuarios/administrar-roles")}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={loading}
+              className="bg-primary-medium hover:bg-primary-dark"
             >
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Guardando...
+                  Creando...
                 </>
               ) : (
                 <>
                   <Save className="mr-2 h-4 w-4" />
-                  Guardar Cambios
+                  Crear Rol
                 </>
               )}
             </Button>

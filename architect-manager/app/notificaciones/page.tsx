@@ -402,7 +402,7 @@ export default function NotificationsPage() {
               <Button
                 variant="outline"
                 className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
-                onClick={() => router.push('/administrar-notificaciones')}
+                onClick={() => router.push('/notificaciones/administrar-notificaciones')}
               >
                 Administrar notificaciones
               </Button>

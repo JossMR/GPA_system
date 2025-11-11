@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Shield, Search, ChevronDown, ChevronRight, Edit, Trash2 } from "lucide-react"
+import { ArrowLeft, Shield, Search, ChevronDown, ChevronRight, Edit, Trash2, Plus } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { GPARole } from "@/models/GPA_role"
 import { useRouter } from "next/navigation"
@@ -95,7 +95,7 @@ export default function RolesPage() {
   // Handle edit role
   const handleEditRole = (e: React.MouseEvent, roleId: number) => {
     e.stopPropagation() // Prevent accordion toggle
-    router.push(`/administrar-roles/${roleId}/editar`)
+    router.push(`/usuarios/administrar-roles/${roleId}/editar`)
   }
 
   // Handle delete role - open confirmation dialog
@@ -164,10 +164,19 @@ export default function RolesPage() {
             <h1 className="text-3xl font-bold text-primary-dark">Administrar Roles</h1>
             <p className="text-muted-foreground">Visualiza los roles y sus permisos del sistema</p>
           </div>
-          <Button onClick={() => router.push('/usuarios')} variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver a Usuarios
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button 
+              onClick={() => router.push('/usuarios/administrar-roles/nuevo')} 
+              className="bg-primary-medium hover:bg-primary-dark"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Rol
+            </Button>
+            <Button onClick={() => router.push('/usuarios')} variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Volver a Usuarios
+            </Button>
+          </div>
         </div>
 
         {/* Statistics */}
