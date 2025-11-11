@@ -14,23 +14,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Bell, User, Settings, LogOut, Shield, Menu, X, Home } from "lucide-react"
+import { User, Settings, LogOut, Shield, Menu, X, Home, Bell } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useAuth } from "./auth-provider"
+import { useNotifications } from "./notifications-provider"
 import { ThemeToggle } from "./theme-toggle"
-
-const notifications = [
-  { id: 1, message: "Pago pendiente - Proyecto Villa Moderna", type: "warning" },
-  { id: 2, message: "Documentos faltantes - Casa Familiar", type: "error" },
-  { id: 3, message: "Reunión programada mañana", type: "info" },
-]
 
 export function Header() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const { user, isAdmin, logout, toggleAdminMode } = useAuth()
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const { unreadCount } = useNotifications()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const navigation = [
@@ -40,8 +34,8 @@ export function Header() {
     { name: "Pagos", href: "/pagos", icon: Settings },
     { name: "Promoción", href: "/promocion", icon: Settings },
     { name: "Reportes", href: "/reportes", icon: Settings },
-    ...(isAdmin ? [{ name: "Usuarios", href: "/usuarios", icon: Shield }] : []),
-  ]
+    ...(isAdmin ? [{ name: "Usuarios", href: "/usuarios", icon: Shield }] : [])
+    ]
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
@@ -81,66 +75,25 @@ export function Header() {
           ))}
         </nav>        {/* Right side actions */}
         <div className="flex items-center space-x-2">
-          <ThemeToggle />
+          <Link href="/notificaciones" className="relative">
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-primary/10 transition-colors duration-300">
+              <Bell className="h-5 w-5" />
+            </Button>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-600 text-white text-xs font-semibold">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </Link>
 
-          {/* Notifications */}
-          <Popover open={notificationsOpen} onOpenChange={setNotificationsOpen}>
-            <PopoverTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="relative hover:bg-primary/10 transition-colors duration-300"
-              >
-                <Bell className="h-5 w-5" />
-                {notifications.length > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs gradient-accent text-white animate-pulse">
-                    {notifications.length}
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-0 animate-slide-down" align="end">
-              <div className="p-4 border-b border-border">
-                <h4 className="font-semibold text-lg">Notificaciones</h4>
-                <p className="text-sm text-muted-foreground">Tienes {notifications.length} notificaciones nuevas</p>
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className="p-4 border-b border-border hover:bg-muted/50 transition-colors duration-200 cursor-pointer"
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className={`w-2 h-2 rounded-full mt-2 ${
-                        notification.type === 'warning' ? 'bg-yellow-500' :
-                        notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-                      }`} />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{notification.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Hace 5 minutos</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="p-4 border-t border-border">
-                <Link 
-                  href="/notificaciones" 
-                  className="text-sm text-primary hover:text-primary/80 font-medium transition-colors duration-200"
-                  onClick={() => setNotificationsOpen(false)}
-                >
-                  Ver todas las notificaciones →
-                </Link>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <ThemeToggle />
 
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-primary/10 transition-colors duration-300">
                 <Avatar className="h-10 w-10 border-2 border-primary/20">
-                  <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name} />
+                  <AvatarImage src={user?.picture || "/placeholder.svg"} alt={user?.name} />
                   <AvatarFallback className="bg-gradient-to-br from-primary-light to-primary-medium text-white font-semibold">
                     {user?.name?.charAt(0)}
                   </AvatarFallback>
@@ -156,7 +109,7 @@ export function Header() {
               <div className="p-4 bg-gradient-to-r from-primary-lighter/20 to-primary-light/20">
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name} />
+                    <AvatarImage src={user?.picture || "/placeholder.svg"} alt={user?.name} />
                     <AvatarFallback className="bg-gradient-to-br from-primary-light to-primary-medium text-white font-semibold text-lg">
                       {user?.name?.charAt(0)}
                     </AvatarFallback>

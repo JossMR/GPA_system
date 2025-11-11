@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '@/lib/database';
-
-// Método GET - Ejemplo de consulta a la base de datos
+import { executeQuery,executeTransaction } from '@/lib/database';
+import { GPAUser,getLocalMySQLDateTime } from '@/models/GPA_user';
 export async function GET(request: NextRequest) {
   try {
-    // Ejemplo: Obtener todos los usuarios
     const users = await executeQuery('SELECT * FROM gpa_users LIMIT 10');
     
     return NextResponse.json({
@@ -21,13 +19,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Método POST - Ejemplo de login con validación
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, password } = body;
     
-    // Validar que se enviaron los datos necesarios
     if (!username || !password) {
       return NextResponse.json(
         { error: "Usuario y contraseña son requeridos" },
@@ -35,7 +31,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Buscar el usuario en la base de datos
     const users = await executeQuery(
       'SELECT id, username, password FROM gpa_users WHERE username = ? LIMIT 1',
       [username]
@@ -50,8 +45,6 @@ export async function POST(request: NextRequest) {
     
     const user = users[0] as any;
     
-    // Aquí deberías comparar la contraseña hasheada
-    // Por ahora, comparación simple (NO usar en producción)
     if (user.password !== password) {
       return NextResponse.json(
         { error: "Contraseña incorrecta" },
@@ -59,7 +52,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Login exitoso
     return NextResponse.json({
       message: "Login exitoso",
       user: {
@@ -72,6 +64,46 @@ export async function POST(request: NextRequest) {
     console.error('Error en POST /api/login:', error);
     return NextResponse.json(
       { error: "Error al procesar la solicitud" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const updatedUser = await req.json();
+    if (!updatedUser || !updatedUser.USR_id) {
+      return NextResponse.json(
+        { error: "User ID and data must be provided" },
+        { status: 400 }
+      );
+    }
+    // Update last access date
+    await executeTransaction([
+      {
+        query: `UPDATE gpa_users SET 
+          USR_last_access_date = ?
+          WHERE USR_id = ?`,
+        params: [
+          getLocalMySQLDateTime(),
+          updatedUser.USR_id
+        ]
+      }
+    ]);
+    // Get the updated user's details
+    const result = await executeQuery(
+      'SELECT USR_id, USR_email, USR_active, USR_role_id, USR_name, USR_f_lastname, USR_s_lastname, USR_creation_date, USR_last_access_date FROM gpa_users WHERE USR_id = ?',
+      [updatedUser.USR_id]
+    );
+    const user: GPAUser = result[0] as GPAUser;
+    return NextResponse.json({
+      message: "User updated successfully",
+      user
+    }, { status: 200 });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Server Error: Error updating user" },
       { status: 500 }
     );
   }

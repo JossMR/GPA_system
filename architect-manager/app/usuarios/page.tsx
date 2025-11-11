@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,45 +13,39 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search, Edit, UserCheck, UserX, Mail, Calendar } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { GPAUser } from "@/models/GPA_user"
+import { GPARole } from "@/models/GPA_role"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 
-const mockUsuarios = [
-  {
-    id: 1,
-    nombre: "Juan Arquitecto",
-    email: "juan@arquitecto.com",
-    rol: "admin",
-    estado: "activo",
-    fechaCreacion: "2024-01-15",
-    ultimoAcceso: "2024-12-13",
-  },
-  {
-    id: 2,
-    nombre: "María Diseñadora",
-    email: "maria@diseño.com",
-    rol: "usuario",
-    estado: "activo",
-    fechaCreacion: "2024-02-20",
-    ultimoAcceso: "2024-12-12",
-  },
-  {
-    id: 3,
-    nombre: "Carlos Supervisor",
-    email: "carlos@supervisor.com",
-    rol: "usuario",
-    estado: "inactivo",
-    fechaCreacion: "2024-01-10",
-    ultimoAcceso: "2024-11-15",
-  },
-]
+// Function to format date as DD/MM/YYYY HH:MM
+function formatDate(dateString: string) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  const hh = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
 
-export default function UsuariosPage() {
+export default function UsersPage() {
+  const router = useRouter()
   const { isAdmin } = useAuth()
-  const [usuarios, setUsuarios] = useState(mockUsuarios)
+  const [users, setUsers] = useState<GPAUser[]>([]);
+  const [roles, setRoles] = useState<GPARole[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedUsuario, setSelectedUsuario] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [fetchingData, setFetchingData] = useState(true)
+  const [selectedUser, setSelectedUser] = useState<any>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedRoleId, setSelectedRoleId] = useState<string>("");
+  const [selectedState, setSelectedState] = useState<boolean>(true);
+  const selectedRole = roles.find(r => r.ROL_id === Number(selectedRoleId));
+  const { toast } = useToast();
 
-  // Redirigir si no es admin
+  // Redirect if not admin
   if (!isAdmin) {
     return (
       <MainLayout>
@@ -67,26 +61,146 @@ export default function UsuariosPage() {
     )
   }
 
-  const filteredUsuarios = usuarios.filter(
-    (usuario) =>
-      usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      usuario.email.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredUsers = users.filter(
+    (user) =>
+      user.USR_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.USR_f_lastname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.USR_s_lastname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.ROL_name?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleEdit = (usuario: any) => {
-    setSelectedUsuario(usuario)
+  // Fetch users from API
+  const fetchUsers = async () => {
+    const response = await fetch("/api/users")
+    const data = await response.json()
+    const requestedUsers: GPAUser[] = data.users
+    setUsers(requestedUsers)
+  }
+  useEffect(() => {
+    const loadData = async () => {
+      setFetchingData(true)
+      await fetchUsers()
+      setFetchingData(false)
+    }
+    loadData()
+  }, [])
+
+  // Fetch roles for the select dropdown
+  useEffect(() => {
+    const fetchRoles = async () => {
+      const response = await fetch("/api/roles");
+      const data = await response.json();
+      const requestedRoles: GPARole[] = data.roles
+      setRoles(requestedRoles);
+      if (requestedRoles.length > 0) {
+        setSelectedRoleId(String(requestedRoles[0].ROL_id));
+      }
+    };
+    fetchRoles();
+  }, []);
+
+  // Handlers for dialog open/close and form submission
+  const handleEdit = (user: any) => {
+    setSelectedUser(user)
+    setSelectedRoleId(String(user.USR_role_id))
+    setSelectedState(user.USR_active === 1)
     setIsDialogOpen(true)
   }
 
   const handleNew = () => {
-    setSelectedUsuario(null)
+    setSelectedUser(null)
+    setSelectedRoleId(String(roles[0]?.ROL_id || ""))
     setIsDialogOpen(true)
   }
 
-  const toggleUsuarioEstado = (usuarioId: number) => {
-    setUsuarios((prev) =>
-      prev.map((u) => (u.id === usuarioId ? { ...u, estado: u.estado === "activo" ? "inactivo" : "activo" } : u)),
-    )
+  const toggleUserStatus = async (userId: number) => {
+    const user = users.find(u => u.USR_id === userId);
+    if (!user) return;
+
+    const updatedUser = {
+      USR_id: user.USR_id,
+      USR_name: user.USR_name,
+      USR_f_lastname: user.USR_f_lastname,
+      USR_s_lastname: user.USR_s_lastname,
+      USR_email: user.USR_email,
+      USR_active: user.USR_active === 1 ? 0 : 1,
+      USR_role_id: user.USR_role_id,
+      ROL_name: user.ROL_name
+    };
+
+    try {
+      const response = await fetch("/api/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedUser),
+      });
+      if (!response.ok) throw new Error("Error updating user status");
+      await fetchUsers();
+    } catch (error) {
+      console.error("API error:", error);
+    }
+  }
+
+  const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    setLoading(true)
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+
+    const userData = {
+      USR_name: formData.get("name") as string,
+      USR_f_lastname: formData.get("f_lastname") as string,
+      USR_s_lastname: formData.get("s_lastname") as string,
+      USR_email: formData.get("email") as string,
+      USR_active: selectedState ? 1 : 0,
+      USR_role_id: Number(selectedRoleId),
+      ROL_name: selectedRole?.ROL_name || "",
+      ...(selectedUser && { USR_id: selectedUser.USR_id })
+    };
+    // if editing, include the user ID
+    if (selectedUser) {
+      userData["USR_id"] = selectedUser.USR_id;
+    }
+
+    try {
+      const response = await fetch("/api/users", {
+        method: selectedUser ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+      if (!response.ok) {
+        toast({
+          title: "Error en el guardado",
+          description: "Ocurrió un error al guardar el usuario.",
+          variant: "destructive",
+        });
+        throw new Error(selectedUser ? "Error updating user" : "Error creating user");
+      }
+      const data = await response.json();
+      if (response.ok) {
+        const savedUserFromApi = data.user;
+        const savedUser = { ...userData, ...savedUserFromApi };
+
+        setUsers((prev) => {
+          if (selectedUser) {
+            return prev.map((u) => (u.USR_id === savedUser.USR_id ? savedUser : u));
+          } else {
+            return [savedUser, ...prev];
+          }
+        });
+        setIsDialogOpen(false);
+        setSelectedUser(null);
+        toast({
+          title: "Guardado exitoso",
+          description: "El usuario fue guardado exitosamente.",
+          variant: "success",
+        });
+      }
+    } catch (error) {
+      console.error("API error:", error);
+    }
+    setLoading(false);
   }
 
   return (
@@ -97,20 +211,29 @@ export default function UsuariosPage() {
             <h1 className="text-3xl font-bold text-primary-dark">Usuarios</h1>
             <p className="text-muted-foreground">Administra los usuarios del sistema</p>
           </div>
-          <Button onClick={handleNew} className="bg-primary-medium hover:bg-primary-dark">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Usuario
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button onClick={handleNew} className="bg-primary-medium hover:bg-primary-dark" disabled={fetchingData}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Usuario
+            </Button>
+            <Button 
+              onClick={() => router.push('/usuarios/administrar-roles')} 
+              variant="outline"
+              disabled={fetchingData}
+            >
+              Administrar Roles
+            </Button>
+          </div>
         </div>
 
-        {/* Estadísticas */}
+        {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total Usuarios</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{usuarios.length}</div>
+              <div className="text-2xl font-bold">{users.length}</div>
             </CardContent>
           </Card>
           <Card>
@@ -119,7 +242,7 @@ export default function UsuariosPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {usuarios.filter((u) => u.estado === "activo").length}
+                {users.filter((u) => u.USR_active === 1).length}
               </div>
             </CardContent>
           </Card>
@@ -129,7 +252,7 @@ export default function UsuariosPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary-medium">
-                {usuarios.filter((u) => u.rol === "admin").length}
+                {users.filter((u) => u.ROL_name === "admin").length}
               </div>
             </CardContent>
           </Card>
@@ -139,13 +262,13 @@ export default function UsuariosPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {usuarios.filter((u) => u.rol === "usuario").length}
+                {users.filter((u) => u.ROL_name === "usuario").length}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filtros */}
+        {/* Filters */}
         <Card>
           <CardHeader>
             <CardTitle>Filtros</CardTitle>
@@ -158,7 +281,7 @@ export default function UsuariosPage() {
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search"
-                    placeholder="Buscar por nombre o email..."
+                    placeholder="Buscar por nombre, apellidos o rol..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-8"
@@ -169,139 +292,169 @@ export default function UsuariosPage() {
           </CardContent>
         </Card>
 
-        {/* Tabla de Usuarios */}
+        {/* User List */}
         <Card>
           <CardHeader>
-            <CardTitle>Lista de Usuarios ({filteredUsuarios.length})</CardTitle>
+            <CardTitle>Lista de Usuarios ({filteredUsers.length})</CardTitle>
             <CardDescription>Todos los usuarios registrados en el sistema</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuario</TableHead>
-                  <TableHead>Contacto</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Fechas</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsuarios.map((usuario) => (
-                  <TableRow key={usuario.id} className="animate-fade-in">
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{usuario.nombre}</div>
-                        <div className="text-sm text-muted-foreground">ID: {usuario.id}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-sm">
-                        <Mail className="mr-1 h-3 w-3" />
-                        {usuario.email}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={usuario.rol === "admin" ? "default" : "secondary"}
-                        className={usuario.rol === "admin" ? "bg-primary-medium" : ""}
-                      >
-                        {usuario.rol === "admin" ? "Administrador" : "Usuario"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={usuario.estado === "activo"}
-                          onCheckedChange={() => toggleUsuarioEstado(usuario.id)}
-                        />
-                        <Badge
-                          variant={usuario.estado === "activo" ? "default" : "secondary"}
-                          className={usuario.estado === "activo" ? "bg-green-500" : ""}
-                        >
-                          {usuario.estado}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm">
-                          <Calendar className="mr-1 h-3 w-3" />
-                          Creado: {usuario.fechaCreacion}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Último acceso: {usuario.ultimoAcceso}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(usuario)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => toggleUsuarioEstado(usuario.id)}>
-                          {usuario.estado === "activo" ? (
-                            <UserX className="h-4 w-4 text-red-500" />
-                          ) : (
-                            <UserCheck className="h-4 w-4 text-green-500" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
+            {fetchingData ? (
+              <div className="text-center py-8 text-muted-foreground">Cargando usuarios...</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Rol</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Fechas</TableHead>
+                    <TableHead>Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.USR_id} className="animate-fade-in">
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{user.USR_name + " " + user.USR_f_lastname + " " + user.USR_s_lastname}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center text-sm">
+                          <Mail className="mr-1 h-3 w-3" />
+                          {user.USR_email}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={user.ROL_name === "admin" ? "default" : "secondary"}
+                          className={user.ROL_name === "admin" ? "bg-primary-medium" : ""}
+                        >
+                          {user.ROL_name === "admin" ? "Administrador" : "Usuario"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={user.USR_active === 1}
+                            onCheckedChange={() => user.USR_id !== undefined && toggleUserStatus(user.USR_id)}
+                          />
+                          <Badge
+                            variant={user.USR_active === 1 ? "default" : "secondary"}
+                            className={user.USR_active === 1 ? "bg-green-500" : ""}
+                          >
+                            {user.USR_active === 1 ? "activo" : "inactivo"}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center text-sm">
+                            <Calendar className="mr-1 h-3 w-3" />
+                            Creado: {formatDate(user.USR_creation_date ?? "")}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Último acceso: {formatDate(user.USR_last_access_date ?? "")}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => user.USR_id !== undefined && toggleUserStatus(user.USR_id)}>
+                            {user.USR_active === 1 ? (
+                              <UserX className="h-4 w-4 text-red-500" />
+                            ) : (
+                              <UserCheck className="h-4 w-4 text-green-500" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
-        {/* Dialog para Crear/Editar Usuario */}
+        {/* Dialog for Creating/Editing User */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>{selectedUsuario ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
+              <DialogTitle>{selectedUser ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
               <DialogDescription>
-                {selectedUsuario ? "Modifica los datos del usuario" : "Ingresa los datos del nuevo usuario"}
+                {selectedUser ? "Modifica los datos del usuario existente" : "Ingresa los datos del nuevo usuario"}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="nombre">Nombre completo</Label>
-                <Input id="nombre" defaultValue={selectedUsuario?.nombre || ""} placeholder="Nombre del usuario" />
+            <form onSubmit={handleSaveUser}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Nombre</Label>
+                  <Input id="name" name="name" defaultValue={selectedUser?.USR_name || ""} placeholder="Nombre" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="f_lastname">Primer Apellido</Label>
+                  <Input id="f_lastname" name="f_lastname" defaultValue={selectedUser?.USR_f_lastname || ""} placeholder="Primer Apellido" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s_lastname">Segundo Apellido</Label>
+                  <Input id="s_lastname" name="s_lastname" defaultValue={selectedUser?.USR_s_lastname || ""} placeholder="Segundo Apellido" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    defaultValue={selectedUser?.USR_email || ""}
+                    placeholder="email@ejemplo.com"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="role">Rol</Label>
+                  <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem key={role.ROL_id} value={String(role.ROL_id)}>
+                          {role.ROL_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch name="state" id="state" defaultChecked={selectedState} onCheckedChange={setSelectedState} />
+                  <Label htmlFor="state">Usuario activo</Label>
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  defaultValue={selectedUsuario?.email || ""}
-                  placeholder="email@ejemplo.com"
-                />
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-primary-medium hover:bg-primary-dark">
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      {selectedUser ? "Actualizar" : "Crear"}
+                    </>
+                  )}
+                </Button>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="rol">Rol</Label>
-                <Select defaultValue={selectedUsuario?.rol || "usuario"}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="usuario">Usuario</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch id="estado" defaultChecked={selectedUsuario?.estado === "activo" || !selectedUsuario} />
-                <Label htmlFor="estado">Usuario activo</Label>
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button className="bg-primary-medium hover:bg-primary-dark" onClick={() => setIsDialogOpen(false)}>
-                {selectedUsuario ? "Actualizar" : "Crear"}
-              </Button>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

@@ -6,56 +6,72 @@ import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Users, Building, DollarSign, FileText } from "lucide-react"
+import { GPADocument } from "@/models/GPA_document"
 
-const projectImages = [
-  {
-    id: 1,
-    title: "Villa Moderna",
-    image: "/placeholder.svg?height=400&width=600",
-    description: "Diseño contemporáneo con líneas limpias",
-  },
-  {
-    id: 2,
-    title: "Casa Familiar",
-    image: "/placeholder.svg?height=400&width=600",
-    description: "Espacios amplios para la familia",
-  },
-  {
-    id: 3,
-    title: "Oficina Corporativa",
-    image: "/placeholder.svg?height=400&width=600",
-    description: "Ambiente profesional y funcional",
-  },
-  {
-    id: 4,
-    title: "Residencia Ecológica",
-    image: "/placeholder.svg?height=400&width=600",
-    description: "Construcción sustentable",
-  },
-]
-
-const stats = [
-  { title: "Clientes Activos", value: "24", icon: Users, color: "text-primary-medium" },
-  { title: "Proyectos en Curso", value: "12", icon: Building, color: "text-primary-light" },
-  { title: "Documentos Pendientes", value: "8", icon: FileText, color: "text-orange-500" },
-]
+interface PromotionImage {
+  DOC_id: number
+  DOC_file_path: string
+  DOC_name: string
+}
 
 export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [promotionImages, setPromotionImages] = useState<PromotionImage[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % projectImages.length)
-    }, 5000)
-    return () => clearInterval(timer)
+    fetchPromotionImages()
   }, [])
 
+  async function fetchPromotionImages() {
+    try {
+      setLoading(true)
+      const projectsRes = await fetch("/api/projects?include=all")
+      const projectsData = await projectsRes.json()
+      
+      const allPromotionImages: PromotionImage[] = []
+      
+      for (const project of projectsData.projects || []) {
+        const docsRes = await fetch(`/api/documents?project_id=${project.PRJ_id}`)
+        const docs = await docsRes.json()
+        
+        const projectPromotionImages = docs
+          .filter((doc: GPADocument) => doc.DOC_image_for_promotion === "Y")
+          .map((doc: GPADocument) => ({
+            DOC_id: doc.DOC_id,
+            DOC_file_path: doc.DOC_file_path,
+            DOC_name: doc.DOC_name
+          }))
+        
+        allPromotionImages.push(...projectPromotionImages)
+      }
+      
+      // Mezclar aleatoriamente y tomar entre 4 y 7 imágenes
+      const shuffled = allPromotionImages.sort(() => Math.random() - 0.5)
+      const selectedCount = Math.min(Math.max(4, Math.floor(Math.random() * 4) + 4), shuffled.length, 7)
+      setPromotionImages(shuffled.slice(0, selectedCount))
+    } catch (error) {
+      console.error("Error fetching promotion images:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (promotionImages.length === 0) return
+    
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % promotionImages.length)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [promotionImages])
+
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % projectImages.length)
+    setCurrentSlide((prev) => (prev + 1) % promotionImages.length)
   }
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + projectImages.length) % projectImages.length)
+    setCurrentSlide((prev) => (prev - 1 + promotionImages.length) % promotionImages.length)
   }
 
   return (
@@ -81,100 +97,77 @@ export default function HomePage() {
           <div className="container">
             <Card className="card-modern overflow-hidden animate-slide-up">
               <div className="relative">
-                <div className="overflow-hidden rounded-t-2xl">
-                  <div
-                    className="flex transition-all duration-700 ease-out"
-                    style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-                  >
-                    {projectImages.map((project) => (
-                      <div key={project.id} className="w-full flex-shrink-0 relative">
-                        <div className="aspect-[21/9] relative overflow-hidden">
-                          <img
-                            src={project.image || "/placeholder.svg"}
-                            alt={project.title}
-                            className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                          <div className="absolute bottom-8 left-8 text-white max-w-md">
-                            <h3 className="text-3xl font-bold mb-2 animate-slide-in-left">{project.title}</h3>
-                            <p className="text-lg opacity-90 animate-slide-in-left" style={{ animationDelay: "0.1s" }}>
-                              {project.description}
-                            </p>
+                {loading ? (
+                  <div className="aspect-[21/9] flex items-center justify-center bg-muted">
+                    <p className="text-muted-foreground">Cargando imágenes...</p>
+                  </div>
+                ) : promotionImages.length === 0 ? (
+                  <div className="aspect-[21/9] flex items-center justify-center bg-muted">
+                    <p className="text-muted-foreground">No hay imágenes de promoción disponibles</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-hidden rounded-t-2xl">
+                      <div
+                        className="flex transition-all duration-700 ease-out"
+                        style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                      >
+                        {promotionImages.map((image) => (
+                          <div key={image.DOC_id} className="w-full flex-shrink-0 relative">
+                            <div className="aspect-[21/9] relative overflow-hidden">
+                              <img
+                                src={image.DOC_file_path}
+                                alt={image.DOC_name}
+                                className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "/placeholder.svg"
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+                            </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
 
-                {/* Navigation Buttons */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute left-4 top-1/2 -translate-y-1/2 glass hover:bg-white/20 text-white border-white/20 h-12 w-12"
-                  onClick={prevSlide}
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </Button>
+                    {/* Navigation Buttons */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 glass hover:bg-white/20 text-white border-white/20 h-12 w-12"
+                      onClick={prevSlide}
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </Button>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 glass hover:bg-white/20 text-white border-white/20 h-12 w-12"
-                  onClick={nextSlide}
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 glass hover:bg-white/20 text-white border-white/20 h-12 w-12"
+                      onClick={nextSlide}
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </Button>
 
-                {/* Enhanced Indicators */}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
-                  <div className="flex space-x-3">
-                    {projectImages.map((_, index) => (
-                      <button
-                        key={index}
-                        className={`transition-all duration-300 rounded-full ${index === currentSlide
-                            ? "w-12 h-3 bg-white"
-                            : "w-3 h-3 bg-white/50 hover:bg-white/70"
-                          }`}
-                        onClick={() => setCurrentSlide(index)}
-                      />
-                    ))}
-                  </div>
-                </div>
+                    {/* Enhanced Indicators */}
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
+                      <div className="flex space-x-3">
+                        {promotionImages.map((_, index) => (
+                          <button
+                            key={index}
+                            className={`transition-all duration-300 rounded-full ${index === currentSlide
+                                ? "w-12 h-3 bg-white"
+                                : "w-3 h-3 bg-white/50 hover:bg-white/70"
+                              }`}
+                            onClick={() => setCurrentSlide(index)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </Card>
-          </div>
-        </section>
-        {/* Stats Section */}
-        <section className="py-16 lg:py-16">
-          <div className="container">
-            <div className="grid-responsive-auto">
-              {stats.map((stat, index) => (
-                <div
-                  key={stat.title}
-                  className="card-interactive bg-white/80 dark:bg-card/80 backdrop-blur-sm animate-slide-up"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="p-3 rounded-2xl bg-gradient-to-br from-primary-light/20 to-primary-medium/20">
-                        <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                      </div>
-                      <div className="text-right">
-                        <div className="text-3xl font-bold text-primary-dark">{stat.value}</div>
-                        <div className="text-sm text-muted-foreground">{stat.title}</div>
-                      </div>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full gradient-primary rounded-full transition-all duration-1000"
-                        style={{ width: `${70 + index * 10}%`, animationDelay: `${index * 0.2}s` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
         {/* Quick Actions */}
