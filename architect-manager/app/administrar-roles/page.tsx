@@ -12,14 +12,28 @@ import { ArrowLeft, Shield, Search, ChevronDown, ChevronRight, Edit, Trash2 } fr
 import { useAuth } from "@/components/auth-provider"
 import { GPARole } from "@/models/GPA_role"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function RolesPage() {
   const router = useRouter()
   const { isAdmin } = useAuth()
+  const { toast } = useToast()
   const [roles, setRoles] = useState<GPARole[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [expandedRoles, setExpandedRoles] = useState<Set<number>>(new Set())
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [roleToDelete, setRoleToDelete] = useState<GPARole | null>(null)
 
   // Redirect if not admin
   if (!isAdmin) {
@@ -38,19 +52,25 @@ export default function RolesPage() {
   }
 
   // Fetch roles from API
-  useEffect(() => {
-    const fetchRoles = async () => {
-      setLoading(true)
-      try {
-        const response = await fetch("/api/roles")
-        const data = await response.json()
-        setRoles(data.roles || [])
-      } catch (error) {
-        console.error("Error fetching roles:", error)
-      } finally {
-        setLoading(false)
-      }
+  const fetchRoles = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch("/api/roles")
+      const data = await response.json()
+      setRoles(data.roles || [])
+    } catch (error) {
+      console.error("Error fetching roles:", error)
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los roles",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchRoles()
   }, [])
 
@@ -75,15 +95,65 @@ export default function RolesPage() {
   // Handle edit role
   const handleEditRole = (e: React.MouseEvent, roleId: number) => {
     e.stopPropagation() // Prevent accordion toggle
-    // TODO: Implement edit functionality
-    console.log("Edit role:", roleId)
+    router.push(`/administrar-roles/${roleId}/editar`)
   }
 
-  // Handle delete role
-  const handleDeleteRole = (e: React.MouseEvent, roleId: number) => {
+  // Handle delete role - open confirmation dialog
+  const handleDeleteClick = (e: React.MouseEvent, role: GPARole) => {
     e.stopPropagation() // Prevent accordion toggle
-    // TODO: Implement delete functionality
-    console.log("Delete role:", roleId)
+    setRoleToDelete(role)
+    setDeleteDialogOpen(true)
+  }
+
+  // Confirm delete role
+  const handleDeleteConfirm = async () => {
+    if (!roleToDelete || !roleToDelete.ROL_id) return
+
+    try {
+      const response = await fetch(`/api/roles/${roleToDelete.ROL_id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        if (response.status === 404 && data.error === 'This role is associated with users') {
+          toast({
+            title: "No se puede eliminar el rol",
+            description: "Este rol está asociado con usuarios activos. Por favor, reasigna los usuarios a otro rol antes de eliminarlo.",
+            variant: "destructive",
+          })
+        } else {
+          toast({
+            title: "Error",
+            description: "No se pudo eliminar el rol",
+            variant: "destructive",
+          })
+        }
+        return
+      }
+
+      // Remove role from local state
+      setRoles((prevRoles) => prevRoles.filter((role) => role.ROL_id !== roleToDelete.ROL_id))
+      
+      // Remove from expanded roles if it was expanded
+      setExpandedRoles((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(roleToDelete.ROL_id!)
+        return newSet
+      })
+
+      toast({
+        title: "Rol eliminado",
+        description: `El rol "${roleToDelete.ROL_name}" ha sido eliminado exitosamente.`,
+        variant: "success",
+      })
+
+    } catch (error) {
+      console.error("Error deleting role:", error)
+    } finally {
+      setDeleteDialogOpen(false)
+      setRoleToDelete(null)
+    }
   }
 
   return (
@@ -203,7 +273,7 @@ export default function RolesPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={(e) => handleDeleteRole(e, role.ROL_id!)}
+                                  onClick={(e) => handleDeleteClick(e, role)}
                                   className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -284,6 +354,27 @@ export default function RolesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará el rol <strong>"{roleToDelete?.ROL_name}"</strong> permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   )
 }

@@ -189,3 +189,72 @@ export async function PUT(
     )
   }
 }
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const resolvedParams = await params;
+    const rolId = parseInt(resolvedParams.id);
+    
+    if (isNaN(rolId)) {
+      return NextResponse.json({ error: "Invalid role ID." }, { status: 400 });
+    }
+    
+    const result = await executeQuery(
+      `SELECT 
+        r.ROL_id,
+        r.ROL_name,
+        r.ROL_notifications_for
+      FROM gpa_roles r
+      WHERE r.ROL_id = ?`,
+      [rolId]
+    );
+    
+    if (!result || result.length === 0) {
+      return NextResponse.json({ error: "Role not found." }, { status: 404 });
+    }
+    
+    const role: GPARole = result[0] as GPARole;
+    
+    // Fetch permissions for the role
+    const permissionsRes = await fetch(`${new URL(request.url).origin}/api/permission?rol_id=${role.ROL_id}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!permissionsRes.ok) {
+      return NextResponse.json(
+        { error: "Server Error: Error in permission request for role" },
+        { status: 500 }
+      );
+    }
+    
+    const permissionsData = await permissionsRes.json();
+    role.permissions = permissionsData.permissions as GPAPermission[];
+    
+    // Fetch notification types for the role
+    const notificationsTypesRes = await fetch(`${new URL(request.url).origin}/api/notifications_types?rol_id=${role.ROL_id}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!notificationsTypesRes.ok) {
+      return NextResponse.json(
+        { error: "Server Error: Error in notification types request for role" },
+        { status: 500 }
+      );
+    }
+    
+    const notificationsTypesData = await notificationsTypesRes.json();
+    role.notifications_types = notificationsTypesData.notificationsTypes as GPANotificationsTypes[];
+    
+    return NextResponse.json({ 
+      message: "Role requested successfully",
+      role 
+    }, { status: 200 });
+    
+  } catch (error) {
+    console.error('Database error:', error);
+    return NextResponse.json(
+      { error: "Server Error: Error fetching role." },
+      { status: 500 }
+    );
+  }
+}
