@@ -1,3 +1,6 @@
+npm install
+npm install pnpm
+
 pnpm install mysql2
 pnpm install @react-oauth/google@latest
 pnpm install jsonwebtoken
