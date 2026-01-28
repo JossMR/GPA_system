@@ -497,7 +497,6 @@ export default function NotificationsPage() {
                         <div
                           className={`p-2 rounded-full ${tipoColors[notification.notification_type_name as keyof typeof tipoColors]} text-white`}
                         >
-                          <IconComponent className="h-4 w-4" />
                         </div>
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center space-x-2">

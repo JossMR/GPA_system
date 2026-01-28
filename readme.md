@@ -1,5 +1,5 @@
 npm install
-npm install pnpm
+npm install -g pnpm
 
 pnpm install mysql2
 pnpm install @react-oauth/google@latest
