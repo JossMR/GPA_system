@@ -79,10 +79,41 @@ export async function POST(request: NextRequest) {
 
     // 5. Check if user exists in our database - using sub as unique identifier
     let users = await executeQuery(
-      "SELECT * FROM gpa_users gpa_u WHERE gpa_u.usr_email = ? LIMIT 1",
+      `SELECT 
+    gpa_u.*,
+    gpa_r.*,
+    GROUP_CONCAT(
+      CONCAT(gpa_s.SCN_name, ':', gpa_pt.PTY_name) 
+      SEPARATOR '|'
+    ) as permissions_data
+  FROM gpa_users gpa_u 
+  JOIN GPA_Roles gpa_r ON gpa_u.USR_role_id = gpa_r.ROL_id 
+  LEFT JOIN GPA_PermissionXGPA_Roles gpa_pxr ON gpa_r.ROL_id = gpa_pxr.ROL_id
+  LEFT JOIN GPA_Permission gpa_p ON gpa_pxr.PSN_id = gpa_p.PSN_id
+  LEFT JOIN GPA_Screen gpa_s ON gpa_p.SCN_id = gpa_s.SCN_id
+  LEFT JOIN GPA_Permission_type gpa_pt ON gpa_p.PTY_id = gpa_pt.PTY_id
+  WHERE gpa_u.USR_email = ? 
+  GROUP BY gpa_u.USR_id
+  LIMIT 1`,
       [email]
     );
-    let user= users[0]
+
+    let user = users[0];
+
+    // Convertir la cadena de permisos en un array de objetos
+    if (user && user.permissions_data) {
+      user.permissions = user.permissions_data
+        .split('|')
+        .map((perm: string) => {
+          const [screen, permission_type] = perm.split(':');
+          return { screen, permission_type };
+        })
+        .filter((p: any) => p.screen && p.permission_type);
+      delete user.permissions_data; // Limpiar el campo temporal
+    } else if (user) {
+      user.permissions = [];
+    }
+    console.log(user);
     /*
     // If user exists with email but not googleId, update the user
     if (!user && email) {
@@ -94,7 +125,7 @@ export async function POST(request: NextRequest) {
       }
     }
     */
-    if (!user || user.length===0) {
+    if (!user || user.length === 0) {
       return NextResponse.json(
         {
           error: "User not registered in the system",
@@ -103,7 +134,7 @@ export async function POST(request: NextRequest) {
         { status: 401 },
       )
     }
-    if (user.USR_active===0) {
+    if (user.USR_active === 0) {
       return NextResponse.json({ error: "Account is inactive" }, { status: 403 })
     }
 
@@ -137,7 +168,7 @@ export async function POST(request: NextRequest) {
         slastname: user.USR_s_lastname,
         active: user.USR_active,
         roleid: user.USR_role_id,
-        picture: payload?.picture, 
+        picture: payload?.picture,
       },
     })
 

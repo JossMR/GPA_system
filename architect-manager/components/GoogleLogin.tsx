@@ -5,6 +5,7 @@ import { GoogleLogin } from "@react-oauth/google"
 import { useState, useEffect } from "react"
 import { User, useAuth } from "@/components/auth-provider"
 import { Loader2 } from "lucide-react"
+import { permission } from "process"
 
 interface GoogleLoginButtonProps {
   onSuccessRedirect: () => void
@@ -85,7 +86,8 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
         slastname: data.user.slastname,
         picture: data.user.picture,
         roleid: data.user.roleid,
-        email: data.user.email
+        email: data.user.email,
+        permissions: data.user.permissions
       }
       login(user);
       // Redirect to the success page

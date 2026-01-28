@@ -11,6 +11,7 @@ export interface User {
   picture: string
   roleid: number
   email: string
+  permissions: { screen: string; permission_type: string }[]
 }
 
 interface AuthContextType {
