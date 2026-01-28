@@ -20,6 +20,7 @@ interface AuthContextType {
   login: (user: User) => Promise<boolean>
   logout: () => void
   toggleAdminMode: () => void
+  hasScreenPermission: (item: { name: string; href: string; icon: any }) => boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -55,13 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
     setIsAdmin(false)
     try {
-      const response = await fetch("/api/auth/logout",{
-        method:"POST",
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         }
       })
-      if(!response.ok){
+      if (!response.ok) {
 
       }
     } catch {
@@ -75,8 +76,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("adminMode", JSON.stringify(newAdminMode))
   }
 
+  function hasScreenPermission(item: { name: string; href: string; icon: any }): boolean {
+    if(user?.roleid === 1) {
+      return true;
+    }
+
+    switch (item.name) {
+      case "Clientes":
+        return user?.permissions.some(p => p.screen === "clientes" && (p.permission_type === "View" || p.permission_type === "Edit" || p.permission_type === "Create" || p.permission_type === "All")) || isAdmin;
+      case "Proyectos":
+        return user?.permissions.some(p => p.screen === "proyectos" && (p.permission_type === "View" || p.permission_type === "Edit" || p.permission_type === "Create" || p.permission_type === "All")) || isAdmin;
+      case "Pagos":
+        return user?.permissions.some(p => p.screen === "pagos" && (p.permission_type === "View" || p.permission_type === "Edit" || p.permission_type === "Create" || p.permission_type === "All")) || isAdmin;
+      case "Reportes":
+        return user?.permissions.some(p => p.screen === "reportes" && (p.permission_type === "View" || p.permission_type === "Edit" || p.permission_type === "Create" || p.permission_type === "All")) || isAdmin;
+      default:
+        return true;
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isAdmin, login, logout, toggleAdminMode }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, isAdmin, login, logout, toggleAdminMode, hasScreenPermission }}>{children}</AuthContext.Provider>
   )
 }
 

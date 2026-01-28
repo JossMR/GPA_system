@@ -169,6 +169,7 @@ export async function POST(request: NextRequest) {
         active: user.USR_active,
         roleid: user.USR_role_id,
         picture: payload?.picture,
+        permissions: user.permissions || []
       },
     })
 

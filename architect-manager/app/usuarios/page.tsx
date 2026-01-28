@@ -332,7 +332,7 @@ export default function UsersPage() {
                           variant={user.ROL_name === "admin" ? "default" : "secondary"}
                           className={user.ROL_name === "admin" ? "bg-primary-medium" : ""}
                         >
-                          {user.ROL_name === "admin" ? "Administrador" : "Usuario"}
+                          {user.ROL_name === "admin" ? "Administrador" : user.ROL_name}
                         </Badge>
                       </TableCell>
                       <TableCell>

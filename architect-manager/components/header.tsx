@@ -23,7 +23,7 @@ import { ThemeToggle } from "./theme-toggle"
 export function Header() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
-  const { user, isAdmin, logout, toggleAdminMode } = useAuth()
+  const { user, isAdmin, logout, toggleAdminMode, hasScreenPermission} = useAuth()
   const { unreadCount } = useNotifications()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -35,7 +35,7 @@ export function Header() {
     { name: "Promoción", href: "/promocion", icon: Settings },
     { name: "Reportes", href: "/reportes", icon: Settings },
     ...(isAdmin ? [{ name: "Usuarios", href: "/usuarios", icon: Shield }] : [])
-    ]
+  ]
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
@@ -61,14 +61,13 @@ export function Header() {
         {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center space-x-1">
           {navigation.map((item) => (
-            <Link
+            hasScreenPermission(item) && <Link
               key={item.name}
               href={item.href}
-              className={`nav-link px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${
-                pathname === item.href 
-                  ? "active bg-primary/10 text-primary" 
+              className={`nav-link px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${pathname === item.href
+                  ? "active bg-primary/10 text-primary"
                   : "text-muted-foreground hover:text-primary hover:bg-primary/5"
-              }`}
+                }`}
             >
               {item.name}
             </Link>
@@ -130,7 +129,7 @@ export function Header() {
                 <User className="mr-3 h-4 w-4" />
                 Ver perfil
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="hover:bg-primary/5 transition-colors duration-200"
                 onClick={toggleAdminMode}
               >
@@ -142,7 +141,7 @@ export function Header() {
                 Configuración
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
                 onClick={logout}
               >
@@ -184,11 +183,10 @@ export function Header() {
                       <Link
                         key={item.name}
                         href={item.href}
-                        className={`flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-300 ${
-                          pathname === item.href
+                        className={`flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-300 ${pathname === item.href
                             ? "bg-primary/10 text-primary"
                             : "text-muted-foreground hover:text-primary hover:bg-primary/5"
-                        }`}
+                          }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <item.icon className="h-5 w-5" />
