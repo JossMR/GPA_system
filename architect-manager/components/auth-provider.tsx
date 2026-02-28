@@ -21,6 +21,7 @@ interface AuthContextType {
   logout: () => void
   toggleAdminMode: () => void
   hasScreenPermission: (item: { name: string; href: string; icon: any }) => boolean
+  getUserPermissions: () => { screen: string; permission_type: string }[]
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -95,8 +96,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function getUserPermissions() {
+    return user?.permissions || []
+  }
   return (
-    <AuthContext.Provider value={{ user, isAdmin, login, logout, toggleAdminMode, hasScreenPermission }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, isAdmin, login, logout, toggleAdminMode, hasScreenPermission, getUserPermissions }}>{children}</AuthContext.Provider>
   )
 }
 

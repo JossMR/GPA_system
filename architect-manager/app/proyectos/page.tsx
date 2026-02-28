@@ -39,7 +39,7 @@ const estadoColors = {
 }
 
 export default function ProjectsPage() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, getUserPermissions } = useAuth()
   const [projects, setProjects] = useState<GPAProject[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
@@ -72,7 +72,7 @@ export default function ProjectsPage() {
             <h1 className="text-3xl font-bold text-primary-dark">Proyectos</h1>
             <p className="text-muted-foreground">Gestiona todos tus proyectos arquitectónicos</p>
           </div>
-          {isAdmin && (
+          {getUserPermissions().some(p => p.screen === "proyectos" && p.permission_type === "Create") || isAdmin || (
             <Link href="/proyectos/nuevo">
               <Button className="gradient-primary text-white hover:opacity-90">
                 <Plus className="mr-2 h-4 w-4" />
@@ -92,7 +92,7 @@ export default function ProjectsPage() {
               <div className="text-2xl font-bold">{projects?.length}</div>
             </CardContent>
           </Card>
-          
+
           <Card className="flex-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Proyectos por Estado</CardTitle>
@@ -227,7 +227,7 @@ export default function ProjectsPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        {project.PRJ_area_m2 
+                        {project.PRJ_area_m2
                           ? Number(project.PRJ_area_m2).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                           : "N/A"
                         }
@@ -245,12 +245,12 @@ export default function ProjectsPage() {
                       <TableCell>
                         <div className="flex items-center text-sm">
                           <Calendar className="mr-1 h-3 w-3 text-[#486b00]" />
-                          {project.PRJ_start_construction_date 
+                          {project.PRJ_start_construction_date
                             ? new Date(project.PRJ_start_construction_date).toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })
                             : "N/A"
                           }
                         </div>
@@ -258,24 +258,26 @@ export default function ProjectsPage() {
                       <TableCell>
                         <div className="flex items-center text-sm">
                           <Calendar className="mr-1 h-3 w-3 text-[#486b00]" />
-                          {project.PRJ_completion_date 
+                          {project.PRJ_completion_date
                             ? new Date(project.PRJ_completion_date).toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })
                             : "N/A"
                           }
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/proyectos/${project.PRJ_id}`}>
-                              <Eye className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          {isAdmin && (
+                          {(getUserPermissions().some(p => p.screen === "proyectos" && p.permission_type === "View")) && (
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link href={`/proyectos/${project.PRJ_id}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          )}
+                          {getUserPermissions().some(p => p.screen === "proyectos" && p.permission_type === "Edit") || isAdmin || (
                             <Link href={`/proyectos/${project.PRJ_id}/editar`}>
                               <Button variant="ghost" size="sm" className="hover:bg-[#c9e077]/20">
                                 <Edit className="h-4 w-4" />
