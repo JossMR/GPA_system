@@ -5,7 +5,7 @@ export function Footer() {
   return (
     <footer className="border-t border-border/40 bg-gray-100 dark:bg-muted/30 backdrop-blur-sm">
       <div className="container py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-8">
           {/* Brand Section */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
@@ -23,25 +23,6 @@ export function Footer() {
               Plataforma moderna para la gestión profesional de proyectos arquitectónicos, 
               clientes y pagos.
             </p>
-          </div>
-
-          {/* Quick Links */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-primary-dark">Enlaces Rápidos</h3>
-            <div className="space-y-2">
-              <Link href="/clientes" className="block text-sm text-muted-foreground hover:text-primary transition-colors duration-200">
-                Clientes
-              </Link>
-              <Link href="/proyectos" className="block text-sm text-muted-foreground hover:text-primary transition-colors duration-200">
-                Proyectos
-              </Link>
-              <Link href="/pagos" className="block text-sm text-muted-foreground hover:text-primary transition-colors duration-200">
-                Pagos
-              </Link>
-              <Link href="/reportes" className="block text-sm text-muted-foreground hover:text-primary transition-colors duration-200">
-                Reportes
-              </Link>
-            </div>
           </div>
         </div>
 

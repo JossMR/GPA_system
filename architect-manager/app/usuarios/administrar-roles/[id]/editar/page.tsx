@@ -372,7 +372,7 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
                     {permissions.map((permission, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-3 border rounded-lg"
+                        className="flex items-center dark:hover:bg-slate-900 hover:bg-slate-50 justify-between p-3 border rounded-lg"
                       >
                         <div className="flex items-center gap-3">
                           <span className="font-medium">{permission.screen_name}</span>
@@ -431,7 +431,7 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
                     <p>No hay tipos de notificación asignados</p>
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 dark:hover:bg-slate-900 hover:bg-slate-50">
                     {notificationTypes.map((nt) => (
                       <Badge
                         key={nt.NTP_id}
@@ -502,7 +502,7 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
                 availablePermissionsForDialog.map((permission, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 cursor-pointer"
+                    className="flex items-center justify-between p-3 border rounded-lg dark:hover:bg-slate-900 hover:bg-slate-50 cursor-pointer"
                     onClick={() => handleAddPermission(permission)}
                   >
                     <div className="flex items-center gap-3">
@@ -552,7 +552,7 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
                 availableNTForDialog.map((nt) => (
                   <div
                     key={nt.NTP_id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 cursor-pointer"
+                    className="flex items-center justify-between p-3 border rounded-lg dark:hover:bg-slate-900 hover:bg-slate-50 cursor-pointer"
                     onClick={() => handleAddNotificationType(nt.NTP_id!)}
                   >
                     <span>{nt.NTP_name}</span>

@@ -23,7 +23,7 @@ import { ThemeToggle } from "./theme-toggle"
 export function Header() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
-  const { user, isAdmin, logout, toggleAdminMode, hasScreenPermission} = useAuth()
+  const { user, isAdmin, logout, toggleAdminMode, hasScreenPermission } = useAuth()
   const { unreadCount } = useNotifications()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -65,8 +65,8 @@ export function Header() {
               key={item.name}
               href={item.href}
               className={`nav-link px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${pathname === item.href
-                  ? "active bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                ? "active bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                 }`}
             >
               {item.name}
@@ -133,8 +133,10 @@ export function Header() {
                 className="hover:bg-primary/5 transition-colors duration-200"
                 onClick={toggleAdminMode}
               >
-                <Shield className="mr-3 h-4 w-4" />
-                {isAdmin ? "Desactivar" : "Activar"} modo admin
+                <Link className="flex" href="/">
+                  <Shield className="mr-3 h-4 w-4" />
+                  {isAdmin ? "Desactivar" : "Activar"} modo admin
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="hover:bg-primary/5 transition-colors duration-200">
                 <Settings className="mr-3 h-4 w-4" />
@@ -184,8 +186,8 @@ export function Header() {
                         key={item.name}
                         href={item.href}
                         className={`flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-300 ${pathname === item.href
-                            ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                           }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >

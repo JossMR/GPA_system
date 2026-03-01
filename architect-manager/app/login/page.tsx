@@ -36,7 +36,7 @@ export default function LoginPage() {
       <div
         className="relative inset-0 bg-cover bg-center"
         style={{
-          backgroundImage: "url('/placeholder.svg?height=1080&width=1920')",
+          backgroundImage: "url('/placeholderModernHouse.jpg?height=1080&width=1920')",
         }}
       ></div>
 
@@ -49,7 +49,7 @@ export default function LoginPage() {
             <div
               className="absolute inset-0 bg-cover bg-center opacity-30"
               style={{
-                backgroundImage: "url('/placeholder.svg?height=600&width=600')",
+                backgroundImage: "url('/placeholderModernHouse.jpg?height=600&width=600')",
               }}
             ></div>
 
@@ -57,10 +57,10 @@ export default function LoginPage() {
             <div className="relative z-10 flex flex-col justify-center h-full p-12 text-white">
               <div className="animate-slide-in-left">
                 <h1 className="text-5xl font-bold mb-6 leading-tight">
-                  Hello
+                  Gestor de
                   <br />
-                  <span className="bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
-                    World.
+                  <span className="bg-gradient-to-r from-green-400 to-orange-500 bg-clip-text text-transparent">
+                    Proyectos Arquitectónicos.
                   </span>
                 </h1>
                 <p className="text-base mb-8 text-white/90 leading-relaxed">

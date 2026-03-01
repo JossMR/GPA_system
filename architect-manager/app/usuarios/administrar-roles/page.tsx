@@ -239,7 +239,7 @@ export default function RolesPage() {
                   return (
                     <Card key={role.ROL_id} className="border-2">
                       <CardHeader 
-                        className="cursor-pointer hover:bg-slate-50 transition-colors"
+                        className="cursor-pointer dark:hover:bg-slate-900 hover:bg-slate-50 transition-colors rounded-md"
                         onClick={() => toggleRole(role.ROL_id!)}
                       >
                         <div className="flex items-center justify-between gap-4">
