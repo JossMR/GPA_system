@@ -34,23 +34,7 @@ export default function RolesPage() {
   const [expandedRoles, setExpandedRoles] = useState<Set<number>>(new Set())
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [roleToDelete, setRoleToDelete] = useState<GPARole | null>(null)
-
-  // Redirect if not admin
-  if (!isAdmin) {
-    return (
-      <MainLayout>
-        <div className="container py-8">
-          <Card>
-            <CardContent className="text-center py-8">
-              <h2 className="text-2xl font-bold mb-4">Acceso Denegado</h2>
-              <p className="text-muted-foreground">Necesitas permisos de administrador para acceder a esta sección.</p>
-            </CardContent>
-          </Card>
-        </div>
-      </MainLayout>
-    )
-  }
-
+  
   // Fetch roles from API
   const fetchRoles = async () => {
     setLoading(true)

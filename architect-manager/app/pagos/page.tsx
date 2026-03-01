@@ -31,7 +31,7 @@ const metodoPago = {
 }
 
 export default function PagosPage() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, getUserPermissions } = useAuth()
   const { toast } = useToast()
   const [payments, setPayments] = useState<GPAPayment[]>([])
   const [projects, setProjects] = useState<GPAProject[]>([])
@@ -374,7 +374,7 @@ export default function PagosPage() {
             </h1>
             <p className="text-muted-foreground">Administra todos los pagos y transacciones</p>
           </div>
-          {isAdmin && (
+          {(getUserPermissions().some(p => p.screen === "pagos-nuevo" && p.permission_type === "Create") || isAdmin) && (
             <Button onClick={handleNew} className="gradient-primary text-white hover:opacity-90">
               <Plus className="mr-2 h-4 w-4" />
               Registrar Pago

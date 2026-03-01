@@ -12,7 +12,7 @@ import { useAuth } from "@/components/auth-provider"
 import { GPAClient } from '@/models/GPA_client';
 
 export default function clientsPage() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, getUserPermissions } = useAuth()
   const [clients, setClients] = useState<GPAClient[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
@@ -63,7 +63,7 @@ export default function clientsPage() {
                 </p>
               </div>
 
-              {isAdmin && (
+              {(getUserPermissions().some(p => p.screen === "clientes-nuevo" && p.permission_type === "Create") || isAdmin) && (
                 <div className="flex gap-3">
                   <Link href="/clientes/nuevo">
                     <Button size="lg" className="btn-primary">
@@ -82,7 +82,7 @@ export default function clientsPage() {
                 <div className="text-sm text-green-700 dark:text-green-300 font-medium">Personas Cliente</div>
               </div>
               <div className="card-modern p-6 text-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{filteredClients.reduce((acc, c) => acc + c.CLI_projects_amount, 0) }</div>
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{filteredClients.reduce((acc, c) => acc + c.CLI_projects_amount, 0)}</div>
                 <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Proyectos</div>
               </div>
               <div className="card-modern p-6 text-center bg-gradient-to-br from-primary-lighter/50 to-primary-light/30 border-primary-light/30">
@@ -165,7 +165,7 @@ export default function clientsPage() {
                             {client.CLI_name.charAt(0)}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-lg text-primary-dark">{client.CLI_name+" "+client.CLI_f_lastname+" "+client.CLI_s_lastname}</h3>
+                            <h3 className="font-semibold text-lg text-primary-dark">{client.CLI_name + " " + client.CLI_f_lastname + " " + client.CLI_s_lastname}</h3>
                             <p className="text-sm text-muted-foreground">{client.CLI_identification}</p>
                           </div>
                         </div>
@@ -196,13 +196,15 @@ export default function clientsPage() {
 
                       {/* Actions */}
                       <div className="flex gap-2 pt-2">
-                        <Link href={`/clientes/${client.CLI_id}`} className="flex-1">
-                          <Button variant="outline" size="sm" className="w-full btn-ghost">
-                            <Eye className="mr-2 h-4 w-4" />
-                            Ver
-                          </Button>
-                        </Link>
-                        {isAdmin && (
+                        {(getUserPermissions().some(p => p.screen === "clientes-id" && p.permission_type === "View") || isAdmin) &&
+                          <Link href={`/clientes/${client.CLI_id}`} className="flex-1">
+                            <Button variant="outline" size="sm" className="w-full btn-ghost">
+                              <Eye className="mr-2 h-4 w-4" />
+                              Ver
+                            </Button>
+                          </Link>
+                        }
+                        {(getUserPermissions().some(p => p.screen === "clientes-id-editar" && p.permission_type === "Edit") || isAdmin) && (
                           <Link href={`/clientes/${client.CLI_id}/editar`} className="flex-1">
                             <Button variant="outline" size="sm" className="w-full btn-secondary">
                               <Edit className="mr-2 h-4 w-4" />

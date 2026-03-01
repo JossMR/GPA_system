@@ -32,7 +32,7 @@ function formatDate(dateString: string) {
 
 export default function UsersPage() {
   const router = useRouter()
-  const { isAdmin } = useAuth()
+  const { isAdmin, getUserPermissions } = useAuth()
   const [users, setUsers] = useState<GPAUser[]>([]);
   const [roles, setRoles] = useState<GPARole[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
@@ -44,22 +44,6 @@ export default function UsersPage() {
   const [selectedState, setSelectedState] = useState<boolean>(true);
   const selectedRole = roles.find(r => r.ROL_id === Number(selectedRoleId));
   const { toast } = useToast();
-
-  // Redirect if not admin
-  if (!isAdmin) {
-    return (
-      <MainLayout>
-        <div className="container py-8">
-          <Card>
-            <CardContent className="text-center py-8">
-              <h2 className="text-2xl font-bold mb-4">Acceso Denegado</h2>
-              <p className="text-muted-foreground">Necesitas permisos de administrador para acceder a esta sección.</p>
-            </CardContent>
-          </Card>
-        </div>
-      </MainLayout>
-    )
-  }
 
   const filteredUsers = users.filter(
     (user) =>
@@ -216,13 +200,13 @@ export default function UsersPage() {
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Usuario
             </Button>
-            <Button 
-              onClick={() => router.push('/usuarios/administrar-roles')} 
+            {(getUserPermissions().some(p => p.screen === "usuarios-administrar-roles" && p.permission_type === "All") || isAdmin) && (<Button
+              onClick={() => router.push('/usuarios/administrar-roles')}
               variant="outline"
               disabled={fetchingData}
             >
               Administrar Roles
-            </Button>
+            </Button>)}
           </div>
         </div>
 

@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function hasScreenPermission(item: { name: string; href: string; icon: any }): boolean {
-    if(user?.roleid === 1) {
+    if (user?.roleid === 1) {
       return true;
     }
 
@@ -91,12 +91,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return user?.permissions.some(p => p.screen === "pagos" && (p.permission_type === "View" || p.permission_type === "Edit" || p.permission_type === "Create" || p.permission_type === "All")) || isAdmin;
       case "Reportes":
         return user?.permissions.some(p => p.screen === "reportes" && (p.permission_type === "View" || p.permission_type === "Edit" || p.permission_type === "Create" || p.permission_type === "All")) || isAdmin;
+      case "Usuarios":
+        return user?.permissions.some(p => p.screen === "usuarios" && (p.permission_type === "All")) || isAdmin;
       default:
         return true;
     }
   }
 
   function getUserPermissions() {
+    console.log("User permissions:", user?.permissions)
     return user?.permissions || []
   }
   return (

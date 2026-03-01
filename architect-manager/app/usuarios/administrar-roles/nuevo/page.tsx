@@ -34,12 +34,6 @@ export default function NewRolePage() {
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false)
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false)
 
-  // Redirect if not admin
-  if (!isAdmin) {
-    router.push("/usuarios/administrar-roles")
-    return null
-  }
-
   // Fetch available notification types
   useEffect(() => {
     const fetchNotificationTypes = async () => {

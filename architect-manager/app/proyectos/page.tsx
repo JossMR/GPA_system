@@ -72,7 +72,7 @@ export default function ProjectsPage() {
             <h1 className="text-3xl font-bold text-primary-dark">Proyectos</h1>
             <p className="text-muted-foreground">Gestiona todos tus proyectos arquitectónicos</p>
           </div>
-          {getUserPermissions().some(p => p.screen === "proyectos" && p.permission_type === "Create") || isAdmin || (
+          {(getUserPermissions().some(p => p.screen === "proyectos-nuevo" && p.permission_type === "Create") || isAdmin) && (
             <Link href="/proyectos/nuevo">
               <Button className="gradient-primary text-white hover:opacity-90">
                 <Plus className="mr-2 h-4 w-4" />
@@ -270,14 +270,14 @@ export default function ProjectsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          {(getUserPermissions().some(p => p.screen === "proyectos" && p.permission_type === "View")) && (
+                          {(getUserPermissions().some(p => p.screen === "proyectos-id" && p.permission_type === "View") || isAdmin) && (
                             <Button variant="ghost" size="sm" asChild>
                               <Link href={`/proyectos/${project.PRJ_id}`}>
                                 <Eye className="h-4 w-4" />
                               </Link>
                             </Button>
                           )}
-                          {getUserPermissions().some(p => p.screen === "proyectos" && p.permission_type === "Edit") || isAdmin || (
+                          {(getUserPermissions().some(p => p.screen === "proyectos-id-editar" && p.permission_type === "Edit") || isAdmin )&& (
                             <Link href={`/proyectos/${project.PRJ_id}/editar`}>
                               <Button variant="ghost" size="sm" className="hover:bg-[#c9e077]/20">
                                 <Edit className="h-4 w-4" />

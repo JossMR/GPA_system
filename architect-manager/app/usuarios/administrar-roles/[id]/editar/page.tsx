@@ -37,12 +37,6 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false)
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false)
 
-  // Redirect if not admin
-  if (!isAdmin) {
-    router.push("/usuarios/administrar-roles")
-    return null
-  }
-
   // Fetch role data
   useEffect(() => {
     const fetchRole = async () => {
