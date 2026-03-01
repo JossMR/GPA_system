@@ -125,10 +125,6 @@ export function Header() {
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="hover:bg-primary/5 transition-colors duration-200">
-                <User className="mr-3 h-4 w-4" />
-                Ver perfil
-              </DropdownMenuItem>
               <DropdownMenuItem
                 className="hover:bg-primary/5 transition-colors duration-200"
                 onClick={toggleAdminMode}
@@ -137,10 +133,6 @@ export function Header() {
                   <Shield className="mr-3 h-4 w-4" />
                   {isAdmin ? "Desactivar" : "Activar"} modo admin
                 </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="hover:bg-primary/5 transition-colors duration-200">
-                <Settings className="mr-3 h-4 w-4" />
-                Configuración
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
