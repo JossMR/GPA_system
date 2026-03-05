@@ -97,11 +97,21 @@ export async function PUT(
     }
     
     updateValues.push(additionId)
+
+    const diferenceCost = body.ATN_cost !== undefined ? body.ATN_cost - (existing[0].ATN_cost || 0) : 0
     
+    const updateProjectQuery = `
+      UPDATE GPA_Projects
+      SET PRJ_total_cost = PRJ_total_cost + ?
+      WHERE PRJ_id = (SELECT ATN_project_id FROM GPA_Additions WHERE ATN_id = ?)
+    `
+
+    await executeQuery(updateProjectQuery, [diferenceCost, additionId])
+
     const updateQuery = `UPDATE GPA_Additions SET ${updateFields.join(', ')} WHERE ATN_id = ?`
     
     await executeQuery(updateQuery, updateValues)
-    
+
     return NextResponse.json({ 
       message: 'Addition updated successfully'
     }, { status: 200 })

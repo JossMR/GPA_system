@@ -72,7 +72,11 @@ export async function POST(request: NextRequest) {
         ATN_date
       ) VALUES (?, ?, ?, ?, ?)
     `
-    
+    const updateProjectQuery = `
+      UPDATE GPA_Projects 
+      SET PRJ_total_cost = PRJ_total_cost + ? 
+      WHERE PRJ_id = ?
+    `
     const result = await executeQuery(insertQuery, [
       additionData.ATN_name,
       additionData.ATN_description || null,
@@ -81,6 +85,12 @@ export async function POST(request: NextRequest) {
       additionData.ATN_date
     ]) as any
     
+    // Update the project's total cost
+    await executeQuery(updateProjectQuery, [
+      additionData.ATN_cost,
+      additionData.ATN_project_id
+    ])
+
     return NextResponse.json({ 
       message: 'Addition created successfully',
       additionId: result.insertId
