@@ -102,7 +102,7 @@ export async function PUT(
     
     const updateProjectQuery = `
       UPDATE GPA_Projects
-      SET PRJ_total_cost = PRJ_total_cost + ?
+      SET PRJ_remaining_amount = PRJ_remaining_amount + ?
       WHERE PRJ_id = (SELECT ATN_project_id FROM GPA_Additions WHERE ATN_id = ?)
     `
 

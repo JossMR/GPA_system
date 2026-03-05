@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     `
     const updateProjectQuery = `
       UPDATE GPA_Projects 
-      SET PRJ_total_cost = PRJ_total_cost + ? 
+      SET PRJ_remaining_amount = PRJ_remaining_amount + ? 
       WHERE PRJ_id = ?
     `
     const result = await executeQuery(insertQuery, [
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       additionData.ATN_date
     ]) as any
     
-    // Update the project's total cost
+    // Update the project's remaining amount
     await executeQuery(updateProjectQuery, [
       additionData.ATN_cost,
       additionData.ATN_project_id
