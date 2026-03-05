@@ -1304,7 +1304,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-[#7d4427]/20">
+            {/*<Card className="border-[#7d4427]/20">
               <CardHeader>
                 <CardTitle className="text-[#7d4427]">Historial de Cambios</CardTitle>
               </CardHeader>
@@ -1324,7 +1324,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card>*/}
           </div>
         </form>
         {/* ClientSelector modal */}

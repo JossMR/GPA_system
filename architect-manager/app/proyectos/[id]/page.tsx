@@ -45,32 +45,6 @@ const estadoProyectoES: Record<string, string> = {
   "Professional Withdrawal": "Retiro Profesional",
   "Conditioned": "Condicionado",
 }
-const tipoObservacionColors = {
-  progreso: "bg-green-500",
-  cambio: "bg-blue-500",
-  problema: "bg-red-500",
-}
-const mockProyecto = {
-  presupuesto: 150000,
-}
-const costosExtra = [
-  { descripcion: "Permiso municipal", monto: 5000 },
-  { descripcion: "Estudio de suelos", monto: 3500 },
-]
-const pagos = [
-  { descripcion: "Anticipo", monto: 20000 },
-  { descripcion: "Segundo pago", monto: 15000 },
-]
-
-interface Document {
-  id: string
-  name: string
-  type: string
-  size: number
-  uploadDate: string
-  category: "plano" | "permiso" | "contrato" | "foto" | "otro"
-  url?: string
-}
 
 export default function ViewProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { isAdmin } = useAuth()
@@ -82,6 +56,8 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
   const [error, setError] = useState<string | null>(null)
   const [isObservacionDialogOpen, setIsObservacionDialogOpen] = useState(false)
   const [nuevaObservacion, setNuevaObservacion] = useState("")
+  const [costosExtra, setCostosExtra] = useState<any []>([])
+  const [pagos, setPagos] = useState<any []>([])
 
   // Charge project data
   useEffect(() => {
@@ -93,6 +69,20 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
         if (!response.ok) throw new Error("No se pudo cargar el proyecto")
         const data = await response.json()
         setProject(data.project)
+
+        // Cargar pagos del proyecto
+        const paymentsRes = await fetch(`/api/payments?project_id=${id}`)
+        if (paymentsRes.ok) {
+          const paymentsData = await paymentsRes.json()
+          setPagos(paymentsData || [])
+        }
+
+        // Cargar costos extra del proyecto
+        const additionsRes = await fetch(`/api/additions?project_id=${id}`)
+        if (additionsRes.ok) {
+          const additionsData = await additionsRes.json()
+          setCostosExtra(additionsData || [])
+        }
       } catch (err: any) {
         setError(err.message)
       } finally {
@@ -302,35 +292,32 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
                 <div className="text-sm space-y-3">
                   <div className="flex justify-between">
                     <span>Presupuesto base:</span>
-                    <span className="font-medium">{formatCurrency(mockProyecto.presupuesto)}</span>
+                    <span className="font-medium">{formatCurrency(project.PRJ_budget)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Costos extra:</span>
                     <span className="font-medium text-[#7d4427]">
-                      +{formatCurrency(costosExtra.reduce((sum, c) => sum + c.monto, 0))}
+                      +{formatCurrency(costosExtra.reduce((sum, c) => sum + (Number(c.ATN_cost) || 0), 0))}
                     </span>
                   </div>
                   <hr className="border-[#a2c523]/30" />
                   <div className="flex justify-between">
                     <span>Total presupuestado:</span>
                     <span className="font-bold text-[#486b00]">
-                      {formatCurrency(mockProyecto.presupuesto + costosExtra.reduce((sum, c) => sum + c.monto, 0))}
+                      {formatCurrency(Number(project.PRJ_budget ?? 0) + costosExtra.reduce((sum, c) => sum + (Number(c.ATN_cost) || 0), 0))}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Total pagado:</span>
                     <span className="font-medium text-green-600">
-                      {formatCurrency(pagos.reduce((sum, p) => sum + p.monto, 0))}
+                      {formatCurrency(pagos.reduce((sum, p) => sum + (Number(p.PAY_amount_paid) || 0), 0))}
                     </span>
                   </div>
                   <hr className="border-[#a2c523]/30" />
                   <div className="flex justify-between">
                     <span>Saldo restante:</span>
                     <span className="font-bold text-[#7d4427]">
-                      {formatCurrency(mockProyecto.presupuesto +
-                        costosExtra.reduce((sum, c) => sum + c.monto, 0) -
-                        pagos.reduce((sum, p) => sum + p.monto, 0)
-                      )}
+                      {formatCurrency(Number(project.PRJ_remaining_amount ?? 0))}
                     </span>
                   </div>
                 </div>
