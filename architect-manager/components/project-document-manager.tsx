@@ -537,14 +537,14 @@ export function ProjectDocumentManager({
                                             </Badge>
                                         </div>
                                         <div className="flex items-center space-x-1 ml-2">
-                                            <Button
+                                            {/*<Button
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => previewDoc(doc)}
                                                 className="hover:bg-[#c9e077]/20 h-8 w-8 p-0"
                                             >
                                                 <Eye className="h-4 w-4" />
-                                            </Button>
+                                            </Button>*/}
                                             <Button
                                                 variant="ghost"
                                                 size="sm"

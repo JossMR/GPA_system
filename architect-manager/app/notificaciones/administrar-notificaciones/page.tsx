@@ -189,7 +189,7 @@ export default function AdminNotificationsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {filteredNotifications.filter(n => n.notification_type_name === "proyectos").length}
+                {filteredNotifications.filter(n => n.notification_type_name === "Proyectos").length}
               </div>
             </CardContent>
           </Card>
@@ -202,7 +202,7 @@ export default function AdminNotificationsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {filteredNotifications.filter(n => n.notification_type_name === "personal").length}
+                {filteredNotifications.filter(n => n.notification_type_name === "Personal").length}
               </div>
             </CardContent>
           </Card>
@@ -268,7 +268,6 @@ export default function AdminNotificationsPage() {
                         <div
                           className={`p-2 rounded-full ${tipoColors[notification.notification_type_name as keyof typeof tipoColors]} text-white`}
                         >
-                          <IconComponent className="h-4 w-4" />
                         </div>
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center space-x-2">
