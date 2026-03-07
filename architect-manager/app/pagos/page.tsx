@@ -65,6 +65,7 @@ export default function PagosPage() {
   // Form state
   const [formData, setFormData] = useState({
     PAY_payment_date: "",
+    PAY_bill_number: "",
     PAY_amount_paid: "",
     PAY_method: "",
     PAY_project_id: "",
@@ -154,9 +155,9 @@ export default function PagosPage() {
       const matchesSearch =
         (payment.projectCaseNumber || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         (payment.projectClientName || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-      
+
       const matchesState = stateFilter === "todos" || (payment.projectState) === stateFilter
-      
+
       return matchesSearch && matchesState
     })
   }, [payments, debouncedSearchTerm, stateFilter])
@@ -175,6 +176,7 @@ export default function PagosPage() {
       PAY_amount_paid: payment.PAY_amount_paid?.toString() || "",
       PAY_method: payment.PAY_method || "",
       PAY_project_id: payment.PAY_project_id?.toString() || "",
+      PAY_bill_number: payment.PAY_bill_number || "",
       PAY_description: payment.PAY_description || "",
     })
     setCoverFullAmount(false)
@@ -192,6 +194,7 @@ export default function PagosPage() {
       PAY_method: payment.PAY_method || "",
       PAY_project_id: payment.PAY_project_id?.toString() || "",
       PAY_description: payment.PAY_description || "",
+      PAY_bill_number: payment.PAY_bill_number || "",
     })
     setCoverFullAmount(false)
     setViewMode(true)
@@ -202,6 +205,7 @@ export default function PagosPage() {
     setSelectedPayment(null)
     setFormData({
       PAY_payment_date: "",
+      PAY_bill_number: "",
       PAY_amount_paid: "",
       PAY_method: "",
       PAY_project_id: "",
@@ -289,6 +293,7 @@ export default function PagosPage() {
 
       const paymentData = {
         PAY_payment_date: formData.PAY_payment_date,
+        PAY_bill_number: formData.PAY_bill_number || null,
         PAY_amount_paid: amountPaid,
         PAY_method: formData.PAY_method,
         PAY_project_id: projectId,
@@ -345,6 +350,7 @@ export default function PagosPage() {
       setSelectedPayment(null)
       setFormData({
         PAY_payment_date: "",
+        PAY_bill_number: "",
         PAY_amount_paid: "",
         PAY_method: "",
         PAY_project_id: "",
@@ -485,6 +491,7 @@ export default function PagosPage() {
                   <TableRow>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Número de Caso</TableHead>
+                    <TableHead>Número de Factura</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Monto</TableHead>
                     <TableHead>Método</TableHead>
@@ -506,6 +513,11 @@ export default function PagosPage() {
                           <div className="font-medium">{payment.projectCaseNumber || "N/A"}</div>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{payment.PAY_bill_number || "N/A"}</div>
+                        </div>
+                      </TableCell>
                       <TableCell>{payment.projectClientName || "N/A"}</TableCell>
                       <TableCell>
                         <div className="font-semibold text-[#2e4600]">{formatCurrency(payment.PAY_amount_paid)}</div>
@@ -522,9 +534,9 @@ export default function PagosPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => handleView(payment)}
                             className="hover:bg-[#c9e077]/20"
                           >
@@ -558,8 +570,8 @@ export default function PagosPage() {
                 {viewMode ? "Detalles del Pago" : (selectedPayment ? "Editar Pago" : "Registrar Nuevo Pago")}
               </DialogTitle>
               <DialogDescription>
-                {viewMode 
-                  ? "Información completa del pago registrado" 
+                {viewMode
+                  ? "Información completa del pago registrado"
                   : (selectedPayment ? "Modifica los datos del pago" : "Ingresa los detalles del nuevo pago")
                 }
               </DialogDescription>
@@ -573,7 +585,7 @@ export default function PagosPage() {
                   <Input
                     value={(() => {
                       const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
-                      return project 
+                      return project
                         ? `${project.PRJ_case_number} - ${project.client_name} - ${formatCurrency(project.PRJ_budget)}`
                         : "N/A"
                     })()}
@@ -598,6 +610,31 @@ export default function PagosPage() {
                   </Select>
                 )}
               </div>
+              <div>
+                <label htmlFor="numero-factura">
+                  Número de Factura
+                </label>
+                <Input
+                  id="numero-factura"
+                  type={viewMode ? "text" : "text"}
+                  placeholder="0001"
+                  value={viewMode
+                    ? formData.PAY_bill_number
+                    : formData.PAY_bill_number
+                  }
+                  onChange={(e) => {
+                    if (!viewMode) {
+                      let value = e.target.value
+                      setFormData({ ...formData, PAY_bill_number: value })
+                    }
+                  }}
+                  className={viewMode ? "bg-gray-50 dark:bg-gray-800 border-[#a2c523]/30" : " border-[#a2c523]/30 focus:border-[#486b00]"}
+                  disabled={viewMode}
+                  required={!viewMode}
+                  min={!viewMode ? "0" : undefined}
+                  step={!viewMode ? "0.01" : undefined}
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
@@ -607,12 +644,12 @@ export default function PagosPage() {
                   <Input
                     id="fecha"
                     type={viewMode ? "text" : "date"}
-                    value={viewMode 
+                    value={viewMode
                       ? new Date(formData.PAY_payment_date).toLocaleDateString('es-ES', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
                       : formData.PAY_payment_date
                     }
                     onChange={(e) => setFormData({ ...formData, PAY_payment_date: e.target.value })}
@@ -631,7 +668,7 @@ export default function PagosPage() {
                       id="monto"
                       type={viewMode ? "text" : "number"}
                       placeholder="25000"
-                      value={viewMode 
+                      value={viewMode
                         ? formatCurrency(formData.PAY_amount_paid)
                         : formData.PAY_amount_paid
                       }
@@ -759,7 +796,7 @@ export default function PagosPage() {
                   const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
                   const remainingAmount = Number(project?.PRJ_remaining_amount || 0)
                   const amountPaid = Number(formData.PAY_amount_paid)
-                  
+
                   if (amountPaid > remainingAmount) {
                     return (
                       <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-3 rounded-md">
@@ -797,6 +834,7 @@ export default function PagosPage() {
                     setCoverFullAmount(false)
                     setFormData({
                       PAY_payment_date: "",
+                      PAY_bill_number: "",
                       PAY_amount_paid: "",
                       PAY_method: "",
                       PAY_project_id: "",
@@ -818,6 +856,7 @@ export default function PagosPage() {
                       setCoverFullAmount(false)
                       setFormData({
                         PAY_payment_date: "",
+                        PAY_bill_number: "",
                         PAY_amount_paid: "",
                         PAY_method: "",
                         PAY_project_id: "",

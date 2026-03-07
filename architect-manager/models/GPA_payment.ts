@@ -5,7 +5,7 @@ export interface GPAPayment {
   PAY_description?: string
   PAY_project_id: number
   PAY_method?: "Cash" | "Card" | "SINPE" | "Credit" | "Debit" | "Transfer" | "Deposit" | "Check"
-  PAY_bill_number?: string
+  PAY_bill_number?: string | null
   projectState?: string
   projectCaseNumber?: string
   projectClientName?: string
