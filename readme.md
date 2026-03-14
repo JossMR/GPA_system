@@ -27,4 +27,5 @@ pnpm install exceljs file-saver
 pnpm install --save-dev @types/file-saver
 pnpm install exceljs file-saver date-fns
 
+dentro de architect-manager ejecutar
 pnpm run dev
