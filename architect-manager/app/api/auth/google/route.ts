@@ -113,7 +113,6 @@ export async function POST(request: NextRequest) {
     } else if (user) {
       user.permissions = [];
     }
-    console.log(user);
     /*
     // If user exists with email but not googleId, update the user
     if (!user && email) {
