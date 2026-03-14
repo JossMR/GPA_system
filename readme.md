@@ -13,6 +13,7 @@ ScriptDB-GPA.sql
 Remplazar los datos del usuario y ejecutar el script
 ScriptPermission.sql
 
+dentro de architect-manager ejecutar
 npm install
 npm install -g pnpm
 
@@ -27,5 +28,4 @@ pnpm install exceljs file-saver
 pnpm install --save-dev @types/file-saver
 pnpm install exceljs file-saver date-fns
 
-dentro de architect-manager ejecutar
 pnpm run dev
