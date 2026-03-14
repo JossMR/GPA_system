@@ -125,7 +125,7 @@ export function Header() {
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
+              {/*<DropdownMenuItem
                 className="hover:bg-primary/5 transition-colors duration-200"
                 onClick={toggleAdminMode}
               >
@@ -133,7 +133,7 @@ export function Header() {
                   <Shield className="mr-3 h-4 w-4" />
                   {isAdmin ? "Desactivar" : "Activar"} modo admin
                 </Link>
-              </DropdownMenuItem>
+              </DropdownMenuItem>*/}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="hover:bg-red-50 hover:text-red-600 transition-colors duration-200"

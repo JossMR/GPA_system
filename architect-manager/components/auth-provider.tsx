@@ -99,7 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function getUserPermissions() {
-    console.log("User permissions:", user?.permissions)
     return user?.permissions || []
   }
   return (

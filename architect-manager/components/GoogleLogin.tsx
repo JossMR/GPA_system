@@ -6,7 +6,6 @@ import { useState, useEffect } from "react"
 import { User, useAuth } from "@/components/auth-provider"
 import { Loader2 } from "lucide-react"
 import { permission } from "process"
-
 interface GoogleLoginButtonProps {
   onSuccessRedirect: () => void
   setLoading: (value: boolean) => void
@@ -17,7 +16,7 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
   const [error, setError] = useState<string | null>(null)
   const [csrfToken, setCsrfToken] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth()
+  const { login, toggleAdminMode, isAdmin } = useAuth()
 
   // Generate CSRF token on component mount
   useEffect(() => {
@@ -90,6 +89,15 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
         permissions: data.user.permissions
       }
       login(user);
+      if (user.roleid === 1) {
+        if (!isAdmin) {
+          toggleAdminMode();
+        }
+      }else {
+        if (isAdmin) {
+          toggleAdminMode();
+        }
+      }
       // Redirect to the success page
       onSuccessRedirect()
     } catch (error) {
