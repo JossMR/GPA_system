@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -157,6 +157,9 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-80 p-0">
+              <SheetHeader>
+                <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
+              </SheetHeader>
               <div className="flex flex-col h-full">
                 <div className="p-6 border-b border-border">
                   <div className="flex items-center justify-between">
