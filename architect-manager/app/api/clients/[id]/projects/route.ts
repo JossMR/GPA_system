@@ -21,7 +21,6 @@ export async function GET(
         PRJ_completion_date,
         PRJ_logbook_number,
         PRJ_logbook_close_date,
-        PRJ_category_id,
         PRJ_type_id,
         PRJ_state,
         PRJ_final_price,

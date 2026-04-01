@@ -2,7 +2,7 @@ import { executeQuery, executeTransaction } from '@/lib/database';
 import { GPAClient } from '@/models/GPA_client';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest,{ params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const clientId = parseInt((await params).id);
     const result = await executeQuery(
@@ -45,12 +45,22 @@ export async function GET(request: NextRequest,{ params }: { params: Promise<{ i
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const clientId = params.id;
+    const clientId = parseInt((await params).id);
     const updatedClient = await request.json();
     if (!updatedClient) {
       return NextResponse.json(
-        { error: "Client data not received for update." },
+        { error: "No se brindó la suficiente información para actualizar el cliente." },
         { status: 400 }
+      );
+    }
+    const clients = await executeQuery(
+      'SELECT * FROM gpa_clients cl WHERE cl.cli_email = ?',
+      [updatedClient.CLI_email]
+    );
+    if (!Array.isArray(clients) || clients.length !== 0) {
+      return NextResponse.json(
+        { error: "Un cliente con este correo electrónico ya está registrado." },
+        { status: 401 }
       );
     }
     await executeTransaction([
@@ -117,10 +127,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       [clientId]
     );
     const client: GPAClient = result[0] as GPAClient;
-    return NextResponse.json({ message: "Client updated successfully", client }, { status: 200 });
+    return NextResponse.json({ message: "Cliente actualizado exitosamente", client }, { status: 200 });
   } catch (error) {
     return NextResponse.json(
-      { error: "Server Error: Error updating client." },
+      { error: "Error de Servidor: No se pudo actualizar el Cliente" },
       { status: 500 }
     );
   }

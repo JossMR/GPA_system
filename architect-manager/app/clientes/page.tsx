@@ -16,18 +16,36 @@ export default function clientsPage() {
   const [clients, setClients] = useState<GPAClient[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState<number>(1)
+  const [totalClients, setTotalClients] = useState(0)
+  const clientsPerPage = 9
+  const [totalPages, setTotalPages] = useState(0)
 
   const filteredClients = clients.filter(
     (client) =>
       client.CLI_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.CLI_f_lastname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.CLI_s_lastname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.CLI_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.CLI_identification.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   useEffect(() => {
+    const fetchTotalClients = async () => {
+      try {
+        const response = await fetch("/api/clients/count")
+        const data = await response.json()
+        setTotalClients(data.totalClients)
+        setTotalPages(Math.ceil(data.totalClients / clientsPerPage))
+      }
+      catch (error) {
+        console.error("Error fetching total clients:", error)
+      }
+    }
+    fetchTotalClients()
     const fetchClients = async () => {
       setLoading(true)
-      const response = await fetch("/api/clients")
+      const response = await fetch("/api/clients?page=" + page+"?limit=" + clientsPerPage)
       const data = await response.json()
       const requestedClients: GPAClient[] = data.clients
       setClients(requestedClients)
@@ -51,6 +69,7 @@ export default function clientsPage() {
     <MainLayout>
       <div className="min-h-screen bg-gradient-to-br from-primary-lighter/5 via-background to-primary-light/5">
         {/* Header Section */}
+        <a>totalClients: {totalClients}</a>
         <section className="py-12 lg:py-16">
           <div className="container">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
@@ -106,7 +125,7 @@ export default function clientsPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="search"
-                      placeholder="Buscar por nombre, email o número de cédula..."
+                      placeholder="Buscar por nombre, apellidos, email o número de cédula..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="input-modern pl-10"
@@ -215,6 +234,12 @@ export default function clientsPage() {
                       </div>
                     </div>
                   </div>
+                ))}
+                {"hola"}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((i) => (
+                  <button key={i} onClick={() => setPage(i)}>
+                    {i}
+                  </button>
                 ))}
               </div>
             )}

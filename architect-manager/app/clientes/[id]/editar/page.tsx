@@ -127,10 +127,9 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
       const updatedClientData: GPAClient = data.client
       router.push(`/clientes/${id}`)
     } catch (error) {
-      console.error(error instanceof Error ? error.message : "There was a problem updating the client.")
       toast({
         title: "Error",
-        description: "Ocurrió un error al actualizar el cliente.",
+        description: error instanceof Error ? error.message : "Ocurrió un error al actualizar el cliente.",
         variant: "destructive"
       })
     }
