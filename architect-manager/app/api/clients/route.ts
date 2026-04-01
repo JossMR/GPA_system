@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
         const newClient:GPAClient = await request.json();
         if (!newClient) {
             return NextResponse.json(
-                { error: "Client data not received for registration." },
+                { error: "No se brindó la suficiente información para registrar el cliente." },
                 { status: 400 }
             );
         }
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
         );
         if (!Array.isArray(clients) || clients.length !== 0) {
             return NextResponse.json(
-                { error: "A client with this email is already registered." },
+                { error: "Un cliente con este correo electrónico ya está registrado." },
                 { status: 401 }
             );
         }
@@ -88,12 +88,12 @@ export async function POST(request: NextRequest) {
         );
         const client: GPAClient = result[0] as GPAClient;
         return NextResponse.json({
-            message: "Client registered succesfully",
+            message: "Cliente registrado exitosamente",
             client
         }, { status: 200 });
     } catch (error) {
         return NextResponse.json(
-            { error: "Server Error: Error in the client register" },
+            { error: "Error de Servidor: No se pudo registrar el Cliente" },
             { status: 500 }
         );
     }

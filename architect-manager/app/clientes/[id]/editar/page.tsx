@@ -39,11 +39,6 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
   const { toast } = useToast()
   const { id } = use(params);
 
-  if (!isAdmin) {
-    router.push("/clientes")
-    return null
-  }
-
   // Fetch client data when component mounts
   useEffect(() => {
     const fetchClientData = async () => {

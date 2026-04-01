@@ -37,11 +37,6 @@ export default function NewClientPage() {
   const [district, setDistrict] = useState("")
   const { toast } = useToast()
 
-  if (!isAdmin) {
-    router.push("/clientes")
-    return null
-  }
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
@@ -85,14 +80,13 @@ export default function NewClientPage() {
         variant: "success"
       })
       const data = await response.json()
-      const registeredClient:GPAClient = data.client;
+      const registeredClient: GPAClient = data.client;
       router.push("/clientes")
     } catch (error) {
-      console.error(error instanceof Error ? error.message : "There was a problem creating the client.")
       toast({
         title: "Error",
-        description: "Ocurrió un error al guardar el cliente.",
-        variant: "success"
+        description: error instanceof Error ? error.message : "Ocurrió un error al registrar el cliente",
+        variant: "destructive"
       })
     }
     setLoading(false)
