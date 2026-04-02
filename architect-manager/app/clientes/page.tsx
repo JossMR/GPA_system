@@ -16,15 +16,28 @@ export default function clientsPage() {
   const [clients, setClients] = useState<GPAClient[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("")
-  const [loading, setLoading] = useState(true)
+  const [loadingClients, setLoadingClients] = useState(true)
   const [page, setPage] = useState<number>(1)
-  const [totalClients, setTotalClients] = useState(0)
+  const [filteredTotalClients, setFilteredTotalClients] = useState(0)
+  const [globalTotalClients, setGlobalTotalClients] = useState(0)
+  const [globalTotalProjects, setGlobalTotalProjects] = useState(0)
   const clientsPerPage = 8
   const [totalPages, setTotalPages] = useState(0)
 
+  const fetchGlobalTotals = async () => {
+    try {
+      const response = await fetch("/api/clients/count")
+      const data = await response.json()
+      setGlobalTotalClients(data.totalClients || 0)
+      setGlobalTotalProjects(data.totalProjects || 0)
+    } catch (error) {
+      console.error("Error fetching global totals:", error)
+    }
+  }
+
   const fetchClients = async (targetPage: number, targetSearch: string) => {
     try {
-      setLoading(true)
+      setLoadingClients(true)
       const params = new URLSearchParams({
         page: String(targetPage),
         limit: String(clientsPerPage),
@@ -36,14 +49,18 @@ export default function clientsPage() {
       const data = await response.json()
       const requestedClients: GPAClient[] = data.clients || []
       setClients(requestedClients)
-      setTotalClients(data.totalClients || 0)
+      setFilteredTotalClients(data.totalClients || 0)
       setTotalPages(data.totalPages || 0)
     } catch (error) {
       console.error("Error fetching clients:", error)
     } finally {
-      setLoading(false)
+      setLoadingClients(false)
     }
   }
+
+  useEffect(() => {
+    fetchGlobalTotals()
+  }, [])
 
   useEffect(() => {
     fetchClients(page, appliedSearchTerm)
@@ -67,17 +84,6 @@ export default function clientsPage() {
     setSearchTerm("")
     setAppliedSearchTerm("")
     setPage(1)
-  }
-
-  if (loading) {
-    return (
-      <MainLayout>
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#486b00] mr-4" />
-          <span className="text-muted-foreground">Cargando información de clientes...</span>
-        </div>
-      </MainLayout>
-    )
   }
 
   return (
@@ -109,18 +115,14 @@ export default function clientsPage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="card-modern p-6 text-center bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{clients.filter(c => c.CLI_isperson).length}</div>
-                <div className="text-sm text-green-700 dark:text-green-300 font-medium">Personas Cliente</div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="card-modern p-6 text-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{clients.reduce((acc, c) => acc + c.CLI_projects_amount, 0)}</div>
-                <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Proyectos</div>
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{globalTotalProjects}</div>
+                <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Proyectos (Global)</div>
               </div>
               <div className="card-modern p-6 text-center bg-gradient-to-br from-primary-lighter/50 to-primary-light/30 border-primary-light/30">
-                <div className="text-3xl font-bold text-primary-dark">{totalClients}</div>
-                <div className="text-sm text-primary-dark/80 font-medium">Total Clientes (Filtro)</div>
+                <div className="text-3xl font-bold text-primary-dark">{globalTotalClients}</div>
+                <div className="text-sm text-primary-dark/80 font-medium">Total Clientes (Global)</div>
               </div>
             </div>
           </div>
@@ -171,7 +173,12 @@ export default function clientsPage() {
         {/* Clients Grid */}
         <section className="pb-16">
           <div className="container">
-            {clients.length === 0 ? (
+            {loadingClients ? (
+              <div className="flex justify-center items-center min-h-[240px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#486b00] mr-4" />
+                <span className="text-muted-foreground">Cargando clientes...</span>
+              </div>
+            ) : clients.length === 0 ? (
               <div className="text-center py-16">
                 <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
                   <Users className="h-12 w-12 text-muted-foreground" />
@@ -296,6 +303,10 @@ export default function clientsPage() {
                     </Button>
                   </div>
                 )}
+
+                <div className="text-center text-sm text-muted-foreground mt-4">
+                  Mostrando {clients.length} de {filteredTotalClients} clientes del filtro actual
+                </div>
               </>
             )}
           </div>
