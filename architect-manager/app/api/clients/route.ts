@@ -101,6 +101,44 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     try {
+        const pageParam = Number.parseInt(request.nextUrl.searchParams.get('page') || '1', 10);
+        const limitParam = Number.parseInt(request.nextUrl.searchParams.get('limit') || '9', 10);
+        const search = (request.nextUrl.searchParams.get('search') || '').trim();
+        const orderByParam = request.nextUrl.searchParams.get('orderBy') || 'CLI_id';
+        const orderDirParam = (request.nextUrl.searchParams.get('orderDir') || 'DESC').toUpperCase();
+
+        const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
+        const limit = Number.isNaN(limitParam) || limitParam < 1 ? 9 : limitParam;
+        const orderByWhitelist = new Set(['CLI_id', 'CLI_name', 'CLI_identification', 'CLI_email']);
+        const orderBy = orderByWhitelist.has(orderByParam) ? orderByParam : 'CLI_id';
+        const orderDir = orderDirParam === 'ASC' ? 'ASC' : 'DESC';
+        const offset = (page - 1) * limit;
+
+        const filterParams: (string | number)[] = [];
+        let whereClause = '';
+        if (search) {
+            whereClause = `
+                WHERE (
+                    gpa_c.CLI_name LIKE ?
+                    OR gpa_c.CLI_f_lastname LIKE ?
+                    OR gpa_c.CLI_s_lastname LIKE ?
+                    OR gpa_c.CLI_email LIKE ?
+                    OR gpa_c.CLI_identification LIKE ?
+                )
+            `;
+            const likeSearch = `%${search}%`;
+            filterParams.push(likeSearch, likeSearch, likeSearch, likeSearch, likeSearch);
+        }
+
+        const countResult = await executeQuery(
+            `SELECT COUNT(gpa_c.CLI_id) as totalClients
+            FROM gpa_clients gpa_c
+            ${whereClause}`,
+            filterParams
+        );
+        const totalClients = Number((countResult as any[])[0]?.totalClients || 0);
+        const totalPages = Math.ceil(totalClients / limit);
+
         const clients: GPAClient[] = await executeQuery(
             `SELECT 
                 CLI_id,
@@ -120,11 +158,21 @@ export async function GET(request: NextRequest) {
                 CLI_district,
                 CLI_neighborhood,
                 count(gpa_p.PRJ_id) as CLI_projects_amount
-            FROM gpa_clients gpa_c LEFT JOIN gpa_projects gpa_p on gpa_c.CLI_id=gpa_p.PRJ_client_id 
-            GROUP BY gpa_c.CLI_id`
+            FROM gpa_clients gpa_c LEFT JOIN gpa_projects gpa_p on gpa_c.CLI_id=gpa_p.PRJ_client_id
+            ${whereClause}
+            GROUP BY gpa_c.CLI_id
+            ORDER BY gpa_c.${orderBy} ${orderDir}
+            LIMIT ?, ?`,
+            [...filterParams, offset, limit]
         );
         return NextResponse.json({
             message: "Clients requested succesfully",
+            page,
+            limit,
+            totalClients,
+            totalPages,
+            orderBy,
+            orderDir,
             clients
         }, { status: 200 });
     } catch {

@@ -15,44 +15,59 @@ export default function clientsPage() {
   const { isAdmin, getUserPermissions } = useAuth()
   const [clients, setClients] = useState<GPAClient[]>([]);
   const [searchTerm, setSearchTerm] = useState("")
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState<number>(1)
   const [totalClients, setTotalClients] = useState(0)
-  const clientsPerPage = 9
+  const clientsPerPage = 8
   const [totalPages, setTotalPages] = useState(0)
 
-  const filteredClients = clients.filter(
-    (client) =>
-      client.CLI_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.CLI_f_lastname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.CLI_s_lastname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.CLI_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.CLI_identification.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  useEffect(() => {
-    const fetchTotalClients = async () => {
-      try {
-        const response = await fetch("/api/clients/count")
-        const data = await response.json()
-        setTotalClients(data.totalClients)
-        setTotalPages(Math.ceil(data.totalClients / clientsPerPage))
-      }
-      catch (error) {
-        console.error("Error fetching total clients:", error)
-      }
-    }
-    fetchTotalClients()
-    const fetchClients = async () => {
+  const fetchClients = async (targetPage: number, targetSearch: string) => {
+    try {
       setLoading(true)
-      const response = await fetch("/api/clients?page=" + page+"?limit=" + clientsPerPage)
+      const params = new URLSearchParams({
+        page: String(targetPage),
+        limit: String(clientsPerPage),
+        search: targetSearch,
+        orderBy: "CLI_id",
+        orderDir: "DESC",
+      })
+      const response = await fetch(`/api/clients?${params.toString()}`)
       const data = await response.json()
-      const requestedClients: GPAClient[] = data.clients
+      const requestedClients: GPAClient[] = data.clients || []
       setClients(requestedClients)
+      setTotalClients(data.totalClients || 0)
+      setTotalPages(data.totalPages || 0)
+    } catch (error) {
+      console.error("Error fetching clients:", error)
+    } finally {
       setLoading(false)
     }
-    fetchClients()
-  }, [])
+  }
+
+  useEffect(() => {
+    fetchClients(page, appliedSearchTerm)
+  }, [page, appliedSearchTerm])
+
+  const handleApplyFilters = async () => {
+    const nextSearch = searchTerm.trim()
+    if (page === 1 && appliedSearchTerm === nextSearch) {
+      await fetchClients(1, nextSearch)
+      return
+    }
+    setPage(1)
+    setAppliedSearchTerm(nextSearch)
+  }
+
+  const handleClearFilters = async () => {
+    if (!searchTerm && !appliedSearchTerm && page === 1) {
+      await fetchClients(1, "")
+      return
+    }
+    setSearchTerm("")
+    setAppliedSearchTerm("")
+    setPage(1)
+  }
 
   if (loading) {
     return (
@@ -69,7 +84,6 @@ export default function clientsPage() {
     <MainLayout>
       <div className="min-h-screen bg-gradient-to-br from-primary-lighter/5 via-background to-primary-light/5">
         {/* Header Section */}
-        <a>totalClients: {totalClients}</a>
         <section className="py-12 lg:py-16">
           <div className="container">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
@@ -97,16 +111,16 @@ export default function clientsPage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <div className="card-modern p-6 text-center bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{filteredClients.filter(c => c.CLI_isperson).length}</div>
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{clients.filter(c => c.CLI_isperson).length}</div>
                 <div className="text-sm text-green-700 dark:text-green-300 font-medium">Personas Cliente</div>
               </div>
               <div className="card-modern p-6 text-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{filteredClients.reduce((acc, c) => acc + c.CLI_projects_amount, 0)}</div>
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{clients.reduce((acc, c) => acc + c.CLI_projects_amount, 0)}</div>
                 <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Proyectos</div>
               </div>
               <div className="card-modern p-6 text-center bg-gradient-to-br from-primary-lighter/50 to-primary-light/30 border-primary-light/30">
-                <div className="text-3xl font-bold text-primary-dark">{filteredClients.length}</div>
-                <div className="text-sm text-primary-dark/80 font-medium">Total Clientes</div>
+                <div className="text-3xl font-bold text-primary-dark">{totalClients}</div>
+                <div className="text-sm text-primary-dark/80 font-medium">Total Clientes (Filtro)</div>
               </div>
             </div>
           </div>
@@ -134,9 +148,16 @@ export default function clientsPage() {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant={searchTerm ? "secondary" : "ghost"}
-                    onClick={() => setSearchTerm("")}
-                    disabled={!searchTerm}
+                    variant="secondary"
+                    onClick={handleApplyFilters}
+                    className="btn-secondary"
+                  >
+                    Filtrar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={handleClearFilters}
+                    disabled={!searchTerm && !appliedSearchTerm && page === 1}
                     className="btn-ghost"
                   >
                     Limpiar
@@ -150,16 +171,16 @@ export default function clientsPage() {
         {/* Clients Grid */}
         <section className="pb-16">
           <div className="container">
-            {filteredClients.length === 0 ? (
+            {clients.length === 0 ? (
               <div className="text-center py-16">
                 <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
                   <Users className="h-12 w-12 text-muted-foreground" />
                 </div>
                 <h3 className="text-2xl font-semibold text-muted-foreground mb-2">No se encontraron clientes</h3>
                 <p className="text-muted-foreground mb-6">
-                  {searchTerm ? "Intenta con otros términos de búsqueda" : "Comienza agregando tu primer cliente"}
+                  {appliedSearchTerm ? "Intenta con otros términos de búsqueda" : "Comienza agregando tu primer cliente"}
                 </p>
-                {isAdmin && !searchTerm && (
+                {isAdmin && !appliedSearchTerm && (
                   <Link href="/clientes/nuevo">
                     <Button className="btn-primary">
                       <Plus className="mr-2 h-4 w-4" />
@@ -169,79 +190,113 @@ export default function clientsPage() {
                 )}
               </div>
             ) : (
-              <div className="grid-responsive-auto">
-                {filteredClients.map((client, index) => (
-                  <div
-                    key={client.CLI_id}
-                    className="card-interactive group animate-slide-up"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <div className="p-6 space-y-4">
-                      {/* Header */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-semibold text-lg">
-                            {client.CLI_name.charAt(0)}
+              <>
+                <div className="grid-responsive-auto">
+                  {clients.map((client, index) => (
+                    <div
+                      key={client.CLI_id}
+                      className="card-interactive group animate-slide-up"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <div className="p-6 space-y-4">
+                        {/* Header */}
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-semibold text-lg">
+                              {client.CLI_name.charAt(0)}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-lg text-primary-dark">{client.CLI_name + " " + client.CLI_f_lastname + " " + client.CLI_s_lastname}</h3>
+                              <p className="text-sm text-muted-foreground">{client.CLI_identification}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-lg text-primary-dark">{client.CLI_name + " " + client.CLI_f_lastname + " " + client.CLI_s_lastname}</h3>
-                            <p className="text-sm text-muted-foreground">{client.CLI_identification}</p>
+                          <div className={`status-${client.CLI_civil_status}`}>
+                            {/*client.CLI_civil_status === 'activo' ? 'Activo' : 'Inactivo'*/}
                           </div>
                         </div>
-                        <div className={`status-${client.CLI_civil_status}`}>
-                          {/*client.CLI_civil_status === 'activo' ? 'Activo' : 'Inactivo'*/}
-                        </div>
-                      </div>
 
-                      {/* Contact Info */}
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <Mail className="h-4 w-4" />
-                          <span>{client.CLI_email}</span>
+                        {/* Contact Info */}
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <Mail className="h-4 w-4" />
+                            <span>{client.CLI_email}</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <Phone className="h-4 w-4" />
+                            <span>{client.CLI_phone}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <Phone className="h-4 w-4" />
-                          <span>{client.CLI_phone}</span>
+
+                        {/* Projects */}
+                        <div className="flex items-center justify-between py-3 px-4 bg-muted/30 rounded-lg">
+                          <span className="text-sm font-medium">Proyectos</span>
+                          <Badge className="gradient-secondary text-primary-dark">
+                            {client.CLI_projects_amount}
+                          </Badge>
                         </div>
-                      </div>
 
-                      {/* Projects */}
-                      <div className="flex items-center justify-between py-3 px-4 bg-muted/30 rounded-lg">
-                        <span className="text-sm font-medium">Proyectos</span>
-                        <Badge className="gradient-secondary text-primary-dark">
-                          {client.CLI_projects_amount}
-                        </Badge>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex gap-2 pt-2">
-                        {(getUserPermissions().some(p => p.screen === "clientes-id" && p.permission_type === "View") || isAdmin) &&
-                          <Link href={`/clientes/${client.CLI_id}`} className="flex-1">
-                            <Button variant="outline" size="sm" className="w-full btn-ghost">
-                              <Eye className="mr-2 h-4 w-4" />
-                              Ver
-                            </Button>
-                          </Link>
-                        }
-                        {(getUserPermissions().some(p => p.screen === "clientes-id-editar" && p.permission_type === "Edit") || isAdmin) && (
-                          <Link href={`/clientes/${client.CLI_id}/editar`} className="flex-1">
-                            <Button variant="outline" size="sm" className="w-full btn-secondary">
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </Button>
-                          </Link>
-                        )}
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-2">
+                          {(getUserPermissions().some(p => p.screen === "clientes-id" && p.permission_type === "View") || isAdmin) &&
+                            <Link href={`/clientes/${client.CLI_id}`} className="flex-1">
+                              <Button variant="outline" size="sm" className="w-full btn-ghost">
+                                <Eye className="mr-2 h-4 w-4" />
+                                Ver
+                              </Button>
+                            </Link>
+                          }
+                          {(getUserPermissions().some(p => p.screen === "clientes-id-editar" && p.permission_type === "Edit") || isAdmin) && (
+                            <Link href={`/clientes/${client.CLI_id}/editar`} className="flex-1">
+                              <Button variant="outline" size="sm" className="w-full btn-secondary">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+
+                {totalPages > 1 && (
+                  <div
+                    className="flex flex-wrap justify-center items-center gap-2 mt-8"
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                      disabled={page === 1}
+                      className="btn-ghost"
+                    >
+                      Anterior
+                    </Button>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
+                      <Button
+                        key={pageNumber}
+                        variant={pageNumber === page ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={() => setPage(pageNumber)}
+                        className={pageNumber === page ? "btn-secondary" : "btn-ghost"}
+                      >
+                        {pageNumber}
+                      </Button>
+                    ))}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={page === totalPages}
+                      className="btn-ghost"
+                    >
+                      Siguiente
+                    </Button>
                   </div>
-                ))}
-                {"hola"}
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((i) => (
-                  <button key={i} onClick={() => setPage(i)}>
-                    {i}
-                  </button>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         </section>

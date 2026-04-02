@@ -88,6 +88,18 @@ export async function executeQuery<T = any>(
       return results as T;
       
     } catch (error) {
+      // Fallback para servidores donde ciertas consultas no son compatibles con prepared statements.
+      if ((error as any)?.code === 'ER_WRONG_ARGUMENTS') {
+        try {
+          const [fallbackResults] = await pool.query(query, params);
+          console.log(`✅ Query ejecutado con fallback pool.query (intento ${attempt})`);
+          return fallbackResults as T;
+        } catch (fallbackError) {
+          lastError = fallbackError;
+          console.error('❌ Error también en fallback pool.query:', fallbackError);
+        }
+      }
+
       lastError = error;
       console.error(`❌ Error ejecutando consulta (intento ${attempt}/${retries}):`, error);
       console.error('Query:', query);
