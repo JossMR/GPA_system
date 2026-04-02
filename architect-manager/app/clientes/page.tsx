@@ -21,6 +21,7 @@ export default function clientsPage() {
   const [filteredTotalClients, setFilteredTotalClients] = useState(0)
   const [globalTotalClients, setGlobalTotalClients] = useState(0)
   const [globalTotalProjects, setGlobalTotalProjects] = useState(0)
+  const [orderBy, setOrderBy] = useState<'CLI_id' | 'CLI_name' | 'CLI_f_lastname' | 'CLI_s_lastname'>('CLI_id')
   const clientsPerPage = 8
   const [totalPages, setTotalPages] = useState(0)
 
@@ -35,15 +36,16 @@ export default function clientsPage() {
     }
   }
 
-  const fetchClients = async (targetPage: number, targetSearch: string) => {
+  const fetchClients = async (targetPage: number, targetSearch: string, targetOrderBy?: 'CLI_id' | 'CLI_name' | 'CLI_f_lastname' | 'CLI_s_lastname') => {
     try {
       setLoadingClients(true)
+      const finalOrderBy = targetOrderBy || orderBy
       const params = new URLSearchParams({
         page: String(targetPage),
         limit: String(clientsPerPage),
         search: targetSearch,
-        orderBy: "CLI_id",
-        orderDir: "DESC",
+        orderBy: finalOrderBy,
+        orderDir: "ASC",
       })
       const response = await fetch(`/api/clients?${params.toString()}`)
       const data = await response.json()
@@ -63,8 +65,8 @@ export default function clientsPage() {
   }, [])
 
   useEffect(() => {
-    fetchClients(page, appliedSearchTerm)
-  }, [page, appliedSearchTerm])
+    fetchClients(page, appliedSearchTerm, orderBy)
+  }, [page, appliedSearchTerm, orderBy])
 
   const handleApplyFilters = async () => {
     const nextSearch = searchTerm.trim()
@@ -77,13 +79,14 @@ export default function clientsPage() {
   }
 
   const handleClearFilters = async () => {
-    if (!searchTerm && !appliedSearchTerm && page === 1) {
-      await fetchClients(1, "")
+    if (!searchTerm && !appliedSearchTerm && page === 1 && orderBy === 'CLI_id') {
+      await fetchClients(1, "", 'CLI_id')
       return
     }
     setSearchTerm("")
     setAppliedSearchTerm("")
     setPage(1)
+    setOrderBy('CLI_id')
   }
 
   return (
@@ -148,22 +151,40 @@ export default function clientsPage() {
                     />
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={handleApplyFilters}
-                    className="btn-secondary"
-                  >
-                    Filtrar
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={handleClearFilters}
-                    disabled={!searchTerm && !appliedSearchTerm && page === 1}
-                    className="btn-ghost"
-                  >
-                    Limpiar
-                  </Button>
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <Label htmlFor="orderBy" className="text-sm font-medium text-muted-foreground mb-2 block">
+                      Ordenar por
+                    </Label>
+                    <select
+                      id="orderBy"
+                      value={orderBy}
+                      onChange={(e) => setOrderBy(e.target.value as 'CLI_id' | 'CLI_name' | 'CLI_f_lastname' | 'CLI_s_lastname')}
+                      className="input-modern px-3 py-2 border border-input rounded-md text-sm bg-background"
+                    >
+                      <option value="CLI_id">Más reciente</option>
+                      <option value="CLI_name">Nombre</option>
+                      <option value="CLI_f_lastname">Primer Apellido</option>
+                      <option value="CLI_s_lastname">Segundo Apellido</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={handleApplyFilters}
+                      className="btn-secondary"
+                    >
+                      Filtrar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={handleClearFilters}
+                      disabled={!searchTerm && !appliedSearchTerm && page === 1}
+                      className="btn-ghost"
+                    >
+                      Limpiar
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
