@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
 import { GPAProject, getLocalMySQLDateTime } from '@/models/GPA_project'
-import { GPAClient } from '@/models/GPA_client'
-import { GPAcategory } from '@/models/GPA_category'
 
 async function fetchProjectRelatedData(projectId: number, request: NextRequest) {
   try {
@@ -50,62 +48,172 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const includeRelated = searchParams.get('include') === 'all'
 
-    const projectsQuery = `
-      SELECT * FROM GPA_Projects
-      ORDER BY PRJ_entry_date DESC
-    `
+    const pageParam = Number.parseInt(searchParams.get('page') || '1', 10)
+    const limitParam = Number.parseInt(searchParams.get('limit') || '0', 10)
+    const search = (searchParams.get('search') || '').trim()
+    const orderByParam = searchParams.get('orderBy') || 'PRJ_entry_date'
+    const orderDirParam = (searchParams.get('orderDir') || 'DESC').toUpperCase()
 
-    let projects = await executeQuery(projectsQuery) as GPAProject[]
+    const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam
+    const limit = Number.isNaN(limitParam) || limitParam < 0 ? 0 : limitParam
+    const hasPagination = searchParams.has('page') || searchParams.has('limit')
 
-    await Promise.all(projects.map(async (project, index) => {
-      // Fetch type of the project
-      const typeRes = await fetch(`${new URL(request.url).origin}/api/types/${project.PRJ_type_id}}`, {
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const typeData = typeRes.ok ? await typeRes.json() : null;
-      project.type = typeData;
+    const orderByMap: Record<string, string> = {
+      PRJ_id: 'p.PRJ_id',
+      PRJ_case_number: 'p.PRJ_case_number',
+      PRJ_entry_date: 'p.PRJ_entry_date',
+      PRJ_state: 'p.PRJ_state',
+      client_name: 'c.CLI_name',
+      type_name: 't.TYP_name'
+    }
+    const orderBy = orderByMap[orderByParam] ? orderByParam : 'PRJ_entry_date'
+    const orderBySql = orderByMap[orderBy]
+    const orderDir = orderDirParam === 'ASC' ? 'ASC' : 'DESC'
 
-      // Fetch user name owner of the project
-      const clientRes = await fetch(`${new URL(request.url).origin}/api/clients/${project?.PRJ_client_id}`, {
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const clientJson = clientRes.ok ? await clientRes.json() : null;
-      const clientData = clientJson ? clientJson.client as GPAClient : null;
-      project.client_name = clientData?.CLI_name + " " + clientData?.CLI_f_lastname + " " + clientData?.CLI_s_lastname;
-      project.client_identification = clientData?.CLI_identification;
-      // Fetch categories names of the project
-      const categoriesRes = await fetch(`${new URL(request.url).origin}/api/categories?project_id=${project.PRJ_id}`, {
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const categoriesData = categoriesRes.ok ? await categoriesRes.json() as GPAcategory[] : null;
-      project.categories_names = [];
-      categoriesData?.forEach((category) => { project.categories_names?.push(category.CAT_name) });
-    }));
+    const filterParams: (string | number)[] = []
+    let whereClause = ''
+    if (search) {
+      const likeSearch = `%${search}%`
+      whereClause = `
+        WHERE (
+          p.PRJ_case_number LIKE ?
+          OR p.PRJ_state LIKE ?
+          OR c.CLI_name LIKE ?
+          OR c.CLI_f_lastname LIKE ?
+          OR c.CLI_s_lastname LIKE ?
+          OR c.CLI_identification LIKE ?
+          OR t.TYP_name LIKE ?
+        )
+      `
+      filterParams.push(likeSearch, likeSearch, likeSearch, likeSearch, likeSearch, likeSearch, likeSearch)
+    }
+
+    const totalResult = await executeQuery(
+      `SELECT COUNT(p.PRJ_id) as totalProjects
+      FROM gpa_projects p
+      LEFT JOIN gpa_clients c ON c.CLI_id = p.PRJ_client_id
+      LEFT JOIN gpa_types t ON t.TYP_id = p.PRJ_type_id
+      ${whereClause}`,
+      filterParams
+    ) as any[]
+
+    const totalProjects = Number(totalResult[0]?.totalProjects || 0)
+    const effectiveLimit = hasPagination && limit > 0 ? limit : totalProjects || 1
+    const totalPages = effectiveLimit > 0 ? Math.ceil(totalProjects / effectiveLimit) : 0
+    const offset = (page - 1) * effectiveLimit
+
+    const paginationSql = hasPagination && limit > 0 ? 'LIMIT ?, ?' : ''
+    const queryParams = hasPagination && limit > 0
+      ? [...filterParams, offset, effectiveLimit]
+      : filterParams
+
+    const rawProjects = await executeQuery(
+      `SELECT
+        p.*,
+        c.CLI_name,
+        c.CLI_f_lastname,
+        c.CLI_s_lastname,
+        c.CLI_identification,
+        t.TYP_id,
+        t.TYP_name
+      FROM gpa_projects p
+      LEFT JOIN gpa_clients c ON c.CLI_id = p.PRJ_client_id
+      LEFT JOIN gpa_types t ON t.TYP_id = p.PRJ_type_id
+      ${whereClause}
+      ORDER BY ${orderBySql} ${orderDir}
+      ${paginationSql}`,
+      queryParams
+    ) as any[]
+
+    const projects = rawProjects.map((project) => {
+      const parsedProject = project as GPAProject & {
+        CLI_name?: string
+        CLI_f_lastname?: string
+        CLI_s_lastname?: string
+        CLI_identification?: string
+        TYP_id?: number
+        TYP_name?: string
+      }
+
+      const fullName = [parsedProject.CLI_name, parsedProject.CLI_f_lastname, parsedProject.CLI_s_lastname]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+
+      return {
+        ...parsedProject,
+        client_name: fullName || undefined,
+        client_identification: parsedProject.CLI_identification,
+        type: parsedProject.TYP_id
+          ? { TYP_id: parsedProject.TYP_id, TYP_name: parsedProject.TYP_name || '' }
+          : undefined
+      } as GPAProject
+    })
+
+    const projectIds = projects
+      .map((project) => project.PRJ_id)
+      .filter((id): id is number => typeof id === 'number')
+
+    if (projectIds.length > 0) {
+      const placeholders = projectIds.map(() => '?').join(',')
+      const categoriesRows = await executeQuery(
+        `SELECT
+          pc.PRJ_id,
+          c.CAT_name
+        FROM gpa_projectsxgpa_categories pc
+        INNER JOIN gpa_categories c ON c.CAT_id = pc.CAT_id
+        WHERE pc.PRJ_id IN (${placeholders})`,
+        projectIds
+      ) as Array<{ PRJ_id: number; CAT_name: string }>
+
+      const categoriesByProject = categoriesRows.reduce<Record<number, string[]>>((accumulator, row) => {
+        if (!accumulator[row.PRJ_id]) {
+          accumulator[row.PRJ_id] = []
+        }
+        accumulator[row.PRJ_id].push(row.CAT_name)
+        return accumulator
+      }, {})
+
+      projects.forEach((project) => {
+        if (project.PRJ_id) {
+          project.categories_names = categoriesByProject[project.PRJ_id] || []
+        }
+      })
+    }
+
     if (!includeRelated) {
-      return NextResponse.json({ projects }, { status: 200 })
+      return NextResponse.json({
+        projects,
+        page,
+        limit: effectiveLimit,
+        totalProjects,
+        totalPages,
+        orderBy,
+        orderDir
+      }, { status: 200 })
     }
 
     const projectsWithRelatedData = await Promise.all(
       projects.map(async (project) => {
         if (project.PRJ_id) {
-          const typeRes = await fetch(`${new URL(request.url).origin}/api/types`, {
-            headers: { 'Content-Type': 'application/json' }
-          });
-          const typeData = typeRes.ok ? await typeRes.json() : null;
-
           const relatedData = await fetchProjectRelatedData(project.PRJ_id, request)
           return {
             ...project,
-            type: typeData,
             ...relatedData
           }
         }
         return project
       })
     )
-    projects = projectsWithRelatedData
-
-    return NextResponse.json({ projects }, { status: 200 })
+    return NextResponse.json({
+      projects: projectsWithRelatedData,
+      page,
+      limit: effectiveLimit,
+      totalProjects,
+      totalPages,
+      orderBy,
+      orderDir
+    }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
