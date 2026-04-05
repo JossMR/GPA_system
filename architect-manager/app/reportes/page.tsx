@@ -12,8 +12,6 @@ import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import ExcelJS from "exceljs"
 import { saveAs } from "file-saver"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
 import {
   Table,
   TableBody,
@@ -248,6 +246,34 @@ export default function ReportesPage() {
     }
   }
 
+  const formatDateValue = (value: string | Date | null | undefined): string => {
+    if (!value) return "N/A"
+    const date = value instanceof Date ? value : new Date(value)
+    if (Number.isNaN(date.getTime())) return "N/A"
+
+    return new Intl.DateTimeFormat("es-CR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date)
+  }
+
+  const formatGeneratedAt = (date: Date = new Date()): string => {
+    return date.toLocaleString("es-CR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+  }
+
+  const formatFileTimestamp = (date: Date = new Date()): string => {
+    const pad = (value: number) => value.toString().padStart(2, "0")
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}`
+  }
+
   // Cargar vista previa de datos
   const loadPreviewData = async () => {
     if (!selectedReport) return
@@ -369,16 +395,16 @@ export default function ReportesPage() {
             <TableCell className="text-right">{parseFloat(item.PRJ_area_m2 || 0).toLocaleString("es-CR", { minimumFractionDigits: 2 })} m²</TableCell>
           )}
           {selectedFields.fechaIngreso && (
-            <TableCell>{item.PRJ_entry_date ? format(new Date(item.PRJ_entry_date), "dd/MM/yyyy") : "N/A"}</TableCell>
+            <TableCell>{formatDateValue(item.PRJ_entry_date)}</TableCell>
           )}
           {selectedFields.fechaEntrega && (
-            <TableCell>{item.PRJ_completion_date ? format(new Date(item.PRJ_completion_date), "dd/MM/yyyy") : "N/A"}</TableCell>
+            <TableCell>{formatDateValue(item.PRJ_completion_date)}</TableCell>
           )}
           {selectedFields.fechaInicioConst && (
-            <TableCell>{item.PRJ_start_construction_date ? format(new Date(item.PRJ_start_construction_date), "dd/MM/yyyy") : "N/A"}</TableCell>
+            <TableCell>{formatDateValue(item.PRJ_start_construction_date)}</TableCell>
           )}
           {selectedFields.fechaCierreBitacora && (
-            <TableCell>{item.PRJ_logbook_close_date ? format(new Date(item.PRJ_logbook_close_date), "dd/MM/yyyy") : "N/A"}</TableCell>
+            <TableCell>{formatDateValue(item.PRJ_logbook_close_date)}</TableCell>
           )}
           {selectedFields.numeroBitacora && <TableCell>{item.PRJ_logbook_number || "N/A"}</TableCell>}
           {selectedFields.provincia && <TableCell>{item.PRJ_province || "N/A"}</TableCell>}
@@ -393,7 +419,7 @@ export default function ReportesPage() {
       return (
         <TableRow key={index}>
           {selectedFields.fecha && (
-            <TableCell>{item.PAY_payment_date ? format(new Date(item.PAY_payment_date), "dd/MM/yyyy") : "N/A"}</TableCell>
+            <TableCell>{formatDateValue(item.PAY_payment_date)}</TableCell>
           )}
           {selectedFields.monto && (
             <TableCell className="text-right">{formatCurrency(item.PAY_amount_paid)}</TableCell>
@@ -461,7 +487,7 @@ export default function ReportesPage() {
       // Fecha de generación
       worksheet.mergeCells("A3:G3")
       const dateCell = worksheet.getCell("A3")
-      dateCell.value = `Generado el: ${format(new Date(), "dd 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })}`
+      dateCell.value = `Generado el: ${formatGeneratedAt()}`
       dateCell.font = { size: 10, italic: true }
       dateCell.alignment = { horizontal: "center" }
       worksheet.getRow(3).height = 20
@@ -635,7 +661,7 @@ export default function ReportesPage() {
 
       const buffer = await workbook.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
-      saveAs(blob, `Reporte_Clientes_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`)
+      saveAs(blob, `Reporte_Clientes_${formatFileTimestamp()}.xlsx`)
 
       toast({
         title: "Reporte generado",
@@ -706,7 +732,7 @@ export default function ReportesPage() {
       // Fecha de generación
       worksheet.mergeCells("A3:I3")
       const dateCell = worksheet.getCell("A3")
-      dateCell.value = `Generado el: ${format(new Date(), "dd 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })}`
+      dateCell.value = `Generado el: ${formatGeneratedAt()}`
       dateCell.font = { size: 10, italic: true }
       dateCell.alignment = { horizontal: "center" }
       worksheet.getRow(3).height = 20
@@ -853,16 +879,16 @@ export default function ReportesPage() {
           rowData.push(project.PRJ_area_m2 ? `${parseFloat(project.PRJ_area_m2).toLocaleString("es-CR", { minimumFractionDigits: 2 })} m²` : "N/A")
         }
         if (selectedFields.fechaIngreso) {
-          rowData.push(project.PRJ_entry_date ? format(new Date(project.PRJ_entry_date), "dd/MM/yyyy") : "N/A")
+          rowData.push(formatDateValue(project.PRJ_entry_date))
         }
         if (selectedFields.fechaEntrega) {
-          rowData.push(project.PRJ_completion_date ? format(new Date(project.PRJ_completion_date), "dd/MM/yyyy") : "N/A")
+          rowData.push(formatDateValue(project.PRJ_completion_date))
         }
         if (selectedFields.fechaInicioConst) {
-          rowData.push(project.PRJ_start_construction_date ? format(new Date(project.PRJ_start_construction_date), "dd/MM/yyyy") : "N/A")
+          rowData.push(formatDateValue(project.PRJ_start_construction_date))
         }
         if (selectedFields.fechaCierreBitacora) {
-          rowData.push(project.PRJ_logbook_close_date ? format(new Date(project.PRJ_logbook_close_date), "dd/MM/yyyy") : "N/A")
+          rowData.push(formatDateValue(project.PRJ_logbook_close_date))
         }
         if (selectedFields.numeroBitacora) {
           rowData.push(project.PRJ_logbook_number || "N/A")
@@ -934,7 +960,7 @@ export default function ReportesPage() {
 
       const buffer = await workbook.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
-      saveAs(blob, `Reporte_Proyectos_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`)
+      saveAs(blob, `Reporte_Proyectos_${formatFileTimestamp()}.xlsx`)
 
       toast({
         title: "Reporte generado",
@@ -1004,7 +1030,7 @@ export default function ReportesPage() {
       // Fecha de generación
       worksheet.mergeCells("A3:H3")
       const dateCell = worksheet.getCell("A3")
-      dateCell.value = `Generado el: ${format(new Date(), "dd 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es })}`
+      dateCell.value = `Generado el: ${formatGeneratedAt()}`
       dateCell.font = { size: 10, italic: true }
       dateCell.alignment = { horizontal: "center" }
       worksheet.getRow(3).height = 20
@@ -1060,7 +1086,7 @@ export default function ReportesPage() {
         const rowData: any[] = []
         
         if (selectedFields.fecha) {
-          rowData.push(payment.PAY_payment_date ? format(new Date(payment.PAY_payment_date), "dd/MM/yyyy") : "N/A")
+          rowData.push(formatDateValue(payment.PAY_payment_date))
         }
         if (selectedFields.monto) {
           const amount = parseFloat(payment.PAY_amount_paid) || 0
@@ -1131,7 +1157,7 @@ export default function ReportesPage() {
 
       const buffer = await workbook.xlsx.writeBuffer()
       const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
-      saveAs(blob, `Reporte_Pagos_${format(new Date(), "yyyy-MM-dd_HHmm")}.xlsx`)
+      saveAs(blob, `Reporte_Pagos_${formatFileTimestamp()}.xlsx`)
 
       toast({
         title: "Reporte generado",
