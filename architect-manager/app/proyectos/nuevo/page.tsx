@@ -43,8 +43,6 @@ export default function NewProjectPage() {
   const [clientDialogOpen, setClientDialogOpen] = useState(false)
   const [clientSelected, setClientSelected] = useState<number | null>(null)
   const [clientSelectedObj, setClientSelectedObj] = useState<GPAClient | null>(null)
-  const [clients, setClients] = useState<GPAClient[]>([])
-  const [clientsLoading, setClientsLoading] = useState(false)
   const [clientError, setClientError] = useState<string | null>(null)
   const { toast } = useToast()
   const clientFieldRef = useRef<HTMLDivElement>(null)
@@ -253,23 +251,6 @@ export default function NewProjectPage() {
     }
     setLoading(false)
   }
-
-  useEffect(() => {
-    const fetchClients = async () => {
-      setClientsLoading(true)
-      try {
-        const response = await fetch("/api/clients")
-        const data = await response.json()
-        const requestedClients: GPAClient[] = data.clients
-        setClients(requestedClients)
-      } catch (error) {
-        setClients([])
-      } finally {
-        setClientsLoading(false)
-      }
-    }
-    if (clientDialogOpen) fetchClients()
-  }, [clientDialogOpen])
 
   useEffect(() => {
     const fetchCategories = async () => {

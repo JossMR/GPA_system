@@ -119,6 +119,8 @@ export async function GET(request: NextRequest) {
         if (search) {
             whereClause = `
                 WHERE (
+                    CONCAT_WS(' ', gpa_c.CLI_name, gpa_c.CLI_f_lastname, gpa_c.CLI_s_lastname) LIKE ?
+                    OR
                     gpa_c.CLI_name LIKE ?
                     OR gpa_c.CLI_f_lastname LIKE ?
                     OR gpa_c.CLI_s_lastname LIKE ?
@@ -127,7 +129,7 @@ export async function GET(request: NextRequest) {
                 )
             `;
             const likeSearch = `%${search}%`;
-            filterParams.push(likeSearch, likeSearch, likeSearch, likeSearch, likeSearch);
+            filterParams.push(likeSearch, likeSearch, likeSearch, likeSearch, likeSearch, likeSearch);
         }
 
         const countResult = await executeQuery(

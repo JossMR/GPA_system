@@ -71,8 +71,6 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [clientDialogOpen, setClientDialogOpen] = useState(false)
   const [clientSelected, setClientSelected] = useState<number | null>(null)
   const [clientSelectedObj, setClientSelectedObj] = useState<GPAClient | null>(null)
-  const [clients, setClients] = useState<GPAClient[]>([])
-  const [clientsLoading, setClientsLoading] = useState(false)
   const [clientError, setClientError] = useState<string | null>(null)
   const [projectTypeId, setProjectTypeId] = useState<number | null>(null)
   const [assignedCategories, setAssignedCategories] = useState<Category[]>([])
@@ -129,22 +127,6 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     }
     fetchProject()
   }, [id, router])
-
-  useEffect(() => {
-    const fetchClients = async () => {
-      setClientsLoading(true)
-      try {
-        const response = await fetch("/api/clients")
-        const data = await response.json()
-        setClients(data.clients)
-      } catch {
-        setClients([])
-      } finally {
-        setClientsLoading(false)
-      }
-    }
-    if (clientDialogOpen) fetchClients()
-  }, [clientDialogOpen])
 
   // Load all categories for assignment
   useEffect(() => {
