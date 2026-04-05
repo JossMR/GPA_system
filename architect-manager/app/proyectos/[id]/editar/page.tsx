@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast"
 import { ProjectTypeManager } from "@/components/projectTypeManager"
 import { Category, ProjectCategoryTags } from "@/components/projectCategoryTags"
 import { formatCurrency } from "@/lib/formatters"
+import { GPAObservation } from "@/models/GPA_observation"
 
 export default function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { isAdmin } = useAuth()
@@ -38,6 +39,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [fetchingData, setFetchingData] = useState(true)
   const [project, setProject] = useState<GPAProject | null>(null)
   const [pagos, setPagos] = useState<any[]>([])
+  const [observations, setObservations] = useState<GPAObservation[]>([])
   const [costosExtra, setCostosExtra] = useState<any[]>([])
   const [isPagoDialogOpen, setIsPagoDialogOpen] = useState(false)
   const [isCostoDialogOpen, setIsCostoDialogOpen] = useState(false)
@@ -113,6 +115,13 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         if (paymentsRes.ok) {
           const paymentsData = await paymentsRes.json()
           setPagos(paymentsData || [])
+        }
+
+        // Cargar observaciones del proyecto
+        const observationsRes = await fetch(`/api/observations?project_id=${id}`)
+        if (observationsRes.ok) {
+          const observationsData = await observationsRes.json()
+          setObservations(observationsData || [])
         }
         
         // Cargar costos extra del proyecto
@@ -1325,6 +1334,42 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 </div>
               </CardContent>
             </Card>*/}
+            <Card className="border-[#486b00]/20">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-[#486b00]">Observaciones</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 space-y-3 max-h-[520px] overflow-hidden flex flex-col">
+                <div className="rounded-md border border-dashed border-[#a2c523]/50 p-3 bg-[#c9e077]/10">
+                  <p className="text-sm text-[#2e4600] font-medium">Espacio de captura (placeholder)</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Aqui se mostrara el formulario real para agregar observaciones del proyecto.
+                  </p>
+                </div>
+
+                <div className="space-y-2 mt-2 border-t border-[#a2c523]/30 pt-4 flex-1 overflow-y-auto pr-1">
+                  {observations.length === 0 ? (
+                    <div className="rounded-md border border-dashed border-[#a2c523]/40 p-3 text-sm text-muted-foreground">
+                      No hay observaciones registradas para este proyecto.
+                    </div>
+                  ) : (
+                    observations.map((obs) => (
+                      <div key={obs.OST_id} className="bg-[#c9e077]/10 p-3 rounded-md border border-[#a2c523]/20">
+                        <p className="text-sm text-foreground mt-2">{obs.OST_content}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {new Date(obs.OST_date).toLocaleDateString("es-ES", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </form>
         {/* ClientSelector modal */}
