@@ -6,6 +6,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('project_id')
+    const orderDirParam = (searchParams.get('orderDir') || 'DESC').toUpperCase()
+    const orderDir = orderDirParam === 'ASC' ? 'ASC' : 'DESC'
     const pageParam = Number.parseInt(searchParams.get('page') || '1', 10)
     const limitParam = Number.parseInt(searchParams.get('limit') || '0', 10)
     const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam
@@ -26,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (!hasPagination || limit <= 0) {
-      query += ' ORDER BY OST_date DESC'
+      query += ` ORDER BY OST_date ${orderDir}`
       const observations = await executeQuery(query, params) as GPAObservation[]
       return NextResponse.json(observations, { status: 200 })
     }
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
     const totalPages = Math.ceil(totalObservations / limit)
     const offset = (page - 1) * limit
 
-    query += ' ORDER BY OST_date DESC LIMIT ?, ?'
+    query += ` ORDER BY OST_date ${orderDir} LIMIT ?, ?`
     const queryParams = [...params, offset, limit]
     
     const observations = await executeQuery(query, queryParams) as GPAObservation[]
@@ -45,6 +47,7 @@ export async function GET(request: NextRequest) {
       observations,
       page,
       limit,
+      orderDir,
       totalObservations,
       totalPages
     }, { status: 200 })

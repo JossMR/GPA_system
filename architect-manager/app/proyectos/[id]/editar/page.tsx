@@ -43,6 +43,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [observationsPage, setObservationsPage] = useState(1)
   const [observationsTotalPages, setObservationsTotalPages] = useState(0)
   const [observationsTotal, setObservationsTotal] = useState(0)
+  const [observationsOrderDir, setObservationsOrderDir] = useState<"ASC" | "DESC">("DESC")
   const observationsPerPage = 5
   const [costosExtra, setCostosExtra] = useState<any[]>([])
   const [isPagoDialogOpen, setIsPagoDialogOpen] = useState(false)
@@ -92,6 +93,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       project_id: String(id),
       page: String(targetPage),
       limit: String(observationsPerPage),
+      orderDir: observationsOrderDir,
     })
 
     const observationsRes = await fetch(`/api/observations?${params.toString()}`)
@@ -140,9 +142,6 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           setPagos(paymentsData || [])
         }
 
-        // Cargar observaciones del proyecto
-        await fetchObservations(1)
-        
         // Cargar costos extra del proyecto
         const additionsRes = await fetch(`/api/additions?project_id=${id}`)
         if (additionsRes.ok) {
@@ -157,6 +156,10 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     }
     fetchProject()
   }, [id, router])
+
+  useEffect(() => {
+    fetchObservations(1)
+  }, [id])
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -1355,7 +1358,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             </Card>*/}
             <Card className="border-[#486b00]/20">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div>
                   <CardTitle className="text-[#486b00]">Observaciones</CardTitle>
                 </div>
               </CardHeader>
@@ -1365,6 +1368,28 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   <p className="text-xs text-muted-foreground mt-1">
                     Aqui se mostrara el formulario real para agregar observaciones del proyecto.
                   </p>
+                </div>
+
+                <div className="max-w-[320px]">
+                  <Label htmlFor="observations-order">Orden por fecha</Label>
+                  <div className="flex gap-2">
+                    <select
+                      id="observations-order"
+                      value={observationsOrderDir}
+                      onChange={(e) => setObservationsOrderDir(e.target.value as "ASC" | "DESC")}
+                      className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background"
+                    >
+                      <option value="DESC">Descendente</option>
+                      <option value="ASC">Ascendente</option>
+                    </select>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => fetchObservations(1)}
+                    >
+                      Filtrar
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-2 mt-2 border-t border-[#a2c523]/30 pt-4 flex-1 overflow-y-auto pr-1">
