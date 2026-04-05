@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
-import { GPAObservation } from '@/models/GPA_observation'
+import { GPAObservation, getLocalMySQLDateTime } from '@/models/GPA_observation'
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     const observationData: Omit<GPAObservation, 'OST_id'> = {
       OST_project_id: body.OST_project_id,
       OST_content: body.OST_content.trim(),
-      OST_date: body.OST_date || new Date().toISOString()
+      OST_date: new Date().toISOString()
     }
     
     const insertQuery = `
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     const result = await executeQuery(insertQuery, [
       observationData.OST_project_id,
       observationData.OST_content,
-      observationData.OST_date
+      getLocalMySQLDateTime(),
     ]) as any
     
     return NextResponse.json({ 

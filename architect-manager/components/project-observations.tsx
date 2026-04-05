@@ -1,10 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { GPAObservation } from "@/models/GPA_observation"
+import { useToast } from "@/hooks/use-toast"
 
 type ObservationOrderDir = "ASC" | "DESC"
 
@@ -13,11 +15,17 @@ interface ProjectObservationsProps {
 }
 
 export function ProjectObservations({ projectId }: ProjectObservationsProps) {
+    const { toast } = useToast()
+    const orderSelectId = useId()
+    const contentInputId = useId()
+
     const [observations, setObservations] = useState<GPAObservation[]>([])
     const [observationsPage, setObservationsPage] = useState(1)
     const [observationsTotalPages, setObservationsTotalPages] = useState(0)
     const [observationsTotal, setObservationsTotal] = useState(0)
     const [observationsOrderDir, setObservationsOrderDir] = useState<ObservationOrderDir>("DESC")
+    const [newObservationContent, setNewObservationContent] = useState("")
+    const [savingObservation, setSavingObservation] = useState(false)
     const observationsPerPage = 5
 
     const fetchObservations = async (targetPage = 1, targetOrderDir: ObservationOrderDir = observationsOrderDir) => {
@@ -45,6 +53,63 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
         fetchObservations(1, "DESC")
     }, [projectId])
 
+    const handleCreateObservation = async () => {
+        const content = newObservationContent.trim()
+        if (!content) {
+            toast({
+                title: "Error",
+                description: "Debe escribir una observación.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        const numericProjectId = Number(projectId)
+        if (Number.isNaN(numericProjectId)) {
+            toast({
+                title: "Error",
+                description: "No se pudo identificar el proyecto.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        setSavingObservation(true)
+        try {
+            const response = await fetch("/api/observations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    OST_project_id: numericProjectId,
+                    OST_content: content,
+                }),
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null)
+                throw new Error(errorData?.error || "No se pudo guardar la observación")
+            }
+
+            setNewObservationContent("")
+            setObservationsOrderDir("DESC")
+            await fetchObservations(1, "DESC")
+
+            toast({
+                title: "Observación creada",
+                description: "La observación se guardó correctamente.",
+                variant: "success",
+            })
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error?.message || "No se pudo guardar la observación.",
+                variant: "destructive",
+            })
+        } finally {
+            setSavingObservation(false)
+        }
+    }
+
     return (
         <Card className="border-[#486b00]/20">
             <CardHeader>
@@ -54,17 +119,33 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
             </CardHeader>
             <CardContent className="p-4 space-y-3 max-h-[520px] overflow-hidden flex flex-col">
                 <div className="rounded-md border border-dashed border-[#a2c523]/50 p-3 bg-[#c9e077]/10">
-                    <p className="text-sm text-[#2e4600] font-medium">Espacio de captura (placeholder)</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        Aqui se mostrara el formulario real para agregar observaciones del proyecto.
-                    </p>
+                    <Label htmlFor={contentInputId} className="text-sm text-[#2e4600] font-medium">
+                        Agregar nueva observación
+                    </Label>
+                    <Textarea
+                        id={contentInputId}
+                        value={newObservationContent}
+                        onChange={(e) => setNewObservationContent(e.target.value)}
+                        placeholder="Escribe una observación del proyecto..."
+                        className="mt-2 min-h-[90px] border-[#a2c523]/40 focus:border-[#486b00]"
+                    />
+                    <div className="mt-2 flex justify-end">
+                        <Button
+                            type="button"
+                            onClick={handleCreateObservation}
+                            disabled={savingObservation}
+                            className="gradient-primary text-white hover:opacity-90"
+                        >
+                            {savingObservation ? "Guardando..." : "Agregar"}
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="max-w-[320px]">
-                    <Label htmlFor="observations-order">Orden por fecha</Label>
+                    <Label htmlFor={orderSelectId}>Orden por fecha</Label>
                     <div className="flex gap-2">
                         <select
-                            id="observations-order"
+                            id={orderSelectId}
                             value={observationsOrderDir}
                             onChange={(e) => setObservationsOrderDir(e.target.value as ObservationOrderDir)}
                             className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background"
