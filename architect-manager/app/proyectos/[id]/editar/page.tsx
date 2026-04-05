@@ -40,6 +40,10 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [project, setProject] = useState<GPAProject | null>(null)
   const [pagos, setPagos] = useState<any[]>([])
   const [observations, setObservations] = useState<GPAObservation[]>([])
+  const [observationsPage, setObservationsPage] = useState(1)
+  const [observationsTotalPages, setObservationsTotalPages] = useState(0)
+  const [observationsTotal, setObservationsTotal] = useState(0)
+  const observationsPerPage = 5
   const [costosExtra, setCostosExtra] = useState<any[]>([])
   const [isPagoDialogOpen, setIsPagoDialogOpen] = useState(false)
   const [isCostoDialogOpen, setIsCostoDialogOpen] = useState(false)
@@ -83,6 +87,25 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [newCat, setNewCat] = useState("")
   const [allCategories, setAllCategories] = useState<Category[]>([])
 
+  const fetchObservations = async (targetPage = 1) => {
+    const params = new URLSearchParams({
+      project_id: String(id),
+      page: String(targetPage),
+      limit: String(observationsPerPage),
+    })
+
+    const observationsRes = await fetch(`/api/observations?${params.toString()}`)
+    if (!observationsRes.ok) {
+      return
+    }
+
+    const observationsData = await observationsRes.json()
+    setObservations(observationsData.observations || [])
+    setObservationsPage(observationsData.page || targetPage)
+    setObservationsTotalPages(observationsData.totalPages || 0)
+    setObservationsTotal(observationsData.totalObservations || 0)
+  }
+
   // Load project data
   useEffect(() => {
     const fetchProject = async () => {
@@ -118,11 +141,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         }
 
         // Cargar observaciones del proyecto
-        const observationsRes = await fetch(`/api/observations?project_id=${id}`)
-        if (observationsRes.ok) {
-          const observationsData = await observationsRes.json()
-          setObservations(observationsData || [])
-        }
+        await fetchObservations(1)
         
         // Cargar costos extra del proyecto
         const additionsRes = await fetch(`/api/additions?project_id=${id}`)
@@ -1367,6 +1386,46 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                       </div>
                     ))
                   )}
+                </div>
+
+                {observationsTotalPages > 1 && (
+                  <div className="flex flex-wrap justify-center items-center gap-2 pt-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() => fetchObservations(Math.max(1, observationsPage - 1))}
+                      disabled={observationsPage === 1}
+                    >
+                      Anterior
+                    </Button>
+
+                    {Array.from({ length: observationsTotalPages }, (_, i) => i + 1).map((pageNumber) => (
+                      <Button
+                        key={pageNumber}
+                        variant={pageNumber === observationsPage ? "secondary" : "outline"}
+                        size="sm"
+                        type="button"
+                        onClick={() => fetchObservations(pageNumber)}
+                      >
+                        {pageNumber}
+                      </Button>
+                    ))}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() => fetchObservations(Math.min(observationsTotalPages, observationsPage + 1))}
+                      disabled={observationsPage === observationsTotalPages}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                )}
+
+                <div className="text-center text-xs text-muted-foreground">
+                  Mostrando {observations.length} de {observationsTotal} observaciones
                 </div>
               </CardContent>
             </Card>

@@ -6,23 +6,48 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('project_id')
+    const pageParam = Number.parseInt(searchParams.get('page') || '1', 10)
+    const limitParam = Number.parseInt(searchParams.get('limit') || '0', 10)
+    const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam
+    const limit = Number.isNaN(limitParam) || limitParam < 0 ? 0 : limitParam
+    const hasPagination = searchParams.has('page') || searchParams.has('limit')
     
     let query = 'SELECT * FROM GPA_Observations'
+    let countQuery = 'SELECT COUNT(OST_id) as totalObservations FROM GPA_Observations'
     const params: any[] = []
     
     if (projectId) {
       const projectIdNum = parseInt(projectId)
       if (!isNaN(projectIdNum)) {
         query += ' WHERE OST_project_id = ?'
+        countQuery += ' WHERE OST_project_id = ?'
         params.push(projectIdNum)
       }
     }
     
-    query += ' ORDER BY OST_date DESC'
+    if (!hasPagination || limit <= 0) {
+      query += ' ORDER BY OST_date DESC'
+      const observations = await executeQuery(query, params) as GPAObservation[]
+      return NextResponse.json(observations, { status: 200 })
+    }
+
+    const totalResult = await executeQuery(countQuery, params) as any[]
+    const totalObservations = Number(totalResult[0]?.totalObservations || 0)
+    const totalPages = Math.ceil(totalObservations / limit)
+    const offset = (page - 1) * limit
+
+    query += ' ORDER BY OST_date DESC LIMIT ?, ?'
+    const queryParams = [...params, offset, limit]
     
-    const observations = await executeQuery(query, params) as GPAObservation[]
+    const observations = await executeQuery(query, queryParams) as GPAObservation[]
     
-    return NextResponse.json(observations, { status: 200 })
+    return NextResponse.json({
+      observations,
+      page,
+      limit,
+      totalObservations,
+      totalPages
+    }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
