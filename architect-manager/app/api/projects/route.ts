@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const pageParam = Number.parseInt(searchParams.get('page') || '1', 10)
     const limitParam = Number.parseInt(searchParams.get('limit') || '0', 10)
     const search = (searchParams.get('search') || '').trim()
-    const orderByParam = searchParams.get('orderBy') || 'PRJ_entry_date'
+    const orderByParam = searchParams.get('orderBy') || 'PRJ_case_number'
     const orderDirParam = (searchParams.get('orderDir') || 'DESC').toUpperCase()
 
     const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam
@@ -62,11 +62,13 @@ export async function GET(request: NextRequest) {
       PRJ_id: 'p.PRJ_id',
       PRJ_case_number: 'p.PRJ_case_number',
       PRJ_entry_date: 'p.PRJ_entry_date',
+      PRJ_start_construction_date: 'p.PRJ_start_construction_date',
+      PRJ_completion_date: 'p.PRJ_completion_date',
       PRJ_state: 'p.PRJ_state',
       client_name: 'c.CLI_name',
       type_name: 't.TYP_name'
     }
-    const orderBy = orderByMap[orderByParam] ? orderByParam : 'PRJ_entry_date'
+    const orderBy = orderByMap[orderByParam] ? orderByParam : 'PRJ_case_number'
     const orderBySql = orderByMap[orderBy]
     const orderDir = orderDirParam === 'ASC' ? 'ASC' : 'DESC'
 

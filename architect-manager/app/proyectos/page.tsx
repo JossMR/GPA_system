@@ -30,12 +30,12 @@ const stateLabels = {
 }
 
 type ProjectOrderBy =
-  | "PRJ_entry_date"
-  | "PRJ_id"
   | "PRJ_case_number"
   | "client_name"
   | "type_name"
   | "PRJ_state"
+  | "PRJ_start_construction_date"
+  | "PRJ_completion_date"
 
 type ProjectOrderDir = "ASC" | "DESC"
 
@@ -50,8 +50,8 @@ export default function ProjectsPage() {
   const [filteredTotalProjects, setFilteredTotalProjects] = useState(0)
   const [globalTotalProjects, setGlobalTotalProjects] = useState(0)
   const [stateCounts, setStateCounts] = useState<Record<string, number>>({})
-  const [orderBy, setOrderBy] = useState<ProjectOrderBy>("PRJ_entry_date")
-  const [orderDir, setOrderDir] = useState<ProjectOrderDir>("DESC")
+  const [orderBy, setOrderBy] = useState<ProjectOrderBy>("PRJ_case_number")
+  const [orderDir, setOrderDir] = useState<ProjectOrderDir>("ASC")
   const projectsPerPage = 10
 
   const fetchGlobalTotals = async () => {
@@ -118,18 +118,18 @@ export default function ProjectsPage() {
       !searchTerm &&
       !appliedSearchTerm &&
       page === 1 &&
-      orderBy === "PRJ_entry_date" &&
-      orderDir === "DESC"
+      orderBy === "PRJ_case_number" &&
+      orderDir === "ASC"
     ) {
-      await fetchProjects(1, "", "PRJ_entry_date", "DESC")
+      await fetchProjects(1, "", "PRJ_case_number", "ASC")
       return
     }
 
     setSearchTerm("")
     setAppliedSearchTerm("")
     setPage(1)
-    setOrderBy("PRJ_entry_date")
-    setOrderDir("DESC")
+    setOrderBy("PRJ_case_number")
+    setOrderDir("ASC")
   }
 
   return (
@@ -252,12 +252,12 @@ export default function ProjectsPage() {
                   onChange={(e) => setOrderBy(e.target.value as ProjectOrderBy)}
                   className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background"
                 >
-                  <option value="PRJ_entry_date">Fecha de ingreso</option>
-                  <option value="PRJ_id">ID</option>
                   <option value="PRJ_case_number">Número de caso</option>
-                  <option value="client_name">Cliente</option>
+                  <option value="client_name">Nombre de cliente</option>
                   <option value="type_name">Tipo</option>
                   <option value="PRJ_state">Estado</option>
+                  <option value="PRJ_start_construction_date">Fecha de inicio</option>
+                  <option value="PRJ_completion_date">Fecha de conclusión</option>
                 </select>
               </div>
               <div className="lg:w-[160px]">
@@ -283,8 +283,8 @@ export default function ProjectsPage() {
                     !searchTerm &&
                     !appliedSearchTerm &&
                     page === 1 &&
-                    orderBy === "PRJ_entry_date" &&
-                    orderDir === "DESC"
+                    orderBy === "PRJ_case_number" &&
+                    orderDir === "ASC"
                   }
                 >
                   Limpiar
