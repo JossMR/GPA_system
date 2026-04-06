@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Search, Edit, UserCheck, UserX, Mail, Calendar } from "lucide-react"
+import { Plus, Search, Edit, Mail, Calendar } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { GPAUser } from "@/models/GPA_user"
 import { GPARole } from "@/models/GPA_role"
@@ -346,13 +346,6 @@ export default function UsersPage() {
                         <div className="flex space-x-2">
                           <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
                             <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => user.USR_id !== undefined && toggleUserStatus(user.USR_id)}>
-                            {user.USR_active === 1 ? (
-                              <UserX className="h-4 w-4 text-red-500" />
-                            ) : (
-                              <UserCheck className="h-4 w-4 text-green-500" />
-                            )}
                           </Button>
                         </div>
                       </TableCell>
