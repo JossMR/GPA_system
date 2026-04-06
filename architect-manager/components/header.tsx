@@ -174,7 +174,7 @@ export function Header() {
                     </Button>
                   </div>
                 </div>
-                <nav className="flex-1 p-6">
+                <nav className="flex-1 p-6 overflow-y-auto">
                   <div className="space-y-2">
                     {navigation.map((item) => (
                       <Link
