@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast"
 import { ProjectTypeManager } from "@/components/projectTypeManager"
 import { Category, ProjectCategoryTags } from "@/components/projectCategoryTags"
 import { formatCurrency } from "@/lib/formatters"
+import { ProjectObservations } from "@/components/project-observations"
 
 export default function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { isAdmin } = useAuth()
@@ -46,7 +47,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [savingPago, setSavingPago] = useState(false)
   const [savingCosto, setSavingCosto] = useState(false)
   const [coverFullAmount, setCoverFullAmount] = useState(false)
-  
+
   // Form data para pagos
   const [pagoFormData, setPagoFormData] = useState({
     PAY_payment_date: "",
@@ -54,7 +55,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     PAY_method: "",
     PAY_description: "",
   })
-  
+
   // Form data para costos extra
   const [costoFormData, setCostoFormData] = useState({
     ATN_name: "",
@@ -105,14 +106,14 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           const clientData = await responseClient.json() as { client: GPAClient | null }
           setClientSelectedObj(clientData.client ?? null)
         }
-        
+
         // Cargar pagos del proyecto
         const paymentsRes = await fetch(`/api/payments?project_id=${id}`)
         if (paymentsRes.ok) {
           const paymentsData = await paymentsRes.json()
           setPagos(paymentsData || [])
         }
-        
+
         // Cargar costos extra del proyecto
         const additionsRes = await fetch(`/api/additions?project_id=${id}`)
         if (additionsRes.ok) {
@@ -194,7 +195,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     }
     setLoading(false)
   }
-  
+
   // Effect para manejar el checkbox de "cubrir monto completo"
   useEffect(() => {
     if (coverFullAmount && project) {
@@ -215,7 +216,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     setCoverFullAmount(false)
     setIsPagoDialogOpen(true)
   }
-  
+
   const handleEditPago = (pago: any) => {
     setSelectedPago(pago)
     setPagoFormData({
@@ -229,34 +230,34 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     setCoverFullAmount(false)
     setIsPagoDialogOpen(true)
   }
-  
+
   const handleDeletePago = async (pagoId: number) => {
     if (!confirm("¿Estás seguro de que quieres eliminar este pago?")) {
       return
     }
-    
+
     try {
       const response = await fetch(`/api/payments/${pagoId}`, {
         method: 'DELETE'
       })
-      
+
       if (!response.ok) {
         throw new Error("Error al eliminar el pago")
       }
-      
+
       toast({
         title: "Pago eliminado",
         description: "El pago fue eliminado correctamente",
         variant: "success"
       })
-      
+
       // Recargar pagos
       const paymentsRes = await fetch(`/api/payments?project_id=${id}`)
       if (paymentsRes.ok) {
         const paymentsData = await paymentsRes.json()
         setPagos(paymentsData || [])
       }
-      
+
       // Recargar proyecto para actualizar saldo
       const projectRes = await fetch(`/api/projects/${id}`)
       if (projectRes.ok) {
@@ -271,7 +272,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       })
     }
   }
-  
+
   const handleSavePago = async () => {
     try {
       // Validación
@@ -324,7 +325,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         PAY_project_id: Number(id),
         PAY_description: pagoFormData.PAY_description || null,
       }
-      
+
       let response
       if (selectedPago?.PAY_id) {
         // Actualizar pago existente
@@ -360,7 +361,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         const paymentsData = await paymentsRes.json()
         setPagos(paymentsData || [])
       }
-      
+
       // Recargar proyecto para actualizar saldo
       const projectRes = await fetch(`/api/projects/${id}`)
       if (projectRes.ok) {
@@ -388,7 +389,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       setSavingPago(false)
     }
   }
-  
+
   const handleNewCosto = () => {
     setSelectedCosto(null)
     setCostoFormData({
@@ -399,7 +400,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     })
     setIsCostoDialogOpen(true)
   }
-  
+
   const handleEditCosto = (costo: any) => {
     setSelectedCosto(costo)
     setCostoFormData({
@@ -412,32 +413,32 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
     })
     setIsCostoDialogOpen(true)
   }
-  
+
   const handleDeleteCosto = async (costoId: number) => {
     if (!confirm("¿Estás seguro de que quieres eliminar este costo extra?")) {
       return
     }
-    
+
     try {
       // Verificar si el costo ya fue pagado
       const costo = costosExtra.find(c => c.ATN_id === costoId)
       if (!costo) return
-      
+
       // Calcular cuánto del presupuesto original ya fue pagado
       const presupuestoBase = Number(project?.PRJ_budget || 0)
       const totalCostosExtra = costosExtra.reduce((sum, c) => sum + (Number(c.ATN_cost) || 0), 0)
       const presupuestoTotal = presupuestoBase + totalCostosExtra
       const totalPagado = pagos.reduce((sum, p) => sum + (Number(p.PAY_amount_paid) || 0), 0)
-      
+
       // Si el total pagado excede el presupuesto base, significa que se ha pagado parte de los costos extra
       if (totalPagado > presupuestoBase) {
         const montoPagadoEnCostosExtra = totalPagado - presupuestoBase
-        
+
         // Calcular qué proporción del costo a eliminar ya fue pagado
         // Si hay múltiples costos extra, distribuimos proporcionalmente
         const proporcionCostoActual = Number(costo.ATN_cost) / totalCostosExtra
         const montoPagadoEsteCosto = montoPagadoEnCostosExtra * proporcionCostoActual
-        
+
         if (montoPagadoEsteCosto > 0) {
           toast({
             title: "No se puede eliminar",
@@ -447,28 +448,28 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           return
         }
       }
-      
+
       const response = await fetch(`/api/additions/${costoId}`, {
         method: 'DELETE'
       })
-      
+
       if (!response.ok) {
         throw new Error("Error al eliminar el costo")
       }
-      
+
       toast({
         title: "Costo eliminado",
         description: "El costo extra fue eliminado correctamente",
         variant: "success"
       })
-      
+
       // Recargar costos
       const additionsRes = await fetch(`/api/additions?project_id=${id}`)
       if (additionsRes.ok) {
         const additionsData = await additionsRes.json()
         setCostosExtra(additionsData || [])
       }
-      
+
       // Recargar proyecto para actualizar presupuesto total
       const projectRes = await fetch(`/api/projects/${id}`)
       if (projectRes.ok) {
@@ -483,7 +484,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       })
     }
   }
-  
+
   const handleSaveCosto = async () => {
     try {
       // Validación
@@ -523,7 +524,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         ATN_date: costoFormData.ATN_date,
         ATN_project_id: Number(id),
       }
-      
+
       let response
       if (selectedCosto?.ATN_id) {
         // Actualizar costo existente
@@ -560,22 +561,22 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         fetch(`/api/payments?project_id=${id}`),
         fetch(`/api/projects/${id}`)
       ])
-      
+
       const additionsData = additionsRes.ok ? await additionsRes.json() : []
       const paymentsData = paymentsRes.ok ? await paymentsRes.json() : []
-      
+
       setCostosExtra(additionsData)
       setPagos(paymentsData)
-      
+
       if (projectRes.ok) {
         const data = await projectRes.json()
         const updatedProject = data.project
-        
+
         // Recalcular PRJ_remaining_amount basado en los datos actualizados
         const totalAdditions = additionsData.reduce((sum: number, a: any) => sum + (Number(a.ATN_cost) || 0), 0)
         const totalPaid = paymentsData.reduce((sum: number, p: any) => sum + (Number(p.PAY_amount_paid) || 0), 0)
         updatedProject.PRJ_remaining_amount = (Number(updatedProject.PRJ_budget) || 0) + totalAdditions - totalPaid
-        
+
         setProject(updatedProject)
       }
 
@@ -1088,14 +1089,14 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                           <TableCell>
                             <Badge variant="outline" className="border-[#a2c523] text-[#486b00]">
                               {pago.PAY_method === "Transfer" ? "Transferencia" :
-                               pago.PAY_method === "SINPE" ? "SINPE" :
-                               pago.PAY_method === "Check" ? "Cheque" :
-                               pago.PAY_method === "Cash" ? "Efectivo" :
-                               pago.PAY_method === "Card" ? "Tarjeta" :
-                               pago.PAY_method === "Credit" ? "Crédito" :
-                               pago.PAY_method === "Debit" ? "Débito" :
-                               pago.PAY_method === "Deposit" ? "Depósito" :
-                               pago.PAY_method}
+                                pago.PAY_method === "SINPE" ? "SINPE" :
+                                  pago.PAY_method === "Check" ? "Cheque" :
+                                    pago.PAY_method === "Cash" ? "Efectivo" :
+                                      pago.PAY_method === "Card" ? "Tarjeta" :
+                                        pago.PAY_method === "Credit" ? "Crédito" :
+                                          pago.PAY_method === "Debit" ? "Débito" :
+                                            pago.PAY_method === "Deposit" ? "Depósito" :
+                                              pago.PAY_method}
                             </Badge>
                           </TableCell>
                           <TableCell className="max-w-[200px] truncate">
@@ -1307,6 +1308,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 </div>
               </CardContent>
             </Card>*/}
+            <ProjectObservations projectId={id} />
           </div>
         </form>
         {/* ClientSelector modal */}
@@ -1319,7 +1321,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           }}
           selectedId={clientSelected}
         />
-        
+
         {/* Dialog para Pagos */}
         <Dialog open={isPagoDialogOpen} onOpenChange={setIsPagoDialogOpen}>
           <DialogContent className="sm:max-w-[600px]">
@@ -1461,7 +1463,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 (() => {
                   const remainingAmount = Number(project.PRJ_remaining_amount || 0)
                   const amountPaid = Number(pagoFormData.PAY_amount_paid)
-                  
+
                   if (amountPaid > remainingAmount) {
                     return (
                       <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-3 rounded-md">
@@ -1534,7 +1536,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
             </div>
           </DialogContent>
         </Dialog>
-        
+
         {/* Dialog para Costos Extra */}
         <Dialog open={isCostoDialogOpen} onOpenChange={setIsCostoDialogOpen}>
           <DialogContent className="sm:max-w-[500px]">
@@ -1560,7 +1562,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   required
                 />
               </div>
-              
+
               <div className="grid gap-2">
                 <Label htmlFor="costo-descripcion">
                   Descripción
@@ -1573,7 +1575,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   className="border-[#7d4427]/30 focus:border-[#7d4427]"
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="costo-monto">
@@ -1600,7 +1602,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     />
                   </div>
                 </div>
-                
+
                 <div className="grid gap-2">
                   <Label htmlFor="costo-fecha">
                     Fecha <span className="text-red-500">*</span>
@@ -1615,7 +1617,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                   />
                 </div>
               </div>
-              
+
               {project && (
                 <div className="bg-[#7d4427]/10 p-3 rounded-md space-y-2">
                   <div className="flex justify-between text-sm">
@@ -1633,7 +1635,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                       <span className="text-[#7d4427] font-medium">Nuevo total:</span>
                       <span className="font-bold">
                         ₡{(
-                          Number(project.PRJ_budget || 0) + 
+                          Number(project.PRJ_budget || 0) +
                           costosExtra.reduce((sum, c) => sum + (Number(c.ATN_cost) || 0), 0) +
                           Number(costoFormData.ATN_cost)
                         ).toLocaleString()}
