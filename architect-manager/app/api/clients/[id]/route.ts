@@ -53,13 +53,23 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         { status: 400 }
       );
     }
-    const clients = await executeQuery(
-      'SELECT * FROM gpa_clients cl WHERE cl.cli_email = ?',
-      [updatedClient.CLI_email]
+    const clientsWithSameEmail = await executeQuery(
+      'SELECT * FROM gpa_clients cl WHERE cl.cli_email = ? and cl.CLI_id != ?',
+      [updatedClient.CLI_email, clientId]
     );
-    if (!Array.isArray(clients) || clients.length !== 0) {
+    if (!Array.isArray(clientsWithSameEmail) || clientsWithSameEmail.length !== 0) {
       return NextResponse.json(
         { error: "Un cliente con este correo electrónico ya está registrado." },
+        { status: 401 }
+      );
+    }
+    const clientsWithSameIdentification = await executeQuery(
+      'SELECT * FROM gpa_clients WHERE CLI_identification = ? and CLI_id != ?',
+      [updatedClient.CLI_identification, clientId]
+    );
+    if (!Array.isArray(clientsWithSameIdentification) || clientsWithSameIdentification.length !== 0) {
+      return NextResponse.json(
+        { error: "Un cliente con esta identificación ya está registrado." },
         { status: 401 }
       );
     }

@@ -12,13 +12,23 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
-        const clients = await executeQuery(
+        const clientsWithSameEmail = await executeQuery(
             'SELECT * FROM gpa_clients cl WHERE cl.cli_email = ?',
             [newClient.CLI_email]
         );
-        if (!Array.isArray(clients) || clients.length !== 0) {
+        if (!Array.isArray(clientsWithSameEmail) || clientsWithSameEmail.length !== 0) {
             return NextResponse.json(
                 { error: "Un cliente con este correo electrónico ya está registrado." },
+                { status: 401 }
+            );
+        }
+        const clientsWithSameIdentification = await executeQuery(
+            'SELECT * FROM gpa_clients WHERE CLI_identification = ?',
+            [newClient.CLI_identification]
+        );
+        if (!Array.isArray(clientsWithSameIdentification) || clientsWithSameIdentification.length !== 0) {
+            return NextResponse.json(
+                { error: "Un cliente con esta identificación ya está registrado." },
                 { status: 401 }
             );
         }
