@@ -134,60 +134,57 @@ export default function clientsPage() {
         {/* Filters Section */}
         <section className="pb-8">
           <div className="container">
-            <div className="card-modern p-6 mb-8">
-              <div className="flex flex-col lg:flex-row gap-4">
-                <div className="flex-1">
-                  <Label htmlFor="search" className="text-sm font-medium text-muted-foreground mb-2 block">
-                    Buscar clientes
-                  </Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="search"
-                      placeholder="Buscar por nombre, apellidos, email o número de cédula..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="input-modern pl-10"
-                    />
-                  </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-8">
+              <div className="card-modern p-6 lg:col-span-8">
+                <Label htmlFor="search" className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Buscar clientes
+                </Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="search"
+                    placeholder="Buscar por nombre, apellidos, email o número de cédula..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="input-modern pl-10"
+                  />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <div>
-                    <Label htmlFor="orderBy" className="text-sm font-medium text-muted-foreground mb-2 block">
-                      Ordenar por
-                    </Label>
-                    <select
-                      id="orderBy"
-                      value={orderBy}
-                      onChange={(e) => setOrderBy(e.target.value as 'CLI_id' | 'CLI_name' | 'CLI_f_lastname' | 'CLI_s_lastname')}
-                      className="input-modern px-3 py-2 border border-input rounded-md text-sm bg-background"
-                    >
-                      <option value="CLI_id">Más reciente</option>
-                      <option value="CLI_name">Nombre</option>
-                      <option value="CLI_f_lastname">Primer Apellido</option>
-                      <option value="CLI_s_lastname">Segundo Apellido</option>
-                    </select>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="secondary"
-                      onClick={handleApplyFilters}
-                      className="btn-secondary"
-                    >
-                      Filtrar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={handleClearFilters}
-                      disabled={!searchTerm && !appliedSearchTerm && page === 1}
-                      className="btn-ghost"
-                    >
-                      Limpiar
-                    </Button>
-                  </div>
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    variant="secondary"
+                    onClick={handleApplyFilters}
+                    className="btn-secondary"
+                  >
+                    Filtrar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={handleClearFilters}
+                    disabled={!searchTerm && !appliedSearchTerm && page === 1}
+                    className="btn-ghost"
+                  >
+                    Limpiar
+                  </Button>
                 </div>
               </div>
-            </div>
+
+              <div className="card-modern p-6 lg:col-span-4">
+                <Label htmlFor="orderBy" className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Ordenar por
+                </Label>
+                <select
+                  id="orderBy"
+                  value={orderBy}
+                  onChange={(e) => setOrderBy(e.target.value as 'CLI_id' | 'CLI_name' | 'CLI_f_lastname' | 'CLI_s_lastname')}
+                  className="input-modern w-full px-3 py-2 border border-input rounded-md text-sm bg-background"
+                >
+                  <option value="CLI_id">Más reciente</option>
+                  <option value="CLI_name">Nombre</option>
+                  <option value="CLI_f_lastname">Primer Apellido</option>
+                  <option value="CLI_s_lastname">Segundo Apellido</option>
+                </select>
+              </div>
+              </div>
           </div>
         </section>
 
