@@ -130,9 +130,9 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
 
     return (
         <Card className="border-[#486b00]/20">
-            <CardHeader>
+            <CardHeader className="gradient-primary text-white rounded-t-lg">
                 <div>
-                    <CardTitle className="text-[#486b00]">Observaciones</CardTitle>
+                    <CardTitle>Observaciones</CardTitle>
                 </div>
             </CardHeader>
             <CardContent className="p-6 space-y-4 max-h-[900px] overflow-hidden flex flex-col">

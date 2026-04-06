@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DocumentManager } from "@/components/document-manager"
+import { ProjectObservations } from "@/components/project-observations"
 import {
   ArrowLeft,
   Plus,
@@ -271,8 +272,7 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
             <Card className="card-hover border-[#486b00]/20">
               <CardHeader className="gradient-primary text-white rounded-t-lg">
                 <CardTitle className="flex items-center">
-                  <DollarSign className="mr-2 h-5 w-5" />
-                  Resumen Financiero
+                  ₡ Resumen Financiero
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
@@ -323,6 +323,8 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
                 </div>
               </CardContent>
             </Card>
+
+            <ProjectObservations projectId={id} />
           </div>
         </div>
       </div>

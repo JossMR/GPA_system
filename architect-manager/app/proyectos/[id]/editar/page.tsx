@@ -1249,8 +1249,10 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
           </div>
           <div className="spacer-y-6">
             <Card className="border-[#486b00]/20">
-              <CardHeader>
-                <CardTitle className="text-[#486b00]">Resumen Financiero</CardTitle>
+              <CardHeader className="gradient-primary text-white rounded-t-lg">
+                <CardTitle className="flex items-center">
+                  ₡ Resumen Financiero
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 <div className="text-sm space-y-3">
