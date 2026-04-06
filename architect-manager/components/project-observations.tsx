@@ -18,6 +18,7 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
     const { toast } = useToast()
     const orderSelectId = useId()
     const contentInputId = useId()
+    const observationContentLimit = 500
 
     const [observations, setObservations] = useState<GPAObservation[]>([])
     const [observationsPage, setObservationsPage] = useState(1)
@@ -25,6 +26,7 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
     const [observationsTotal, setObservationsTotal] = useState(0)
     const [observationsOrderDir, setObservationsOrderDir] = useState<ObservationOrderDir>("DESC")
     const [newObservationContent, setNewObservationContent] = useState("")
+    const [observationContentError, setObservationContentError] = useState<string | null>(null)
     const [savingObservation, setSavingObservation] = useState(false)
     const observationsPerPage = 5
 
@@ -56,9 +58,21 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
     const handleCreateObservation = async () => {
         const content = newObservationContent.trim()
         if (!content) {
+            setObservationContentError(null)
             toast({
                 title: "Error",
                 description: "Debe escribir una observación.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        if (newObservationContent.length > observationContentLimit) {
+            const message = `La observación no puede superar los ${observationContentLimit} caracteres.`
+            setObservationContentError(message)
+            toast({
+                title: "Error",
+                description: message,
                 variant: "destructive",
             })
             return
@@ -91,6 +105,7 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
             }
 
             setNewObservationContent("")
+            setObservationContentError(null)
             setObservationsOrderDir("DESC")
             await fetchObservations(1, "DESC")
 
@@ -110,6 +125,9 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
         }
     }
 
+    const observationCharacterCount = newObservationContent.length
+    const observationIsOverLimit = observationCharacterCount > observationContentLimit
+
     return (
         <Card className="border-[#486b00]/20">
             <CardHeader>
@@ -125,20 +143,37 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
                     <Textarea
                         id={contentInputId}
                         value={newObservationContent}
-                        onChange={(e) => setNewObservationContent(e.target.value)}
+                        onChange={(e) => {
+                            const value = e.target.value
+                            setNewObservationContent(value)
+                            setObservationContentError(
+                                value.length > observationContentLimit
+                                    ? `La observación no puede superar los ${observationContentLimit} caracteres.`
+                                    : null
+                            )
+                        }}
                         placeholder="Escribe una observación del proyecto..."
-                        className="mt-3 min-h-[140px] border-[#a2c523]/40 focus:border-[#486b00] text-base"
+                        className={`mt-3 min-h-[140px] border-[#a2c523]/40 focus:border-[#486b00] text-base ${observationIsOverLimit ? "border-red-500 focus:border-red-500" : ""}`}
+                            aria-invalid={observationIsOverLimit}
                     />
-                    <div className="mt-2 flex justify-end">
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                        <p className={`text-xs ${observationIsOverLimit ? "text-red-600" : "text-muted-foreground"}`}>
+                            {observationCharacterCount}/{observationContentLimit} caracteres
+                        </p>
                         <Button
                             type="button"
                             onClick={handleCreateObservation}
-                            disabled={savingObservation}
+                            disabled={savingObservation || observationIsOverLimit}
                             className="gradient-primary text-white hover:opacity-90"
                         >
                             {savingObservation ? "Guardando..." : "Agregar"}
                         </Button>
                     </div>
+                    {observationContentError && (
+                        <p className="mt-2 text-sm text-red-600">
+                            {observationContentError}
+                        </p>
+                    )}
                 </div>
 
                 <div className="max-w-full">
@@ -171,7 +206,9 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
                     ) : (
                         observations.map((obs) => (
                             <div key={obs.OST_id} className="bg-[#c9e077]/10 p-4 rounded-md border border-[#a2c523]/20">
-                                <p className="text-base text-foreground mt-2">{obs.OST_content}</p>
+                                <p className="mt-2 w-full max-w-full min-w-0 text-base text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                                    {obs.OST_content}
+                                </p>
                                 <p className="text-sm text-muted-foreground mt-3">
                                     {new Date(obs.OST_date).toLocaleDateString("es-ES", {
                                         year: "numeric",
