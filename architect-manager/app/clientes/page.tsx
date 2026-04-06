@@ -21,7 +21,7 @@ export default function clientsPage() {
   const [filteredTotalClients, setFilteredTotalClients] = useState(0)
   const [globalTotalClients, setGlobalTotalClients] = useState(0)
   const [globalTotalProjects, setGlobalTotalProjects] = useState(0)
-  const [orderBy, setOrderBy] = useState<'CLI_id' | 'CLI_name' | 'CLI_f_lastname' | 'CLI_s_lastname'>('CLI_id')
+  const [orderBy, setOrderBy] = useState<'CLI_name' | 'CLI_f_lastname' | 'CLI_s_lastname' | 'CLI_identification' | 'CLI_email'>('CLI_identification')
   const clientsPerPage = 8
   const [totalPages, setTotalPages] = useState(0)
 
@@ -36,7 +36,7 @@ export default function clientsPage() {
     }
   }
 
-  const fetchClients = async (targetPage: number, targetSearch: string, targetOrderBy?: 'CLI_id' | 'CLI_name' | 'CLI_f_lastname' | 'CLI_s_lastname') => {
+  const fetchClients = async (targetPage: number, targetSearch: string, targetOrderBy?: 'CLI_name' | 'CLI_f_lastname' | 'CLI_s_lastname' | 'CLI_identification' | 'CLI_email') => {
     try {
       setLoadingClients(true)
       const finalOrderBy = targetOrderBy || orderBy
@@ -79,14 +79,14 @@ export default function clientsPage() {
   }
 
   const handleClearFilters = async () => {
-    if (!searchTerm && !appliedSearchTerm && page === 1 && orderBy === 'CLI_id') {
-      await fetchClients(1, "", 'CLI_id')
+    if (!searchTerm && !appliedSearchTerm && page === 1 && orderBy === 'CLI_identification') {
+      await fetchClients(1, "", 'CLI_identification')
       return
     }
     setSearchTerm("")
     setAppliedSearchTerm("")
     setPage(1)
-    setOrderBy('CLI_id')
+    setOrderBy('CLI_identification')
   }
 
   return (
@@ -175,13 +175,14 @@ export default function clientsPage() {
                 <select
                   id="orderBy"
                   value={orderBy}
-                  onChange={(e) => setOrderBy(e.target.value as 'CLI_id' | 'CLI_name' | 'CLI_f_lastname' | 'CLI_s_lastname')}
+                  onChange={(e) => setOrderBy(e.target.value as 'CLI_identification' | 'CLI_name' | 'CLI_f_lastname' | 'CLI_s_lastname' | 'CLI_email')}
                   className="input-modern w-full px-3 py-2 border border-input rounded-md text-sm bg-background"
                 >
-                  <option value="CLI_id">Más reciente</option>
+                  <option value="CLI_identification">Identificación</option>
                   <option value="CLI_name">Nombre</option>
                   <option value="CLI_f_lastname">Primer Apellido</option>
                   <option value="CLI_s_lastname">Segundo Apellido</option>
+                  <option value="CLI_email">Email</option>
                 </select>
               </div>
               </div>

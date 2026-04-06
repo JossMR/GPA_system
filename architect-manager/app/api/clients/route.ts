@@ -114,13 +114,13 @@ export async function GET(request: NextRequest) {
         const pageParam = Number.parseInt(request.nextUrl.searchParams.get('page') || '1', 10);
         const limitParam = Number.parseInt(request.nextUrl.searchParams.get('limit') || '9', 10);
         const search = (request.nextUrl.searchParams.get('search') || '').trim();
-        const orderByParam = request.nextUrl.searchParams.get('orderBy') || 'CLI_id';
+        const orderByParam = request.nextUrl.searchParams.get('orderBy') || 'CLI_identification';
         const orderDirParam = (request.nextUrl.searchParams.get('orderDir') || 'DESC').toUpperCase();
 
         const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
         const limit = Number.isNaN(limitParam) || limitParam < 1 ? 9 : limitParam;
-        const orderByWhitelist = new Set(['CLI_id', 'CLI_name', 'CLI_identification', 'CLI_email']);
-        const orderBy = orderByWhitelist.has(orderByParam) ? orderByParam : 'CLI_id';
+        const orderByWhitelist = new Set(['CLI_name','CLI_f_lastname', 'CLI_s_lastname', 'CLI_identification', 'CLI_email']);
+        const orderBy = orderByWhitelist.has(orderByParam) ? orderByParam : 'CLI_identification';
         const orderDir = orderDirParam === 'ASC' ? 'ASC' : 'DESC';
         const offset = (page - 1) * limit;
 
