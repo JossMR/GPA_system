@@ -676,16 +676,17 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
         const errorMessage = errorData.error || "Error actualizando el proyecto"
         throw new Error(errorMessage)
       }
+      const successData = await response.json()
       toast({
         title: "Proyecto Actualizado",
-        description: "Los cambios fueron guardados correctamente",
+        description: successData.message || "El proyecto fue actualizado correctamente",
         variant: "success"
       })
       router.push(`/proyectos/${id}`)
     } catch (error) {
       toast({
         title: "Error",
-        description: "Ocurrió un error al actualizar el proyecto.",
+        description: error instanceof Error ? error.message : "Ocurrió un error al actualizar el proyecto",
         variant: "destructive"
       })
     }

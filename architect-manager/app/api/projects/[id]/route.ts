@@ -38,7 +38,6 @@ async function fetchProjectRelatedData(projectId: number, request: NextRequest) 
       payments
     }
   } catch (error) {
-    console.error('Error fetching project related data via main API endpoints:', error)
     return {
       categories: [],
       types: undefined,
@@ -114,9 +113,8 @@ export async function GET(
     return NextResponse.json({ project }, { status: 200 })
 
   } catch (error) {
-    console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error del servidor: No se pudo obtener el Proyecto' },
       { status: 500 }
     )
   }
@@ -157,6 +155,18 @@ export async function PUT(
       PRJ_remaining_amount,
       categories
     } = body
+
+    const projectsWithSameCaseNumber = await executeQuery(
+      `SELECT PRJ_id FROM GPA_Projects WHERE PRJ_case_number = ? AND PRJ_id != ?`,
+      [PRJ_case_number, projectId]
+    ) as { PRJ_id: number }[];
+    if (projectsWithSameCaseNumber.length > 0) {
+      return NextResponse.json(
+        { error: 'Ya existe un proyecto con el mismo número de caso' },
+        { status: 400 }
+      );
+    }
+
     const projectPayments = await fetch(`${new URL(request.url).origin}/api/payments?project_id=${projectId}`, {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -260,12 +270,12 @@ export async function PUT(
         [projectId, catId]
       );
     }
-    return NextResponse.json({ message: 'Project updated successfully' }, { status: 200 })
+    return NextResponse.json({ message: 'Proyecto actualizado exitosamente' }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error del servidor: No se pudo actualizar el Proyecto' },
       { status: 500 }
     )
   }
@@ -286,12 +296,12 @@ export async function DELETE(
     const deleteQuery = `DELETE FROM GPA_Projects WHERE PRJ_id = ?`
     await executeQuery(deleteQuery, [projectId])
 
-    return NextResponse.json({ message: 'Project deleted successfully' }, { status: 200 })
+    return NextResponse.json({ message: 'Proyecto eliminado exitosamente' }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error del servidor: No se pudo eliminar el Proyecto' },
       { status: 500 }
     )
   }

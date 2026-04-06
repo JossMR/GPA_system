@@ -53,16 +53,13 @@ export default function NewProjectPage() {
   const [newCat, setNewCat] = useState("")
   const [allCategories, setAllCategories] = useState<Category[]>([])
   
-  // 👇 NUEVO: Estado para documentos pendientes (antes de crear el proyecto)
   const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([])
   const [uploadingDocuments, setUploadingDocuments] = useState(false)
 
-  // Delete assigned category
   const handleRemoveCategory = (id: number) => {
     setAssignedCategories(cats => cats.filter(c => c.id !== id))
   }
 
-  // Assign existing category
   const handleAssignCategory = (cat: Category) => {
     setAssignedCategories(cats => [...cats, cat])
     setCatDialogOpen(false)
@@ -157,7 +154,6 @@ export default function NewProjectPage() {
       })),
     }
     try {
-      // 1️⃣ Crear el proyecto primero
       const response = await fetch("/api/projects", {
         method: "POST",
         headers: {
@@ -177,11 +173,10 @@ export default function NewProjectPage() {
       
       toast({
         title: "Proyecto Registrado",
-        description: "El proyecto fue registrado correctamente.",
+        description: data.message || "El proyecto fue registrado correctamente.",
         variant: "success"
       })
 
-      // 2️⃣ Subir documentos pendientes si hay alguno
       if (pendingDocuments.length > 0) {
         setUploadingDocuments(true)
         toast({
@@ -232,20 +227,17 @@ export default function NewProjectPage() {
           })
         }
 
-        // Limpiar documentos pendientes
         setPendingDocuments([])
       }
 
-      // 3️⃣ Redirigir al detalle del proyecto
       setTimeout(() => {
         router.push(`/proyectos/${projectId}`)
       }, 1500)
 
     } catch (error) {
-      console.error(error instanceof Error ? error.message : "There was a problem creating the project.")
       toast({
         title: "Error",
-        description: "Ocurrió un error al guardar el proyecto.",
+        description: error instanceof Error ? error.message : "Ocurrió un error al registrar el proyecto.",
         variant: "destructive"
       })
     }
@@ -270,7 +262,6 @@ export default function NewProjectPage() {
   }, [])
 
 
-  // Available categories to assign (exclude already assigned and filter by name)
   const assignedIds = assignedCategories.map(c => c.id)
   const available = allCategories.filter(
     c => !assignedIds.includes(c.id) && c.name.toLowerCase().includes(filter.toLowerCase())

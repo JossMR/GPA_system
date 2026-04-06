@@ -33,7 +33,6 @@ async function fetchProjectRelatedData(projectId: number, request: NextRequest) 
       payments
     }
   } catch (error) {
-    console.error('Error fetching project related data via main API endpoints:', error)
     return {
       categories: [],
       observations: [],
@@ -218,9 +217,8 @@ export async function GET(request: NextRequest) {
     }, { status: 200 })
 
   } catch (error) {
-    console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error del servidor: No se pudieron obtener los Proyectos' },
       { status: 500 }
     )
   }
@@ -250,11 +248,20 @@ export async function POST(request: NextRequest) {
       PRJ_remaining_amount,
       categories
     } = body
-
+    const projectsWithSameCaseNumber = await executeQuery(
+      'SELECT PRJ_id FROM GPA_Projects WHERE PRJ_case_number = ?',
+      [PRJ_case_number]
+    ) as any[]
+    if (!Array.isArray(projectsWithSameCaseNumber) || projectsWithSameCaseNumber.length > 0) {
+      return NextResponse.json(
+        { error: 'Ya existe un proyecto con el mismo número de caso' },
+        { status: 400 }
+      )
+    }
     // Validate required fields
     if (!PRJ_client_id || !PRJ_case_number || !PRJ_type_id || !PRJ_state) {
       return NextResponse.json(
-        { error: 'Required fields: client_id, case_number, type_id, state' },
+        { error: 'Se requieren para el registro cliente, numero de caso, tipo de proyecto y estado' },
         { status: 400 }
       )
     }
@@ -304,14 +311,13 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'Project created successfully',
+      message: 'El proyecto fue registrado correctamente.',
       projectId
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error del servidor: No se pudo crear el Proyecto' },
       { status: 500 }
     )
   }
