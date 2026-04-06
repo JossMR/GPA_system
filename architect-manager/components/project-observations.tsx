@@ -117,9 +117,9 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
                     <CardTitle className="text-[#486b00]">Observaciones</CardTitle>
                 </div>
             </CardHeader>
-            <CardContent className="p-4 space-y-3 max-h-[520px] overflow-hidden flex flex-col">
-                <div className="rounded-md border border-dashed border-[#a2c523]/50 p-3 bg-[#c9e077]/10">
-                    <Label htmlFor={contentInputId} className="text-sm text-[#2e4600] font-medium">
+            <CardContent className="p-6 space-y-4 max-h-[900px] overflow-hidden flex flex-col">
+                <div className="rounded-md border border-dashed border-[#a2c523]/50 p-4 bg-[#c9e077]/10">
+                    <Label htmlFor={contentInputId} className="text-base text-[#2e4600] font-medium">
                         Agregar nueva observación
                     </Label>
                     <Textarea
@@ -127,7 +127,7 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
                         value={newObservationContent}
                         onChange={(e) => setNewObservationContent(e.target.value)}
                         placeholder="Escribe una observación del proyecto..."
-                        className="mt-2 min-h-[90px] border-[#a2c523]/40 focus:border-[#486b00]"
+                        className="mt-3 min-h-[140px] border-[#a2c523]/40 focus:border-[#486b00] text-base"
                     />
                     <div className="mt-2 flex justify-end">
                         <Button
@@ -141,14 +141,14 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
                     </div>
                 </div>
 
-                <div className="max-w-[320px]">
-                    <Label htmlFor={orderSelectId}>Orden por fecha</Label>
+                <div className="max-w-full">
+                    <Label htmlFor={orderSelectId} className="text-base">Orden por fecha</Label>
                     <div className="flex gap-2">
                         <select
                             id={orderSelectId}
                             value={observationsOrderDir}
                             onChange={(e) => setObservationsOrderDir(e.target.value as ObservationOrderDir)}
-                            className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background"
+                            className="w-full px-4 py-2 border border-input rounded-md text-base bg-background"
                         >
                             <option value="DESC">Más recientes</option>
                             <option value="ASC">Más antiguas</option>
@@ -163,16 +163,16 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
                     </div>
                 </div>
 
-                <div className="space-y-2 mt-2 border-t border-[#a2c523]/30 pt-4 flex-1 overflow-y-auto pr-1">
+                <div className="space-y-3 mt-4 border-t border-[#a2c523]/30 pt-4 flex-1 overflow-y-auto pr-2">
                     {observations.length === 0 ? (
-                        <div className="rounded-md border border-dashed border-[#a2c523]/40 p-3 text-sm text-muted-foreground">
+                        <div className="rounded-md border border-dashed border-[#a2c523]/40 p-4 text-base text-muted-foreground">
                             No hay observaciones registradas para este proyecto.
                         </div>
                     ) : (
                         observations.map((obs) => (
-                            <div key={obs.OST_id} className="bg-[#c9e077]/10 p-3 rounded-md border border-[#a2c523]/20">
-                                <p className="text-sm text-foreground mt-2">{obs.OST_content}</p>
-                                <p className="text-xs text-muted-foreground mt-2">
+                            <div key={obs.OST_id} className="bg-[#c9e077]/10 p-4 rounded-md border border-[#a2c523]/20">
+                                <p className="text-base text-foreground mt-2">{obs.OST_content}</p>
+                                <p className="text-sm text-muted-foreground mt-3">
                                     {new Date(obs.OST_date).toLocaleDateString("es-ES", {
                                         year: "numeric",
                                         month: "short",
