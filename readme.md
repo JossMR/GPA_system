@@ -28,4 +28,8 @@ pnpm install exceljs file-saver
 pnpm install --save-dev @types/file-saver
 pnpm install exceljs file-saver date-fns
 
+npm install --save-dev jest-environment-jsdom
+
+npm install --save-dev @testing-library/react @testing-library/jest-dom jest @types/jest ts-jest --legacy-peer-deps
+
 pnpm run dev
