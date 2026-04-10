@@ -34,7 +34,7 @@ npm test -- formatters --watch
 
 | Módulo | Cantidad | Estado |
 |--------|----------|--------|
-| Models | 76 tests | ✅ |
+| Models | 89 tests | ✅ |
 | Utils | 54 tests | ✅ |
 | Components | 8 tests | ✅ |
 | Hooks | 9 tests | ✅ |
@@ -66,10 +66,15 @@ __tests__/models/
 │   ✓ Métodos de pago (8 tipos)
 │   ✓ Reembolsos y facturación
 │
-└── GPA_observation.test.ts (14 tests)
-    ✓ Creación y contenido
-    ✓ Asociación con proyectos
-    ✓ Timeline y timestamps
+├── GPA_observation.test.ts (14 tests)
+│   ✓ Creación y contenido
+│   ✓ Asociación con proyectos
+│   ✓ Timeline y timestamps
+│   
+└── GPA_notification.test.ts (13 tests)
+    ✓ Creación y validación
+    ✓ Tipos de notificación y destinatarios
+    ✓ Fechas y relaciones con proyecto
 ```
 
 #### 2️⃣ **Utilidades** - 54 Tests
@@ -202,7 +207,7 @@ __tests__/
 
 | Métrica | Valor |
 |---------|-------|
-| Total de Tests | 175+ |
+| Total de Tests | 180+ |
 | Archivos de Test | 11 |
 | Módulos Cubiertos | 8 |
 | Funciones Críticas | 40+ |
@@ -221,15 +226,16 @@ __tests__/
 ## Resultado Esperado
 
 ```
-PASS  __tests__/models/GPA_user.test.ts
-PASS  __tests__/models/GPA_project.test.ts
-PASS  __tests__/models/GPA_client.test.ts
-PASS  __tests__/models/GPA_payment.test.ts
-PASS  __tests__/models/GPA_observation.test.ts
-PASS  __tests__/lib/formatters.test.ts
+PASS  __tests__/integration.test.ts
+PASS  __tests__/models/GPA_notification.test.ts
 PASS  __tests__/lib/utils.test.ts
 PASS  __tests__/lib/database.test.ts
-PASS  __tests__/components/basic-components.test.tsx
+PASS  __tests__/lib/formatters.test.ts
+PASS  __tests__/models/GPA_payment.test.ts
+PASS  __tests__/models/GPA_observation.test.ts
+PASS  __tests__/models/GPA_project.test.ts
+PASS  __tests__/models/GPA_user.test.ts
+PASS  __tests__/models/GPA_client.test.ts
 PASS  __tests__/hooks/use-mobile.test.ts
-PASS  __tests__/integration.test.ts
+PASS  __tests__/components/basic-components.test.tsx
 ```
