@@ -50,9 +50,9 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
       if (!response.ok) {
         // Handle different error scenarios
         if (response.status === 401 && data.needsRegistration) {
-          setError("Your account is not registered in the system.")
+          setError("Su cuenta no se encuentra registrada. Por favor, contacte a un administrador para que le registre.")
         } else if (response.status === 403) {
-          setError("Your account is inactive. Please contact an administrator.")
+          setError("Su cuenta está inactiva. Por favor, contacte a un administrador.")
         } else {
           setError(data.error || "Failed to authenticate with Google")
         }

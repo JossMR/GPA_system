@@ -1,36 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery, executeTransaction } from '@/lib/database';
 import { GPAUser } from '@/models/GPA_user';
-import { validateRequiredFields,getLocalMySQLDateTime } from '@/models/GPA_user';
+import { validateRequiredFields, getLocalMySQLDateTime } from '@/models/GPA_user';
 
 export async function POST(req: NextRequest) {
   try {
     const newUser = await req.json();
-    if(!newUser){
+    if (!newUser) {
       return NextResponse.json(
-        { error: "User data not provided" }, 
+        { error: "Los datos del usuario no fueron proporcionados" },
         { status: 400 }
       );
     }
     // Validate required fields
     const fields = validateRequiredFields(newUser);
-    if(!fields){
+    if (!fields) {
       return NextResponse.json(
-        { error: "User fields are missing" },
+        { error: "Los campos del usuario son requeridos" },
         { status: 400 }
       );
     }
     // Check if a user with the same email already exists
-    const users = await executeQuery(
-            'SELECT * FROM gpa_users us WHERE us.usr_email = ?',
-            [newUser.USR_email]
-        );
-        if (!Array.isArray(users) || users.length !== 0) {
-            return NextResponse.json(
-                { error: "An user with this email is already registered." },
-                { status: 401 }
-            );
-        }
+    const usersWithSameEmail = await executeQuery(
+      'SELECT * FROM gpa_users us WHERE us.usr_email = ?',
+      [newUser.USR_email]
+    );
+    if (usersWithSameEmail.length !== 0 || !Array.isArray(usersWithSameEmail)){
+          return NextResponse.json(
+            { error: "Un usuario con este correo electrónico ya está registrado." },
+            { status: 401 }
+          );
+    }
+    if (!Array.isArray(usersWithSameEmail) || usersWithSameEmail.length !== 0) {
+      return NextResponse.json(
+        { error: "Un usuario con este correo electrónico ya está registrado." },
+        { status: 401 }
+      );
+    }
     // Insert the new user into the database
     const results = await executeTransaction([
       {
@@ -53,16 +59,16 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error(error);
     return NextResponse.json(
-      { error: "Server Error: Error in the user registration" },
+      { error: "Error del servidor: Error en el registro del usuario" },
       { status: 500 }
     );
   }
 }
 
 export async function GET(request: NextRequest) {
-    try {
-        const users: GPAUser[] = await executeQuery(
-            `SELECT 
+  try {
+    const users: GPAUser[] = await executeQuery(
+      `SELECT 
                 USR_id,
                 USR_role_id,
                 USR_active,
@@ -75,17 +81,17 @@ export async function GET(request: NextRequest) {
                 r.ROL_name
             FROM gpa_users us
             JOIN gpa_roles r ON us.usr_role_id = r.rol_id`
-        );
-        return NextResponse.json({
-            message: "Users requested successfully",
-            users
-        }, { status: 200 });
-    } catch {
-        return NextResponse.json(
-            { error: "Server Error: Error in the users request" },
-            { status: 500 }
-        );
-    }
+    );
+    return NextResponse.json({
+      message: "Users requested successfully",
+      users
+    }, { status: 200 });
+  } catch {
+    return NextResponse.json(
+      { error: "Server Error: Error in the users request" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function PUT(req: NextRequest) {
@@ -93,7 +99,7 @@ export async function PUT(req: NextRequest) {
     const updatedUser = await req.json();
     if (!updatedUser || !updatedUser.USR_id) {
       return NextResponse.json(
-        { error: "User ID and data must be provided" },
+        { error: "El id del usuario es requerido" },
         { status: 400 }
       );
     }
@@ -101,10 +107,30 @@ export async function PUT(req: NextRequest) {
     const fields = validateRequiredFields(updatedUser);
     if (!fields) {
       return NextResponse.json(
-        { error: "User fields are missing" },
+        { error: "Los campos del usuario son requeridos" },
         { status: 400 }
       );
     }
+    const usersWithSameEmail = await executeQuery(
+      'SELECT * FROM gpa_users us WHERE us.usr_email = ? and us.USR_id != ?',
+      [updatedUser.USR_email, updatedUser.USR_id]
+    );
+    if (!Array.isArray(usersWithSameEmail) || usersWithSameEmail.length !== 0) {
+      return NextResponse.json(
+        { error: "Un usuario con este correo electrónico ya está registrado." },
+        { status: 401 }
+      );
+    }
+    const activeUsers: GPAUser[] = await executeQuery(
+      'SELECT * FROM gpa_users WHERE USR_active = 1'
+    );
+    if (activeUsers.length === 1 && activeUsers[0].USR_id === updatedUser.USR_id && updatedUser.USR_active === 0) {
+      return NextResponse.json(
+        { error: "Debe haber al menos un usuario activo en el sistema." },
+        { status: 401 }
+      );
+    }
+
     // Update the user in the database
     await executeTransaction([
       {
@@ -134,13 +160,13 @@ export async function PUT(req: NextRequest) {
     );
     const user: GPAUser = result[0] as GPAUser;
     return NextResponse.json({
-      message: "User updated successfully",
+      message: "Usuario actualizado exitosamente",
       user
     }, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
-      { error: "Server Error: Error updating user" },
+      { error: "Error de servidor: Error al actualizar el usuario" },
       { status: 500 }
     );
   }

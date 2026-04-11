@@ -673,8 +673,13 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       })
       if (!response.ok) {
         const errorData = await response.json()
-        const errorMessage = errorData.error || "Error actualizando el proyecto"
-        throw new Error(errorMessage)
+        toast({
+          title: "Error",
+          description: errorData.error || "Error actualizando el proyecto",
+          variant: "destructive"
+        })
+        setLoading(false)
+        return;
       }
       const successData = await response.json()
       toast({

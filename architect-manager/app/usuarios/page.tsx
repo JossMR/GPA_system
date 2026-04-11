@@ -118,10 +118,21 @@ export default function UsersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedUser),
       });
-      if (!response.ok) throw new Error("Error updating user status");
+      if (!response.ok) {
+        const errorData = await response.json()
+        toast({
+          title: "Error",
+          description: errorData.error || "Error al actualizar el estado del usuario",
+          variant: "destructive"
+        })
+      }
       await fetchUsers();
     } catch (error) {
-      console.error("API error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error al actualizar el estado del usuario",
+        variant: "destructive"
+      })
     }
   }
 
@@ -146,6 +157,7 @@ export default function UsersPage() {
     }
 
     try {
+      console.log("Enviando datos al API:", userData);
       const response = await fetch("/api/users", {
         method: selectedUser ? "PUT" : "POST",
         headers: {
@@ -154,12 +166,15 @@ export default function UsersPage() {
         body: JSON.stringify(userData),
       });
       if (!response.ok) {
+        const errorData = await response.json()
+        const errorMessage = errorData.error || "Ocurrió un error al guardar el usuario.";
         toast({
           title: "Error en el guardado",
-          description: "Ocurrió un error al guardar el usuario.",
+          description: errorMessage,
           variant: "destructive",
         });
-        throw new Error(selectedUser ? "Error updating user" : "Error creating user");
+        setLoading(false);
+        return;
       }
       const data = await response.json();
       if (response.ok) {
@@ -177,12 +192,16 @@ export default function UsersPage() {
         setSelectedUser(null);
         toast({
           title: "Guardado exitoso",
-          description: "El usuario fue guardado exitosamente.",
+          description: data.message || "El usuario fue guardado exitosamente.",
           variant: "success",
         });
       }
     } catch (error) {
-      console.error("API error:", error);
+      toast({
+        title: "Error en el guardado",
+        description: error instanceof Error ? error.message : "Ocurrió un error al guardar el usuario.",
+        variant: "destructive",
+      });
     }
     setLoading(false);
   }

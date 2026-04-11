@@ -114,7 +114,13 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
       if (!response.ok) {
         const errorData = await response.json()
         const errorMessage = errorData.error || "Error updating client"
-        throw new Error(errorMessage)
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        })
+        setLoading(false)
+        return;
       }
 
       toast({
