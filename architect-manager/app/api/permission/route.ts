@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url)
         const roleId = searchParams.get('rol_id')
-        let query = 
+        let query =
             `SELECT 
                 p.PSN_id,
                 p.PTY_id,
@@ -19,22 +19,22 @@ export async function GET(request: NextRequest) {
         const params: any[] = []
         if (roleId) {
             const rolIdNum = parseInt(roleId)
-          if (!isNaN(rolIdNum)) {
-            query += ` JOIN gpa_permissionXGPA_roles pr ON pr.PSN_id = p.PSN_id 
+            if (!isNaN(rolIdNum)) {
+                query += ` JOIN gpa_permissionXGPA_roles pr ON pr.PSN_id = p.PSN_id 
                         WHERE pr.ROL_id = ?`
-            params.push(rolIdNum)
-            }        
+                params.push(rolIdNum)
+            }
         }
         const permissions: GPAPermission[] = await executeQuery(
             query, params
         );
         return NextResponse.json({
-            message: "Permissions requested successfully",
+            message: "Permisos obtenidos exitosamente",
             permissions
         }, { status: 200 });
     } catch {
         return NextResponse.json(
-            { error: "Server Error: Error in the permissions request" },
+            { error: "Error de servidor: Error interno del servidor" },
             { status: 500 }
         );
     }

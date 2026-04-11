@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     
     // Validate required fields according to GPAcategory interface
     if (!body.CAT_name || body.CAT_name.trim() === '') {
-      return NextResponse.json({ error: 'Category name is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Nombre de la categoría es requerido' }, { status: 400 })
     }
     
     // Check if category name already exists
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const existing = await executeQuery(checkQuery, [body.CAT_name.trim()]) as any[]
     
     if (existing.length > 0) {
-      return NextResponse.json({ error: 'Category name already exists' }, { status: 409 })
+      return NextResponse.json({ error: 'Nombre de la categoría ya existe' }, { status: 409 })
     }
     
     // Create category object following GPAcategory interface
@@ -67,14 +67,14 @@ export async function POST(request: NextRequest) {
     ]) as any
     
     return NextResponse.json({ 
-      message: 'Category created successfully',
+      message: 'Categoría creada exitosamente',
       categoryId: result.insertId
     }, { status: 201 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al crear la categoría' },
       { status: 500 }
     )
   }

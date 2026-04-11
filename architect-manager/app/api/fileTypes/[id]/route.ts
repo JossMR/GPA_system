@@ -11,14 +11,14 @@ export async function GET(
     const fileTypeId = parseInt(resolvedParams.id)
     
     if (isNaN(fileTypeId)) {
-      return NextResponse.json({ error: 'Invalid file type ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de tipo de archivo inválido' }, { status: 400 })
     }
     
     const query = 'SELECT * FROM GPA_FileTypes WHERE FTP_id = ?'
     const fileTypes = await executeQuery(query, [fileTypeId]) as GPAFileType[]
     
     if (fileTypes.length === 0) {
-      return NextResponse.json({ error: 'File type not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Tipo de archivo no encontrado' }, { status: 404 })
     }
     
     return NextResponse.json(fileTypes[0], { status: 200 })
@@ -26,7 +26,7 @@ export async function GET(
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al obtener el tipo de archivo' },
       { status: 500 }
     )
   }
@@ -41,14 +41,14 @@ export async function PUT(
     const fileTypeId = parseInt(resolvedParams.id)
     
     if (isNaN(fileTypeId)) {
-      return NextResponse.json({ error: 'Invalid file type ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de tipo de archivo inválido' }, { status: 400 })
     }
     
     const body = await request.json() as Partial<GPAFileType>
     
     // Validate required fields
     if (body.FTP_name !== undefined && (!body.FTP_name || body.FTP_name.trim() === '')) {
-      return NextResponse.json({ error: 'File type name cannot be empty' }, { status: 400 })
+      return NextResponse.json({ error: 'El nombre del tipo de archivo no puede estar vacío' }, { status: 400 })
     }
     
     // Check if file type exists
@@ -56,7 +56,7 @@ export async function PUT(
     const existing = await executeQuery(checkQuery, [fileTypeId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'File type not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Tipo de archivo no encontrado' }, { status: 404 })
     }
     
     // Check if new name already exists (if updating name)
@@ -65,7 +65,7 @@ export async function PUT(
       const duplicates = await executeQuery(duplicateQuery, [body.FTP_name.trim(), fileTypeId]) as any[]
       
       if (duplicates.length > 0) {
-        return NextResponse.json({ error: 'File type name already exists' }, { status: 409 })
+        return NextResponse.json({ error: 'Nombre del tipo de archivo ya existe' }, { status: 409 })
       }
     }
     
@@ -79,7 +79,7 @@ export async function PUT(
     }
     
     if (updateFields.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+      return NextResponse.json({ error: 'No hay campos para actualizar' }, { status: 400 })
     }
     
     updateValues.push(fileTypeId)
@@ -89,13 +89,13 @@ export async function PUT(
     await executeQuery(updateQuery, updateValues)
     
     return NextResponse.json({ 
-      message: 'File type updated successfully'
+      message: 'Tipo de archivo actualizado exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al actualizar el tipo de archivo' },
       { status: 500 }
     )
   }
@@ -110,7 +110,7 @@ export async function DELETE(
     const fileTypeId = parseInt(resolvedParams.id)
     
     if (isNaN(fileTypeId)) {
-      return NextResponse.json({ error: 'Invalid file type ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de tipo de archivo inválido' }, { status: 400 })
     }
     
     // Check if file type exists
@@ -118,7 +118,7 @@ export async function DELETE(
     const existing = await executeQuery(checkQuery, [fileTypeId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'File type not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Tipo de archivo no encontrado' }, { status: 404 })
     }
     
     // Check if file type is being used by any document (referential integrity)
@@ -127,7 +127,7 @@ export async function DELETE(
     
     if (documentsCount[0].count > 0) {
       return NextResponse.json({ 
-        error: 'Cannot delete file type: it is being used by one or more documents' 
+        error: 'No se puede eliminar el tipo de archivo: está siendo utilizado por uno o más documentos' 
       }, { status: 409 })
     }
     
@@ -135,13 +135,13 @@ export async function DELETE(
     await executeQuery(deleteQuery, [fileTypeId])
     
     return NextResponse.json({ 
-      message: 'File type deleted successfully'
+      message: 'Tipo de archivo eliminado exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al eliminar el tipo de archivo' },
       { status: 500 }
     )
   }

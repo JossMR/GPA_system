@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'File types initialization completed',
+      message: 'Inicialización de tipos de archivo completada',
       results: results,
       created: results.filter(r => r.status === 'created').length,
       existing: results.filter(r => r.status === 'exists').length,
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error initializing file types:', error)
     return NextResponse.json(
-      { error: 'Failed to initialize file types' },
+      { error: 'Error de servidor: Error al inicializar los tipos de archivo' },
       { status: 500 }
     )
   }

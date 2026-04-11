@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error del servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     
     // Validate required fields according to GPAtype interface
     if (!body.TYP_name || body.TYP_name.trim() === '') {
-      return NextResponse.json({ error: 'Type name is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Nombre de tipo es requerido' }, { status: 400 })
     }
     
     // Check if type name already exists
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const existing = await executeQuery(checkQuery, [body.TYP_name.trim()]) as any[]
     
     if (existing.length > 0) {
-      return NextResponse.json({ error: 'Type name already exists' }, { status: 409 })
+      return NextResponse.json({ error: 'Nombre de tipo ya existe' }, { status: 409 })
     }
     
     // Create type object following GPAtype interface
@@ -50,14 +50,14 @@ export async function POST(request: NextRequest) {
     ]) as any
     
     return NextResponse.json({ 
-      message: 'Type created successfully',
+      message: 'Tipo creado exitosamente',
       typeId: result.insertId
     }, { status: 201 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error del servidor: Error interno del servidor' },
       { status: 500 }
     )
   }

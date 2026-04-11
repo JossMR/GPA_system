@@ -15,11 +15,11 @@ export async function GET(
     // Validate project ID
     const projectIdNum = parseInt(projectId)
     if (isNaN(projectIdNum)) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de proyecto inválido' }, { status: 400 })
     }
 
     if (!filename) {
-      return NextResponse.json({ error: 'Filename is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Nombre de archivo es requerido' }, { status: 400 })
     }
 
     // Find document in database by filename and project
@@ -31,14 +31,14 @@ export async function GET(
     const documents = await executeQuery(documentQuery, [projectIdNum, `%${filename}`]) as any[]
     
     if (documents.length === 0) {
-      return NextResponse.json({ error: 'Document not found in database' }, { status: 404 })
+      return NextResponse.json({ error: 'Documento no encontrado en la base de datos' }, { status: 404 })
     }
 
     const document = documents[0]
     const filePath = path.join(process.cwd(), 'public', document.DOC_file_path)
     
     if (!existsSync(filePath)) {
-      return NextResponse.json({ error: 'Physical file not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Archivo físico no encontrado' }, { status: 404 })
     }
 
     // Get file stats
@@ -110,11 +110,11 @@ export async function DELETE(
     // Validate project ID
     const projectIdNum = parseInt(projectId)
     if (isNaN(projectIdNum)) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de proyecto inválido' }, { status: 400 })
     }
 
     if (!filename) {
-      return NextResponse.json({ error: 'Filename is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Nombre de archivo es requerido' }, { status: 400 })
     }
 
     // Find document in database by filename and project
@@ -126,7 +126,7 @@ export async function DELETE(
     const documents = await executeQuery(documentQuery, [projectIdNum, `%${filename}`]) as any[]
     
     if (documents.length === 0) {
-      return NextResponse.json({ error: 'Document not found in database' }, { status: 404 })
+      return NextResponse.json({ error: 'Documento no encontrado en la base de datos' }, { status: 404 })
     }
 
     const document = documents[0]
@@ -142,7 +142,7 @@ export async function DELETE(
     await executeQuery(deleteQuery, [document.DOC_id])
 
     return NextResponse.json({
-      message: 'Document deleted successfully',
+      message: 'Documento eliminado exitosamente',
       documentId: document.DOC_id,
       documentName: document.DOC_name,
       fileName: filename,
@@ -152,7 +152,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting document:', error)
     return NextResponse.json(
-      { error: 'Failed to delete document' },
+      { error: 'Error de servidor: No se pudo eliminar el documento' },
       { status: 500 }
     )
   }

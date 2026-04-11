@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         }, { status: 200 });
     } catch (error) {
         return NextResponse.json(
-            { error: "Error de Servidor: No se pudo registrar el Cliente" },
+            { error: "Error de servidor: No se pudo registrar el Cliente" },
             { status: 500 }
         );
     }
@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
             [...filterParams, offset, limit]
         );
         return NextResponse.json({
-            message: "Clients requested succesfully",
+            message: "Clientes obtenidos exitosamente",
             page,
             limit,
             totalClients,
@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
         }, { status: 200 });
     } catch {
         return NextResponse.json(
-            { error: "Server Error: Error in the clients request" },
+            { error: "Error de servidor: Error al obtener los clientes" },
             { status: 500 }
         );
     }

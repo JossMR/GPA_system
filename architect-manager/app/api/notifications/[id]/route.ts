@@ -12,7 +12,7 @@ export async function DELETE(
     const notificationId = parseInt(resolvedParams.id)
 
     if (isNaN(notificationId)) {
-      return NextResponse.json({ error: 'Invalid notification ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de notificación inválido' }, { status: 400 })
     }
 
     // Check if notification exists
@@ -20,7 +20,7 @@ export async function DELETE(
     const existing = await executeQuery(checkQuery, [notificationId]) as any[]
 
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'Notification not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Notificación no encontrada' }, { status: 404 })
     }
 
     const deleteUserNotificationsQuery = 'DELETE FROM GPA_UsersXGPA_Notifications WHERE NOT_id = ?'
@@ -30,13 +30,13 @@ export async function DELETE(
     await executeQuery(deleteQuery, [notificationId])
 
     return NextResponse.json({
-      message: 'Notification deleted successfully'
+      message: 'Notificación eliminada exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -64,17 +64,17 @@ export async function PUT(request: NextRequest,
     } = body as GPANotification
 
     if (isNaN(notificationId)) {
-      return NextResponse.json({ error: 'Invalid notification ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de notificación inválido' }, { status: 400 })
     }
     if (!body) {
       return NextResponse.json(
-        { error: "Notification data not received for update." },
+        { error: "Error de servidor: No se recibieron datos de notificación para la actualización." },
         { status: 400 }
       );
     }
     if (!destination_users_ids || destination_users_ids.length === 0) {
       return NextResponse.json(
-        { error: "Destination users data not received for update." },
+        { error: "Error de servidor: No se recibieron datos de usuarios destinatarios para la actualización." },
         { status: 400 }
       );
     }
@@ -149,16 +149,16 @@ export async function PUT(request: NextRequest,
             `UPDATE GPA_UsersXGPA_Notifications SET UXN_read = ? WHERE USR_id = ? AND NOT_id = ?`,
             [readStatus, userId, notificationId]
           );
-          return NextResponse.json({ message: 'Notification read status updated successfully' }, { status: 200 })
+          return NextResponse.json({ message: 'Estado de lectura de la notificación actualizado exitosamente' }, { status: 200 })
         }
       }
     }
-    return NextResponse.json({ message: 'Notification updated successfully' }, { status: 200 })
+    return NextResponse.json({ message: 'Notificación actualizada exitosamente' }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }

@@ -11,14 +11,14 @@ export async function GET(
     const categoryId = parseInt(resolvedParams.id)
     
     if (isNaN(categoryId)) {
-      return NextResponse.json({ error: 'Invalid category ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de categoría inválido' }, { status: 400 })
     }
     
     const query = 'SELECT * FROM GPA_Categories WHERE CAT_id = ?'
     const categories = await executeQuery(query, [categoryId]) as GPAcategory[]
     
     if (categories.length === 0) {
-      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Categoría no encontrada' }, { status: 404 })
     }
     
     return NextResponse.json(categories[0], { status: 200 })
@@ -26,7 +26,7 @@ export async function GET(
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al obtener la categoría' },
       { status: 500 }
     )
   }
@@ -41,14 +41,14 @@ export async function PUT(
     const categoryId = parseInt(resolvedParams.id)
     
     if (isNaN(categoryId)) {
-      return NextResponse.json({ error: 'Invalid category ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de categoría inválido' }, { status: 400 })
     }
     
     const body = await request.json() as Partial<GPAcategory>
     
     // Validate required fields
     if (body.CAT_name !== undefined && (!body.CAT_name || body.CAT_name.trim() === '')) {
-      return NextResponse.json({ error: 'Category name cannot be empty' }, { status: 400 })
+      return NextResponse.json({ error: 'Nombre de la categoría no puede estar vacío' }, { status: 400 })
     }
     
     // Check if category exists
@@ -56,7 +56,7 @@ export async function PUT(
     const existing = await executeQuery(checkQuery, [categoryId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Categoría no encontrada' }, { status: 404 })
     }
     
     // Check if new name already exists (if updating name)
@@ -65,7 +65,7 @@ export async function PUT(
       const duplicates = await executeQuery(duplicateQuery, [body.CAT_name.trim(), categoryId]) as any[]
       
       if (duplicates.length > 0) {
-        return NextResponse.json({ error: 'Category name already exists' }, { status: 409 })
+        return NextResponse.json({ error: 'Nombre de la categoría ya existe' }, { status: 409 })
       }
     }
     
@@ -79,7 +79,7 @@ export async function PUT(
     }
     
     if (updateFields.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+      return NextResponse.json({ error: 'No hay campos para actualizar' }, { status: 400 })
     }
     
     updateValues.push(categoryId)
@@ -89,13 +89,13 @@ export async function PUT(
     await executeQuery(updateQuery, updateValues)
     
     return NextResponse.json({ 
-      message: 'Category updated successfully'
+      message: 'Categoría actualizada exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al actualizar la categoría' },
       { status: 500 }
     )
   }
@@ -110,7 +110,7 @@ export async function DELETE(
     const categoryId = parseInt(resolvedParams.id)
     
     if (isNaN(categoryId)) {
-      return NextResponse.json({ error: 'Invalid category ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de categoría inválido' }, { status: 400 })
     }
     
     // Check if category exists
@@ -118,7 +118,7 @@ export async function DELETE(
     const existing = await executeQuery(checkQuery, [categoryId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Categoría no encontrada' }, { status: 404 })
     }
     
     // Check if category is being used by any project (referential integrity)
@@ -127,7 +127,7 @@ export async function DELETE(
     
     if (projectsCount[0].count > 0) {
       return NextResponse.json({ 
-        error: 'Cannot delete category: it is being used by one or more projects' 
+        error: 'No se puede eliminar la categoría: está siendo utilizada por uno o más proyectos' 
       }, { status: 409 })
     }
     
@@ -135,13 +135,13 @@ export async function DELETE(
     await executeQuery(deleteQuery, [categoryId])
     
     return NextResponse.json({ 
-      message: 'Category deleted successfully'
+      message: 'Categoría eliminada exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al eliminar la categoría' },
       { status: 500 }
     )
   }

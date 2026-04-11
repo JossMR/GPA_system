@@ -11,14 +11,14 @@ export async function GET(
     const observationId = parseInt(resolvedParams.id)
     
     if (isNaN(observationId)) {
-      return NextResponse.json({ error: 'Invalid observation ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de observación inválido' }, { status: 400 })
     }
     
     const query = 'SELECT * FROM GPA_Observations WHERE OST_id = ?'
     const observations = await executeQuery(query, [observationId]) as GPAObservation[]
     
     if (observations.length === 0) {
-      return NextResponse.json({ error: 'Observation not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Observación no encontrada' }, { status: 404 })
     }
     
     return NextResponse.json(observations[0], { status: 200 })
@@ -26,7 +26,7 @@ export async function GET(
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -41,14 +41,14 @@ export async function PUT(
     const observationId = parseInt(resolvedParams.id)
     
     if (isNaN(observationId)) {
-      return NextResponse.json({ error: 'Invalid observation ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de observación inválido' }, { status: 400 })
     }
     
     const body = await request.json() as Partial<GPAObservation>
     
     // Validate required fields
     if (body.OST_content !== undefined && (!body.OST_content || body.OST_content.trim() === '')) {
-      return NextResponse.json({ error: 'Observation content cannot be empty' }, { status: 400 })
+      return NextResponse.json({ error: 'El contenido de la observación no puede estar vacío' }, { status: 400 })
     }
     
     // Check if observation exists
@@ -56,7 +56,7 @@ export async function PUT(
     const existing = await executeQuery(checkQuery, [observationId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'Observation not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Observación no encontrada' }, { status: 404 })
     }
     
     // Build dynamic update query
@@ -79,7 +79,7 @@ export async function PUT(
     }
     
     if (updateFields.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+      return NextResponse.json({ error: 'No hay campos para actualizar' }, { status: 400 })
     }
     
     updateValues.push(observationId)
@@ -89,13 +89,13 @@ export async function PUT(
     await executeQuery(updateQuery, updateValues)
     
     return NextResponse.json({ 
-      message: 'Observation updated successfully'
+      message: 'Observación actualizada exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -110,7 +110,7 @@ export async function DELETE(
     const observationId = parseInt(resolvedParams.id)
     
     if (isNaN(observationId)) {
-      return NextResponse.json({ error: 'Invalid observation ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de observación inválido' }, { status: 400 })
     }
     
     // Check if observation exists
@@ -118,20 +118,20 @@ export async function DELETE(
     const existing = await executeQuery(checkQuery, [observationId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'Observation not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Observación no encontrada' }, { status: 404 })
     }
     
     const deleteQuery = 'DELETE FROM GPA_Observations WHERE OST_id = ?'
     await executeQuery(deleteQuery, [observationId])
     
     return NextResponse.json({ 
-      message: 'Observation deleted successfully'
+      message: 'Observación eliminada exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }

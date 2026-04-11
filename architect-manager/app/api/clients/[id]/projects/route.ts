@@ -36,13 +36,12 @@ export async function GET(
     );
     
     return NextResponse.json({
-      message: "Projects retrieved successfully",
+      message: "Proyectos obtenidos exitosamente",
       projects
     }, { status: 200 });
   } catch (error) {
-    console.error("Error fetching projects:", error);
     return NextResponse.json(
-      { error: "Server Error: Error fetching projects" },
+      { error: "Error de servidor: Error al obtener los proyectos" },
       { status: 500 }
     );
   }

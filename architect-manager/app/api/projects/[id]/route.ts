@@ -57,7 +57,7 @@ export async function GET(
     const projectId = parseInt(resolvedParams.id)
 
     if (isNaN(projectId)) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de proyecto inválido' }, { status: 400 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -72,7 +72,7 @@ export async function GET(
     const projects = await executeQuery(projectQuery, [projectId]) as GPAProject[]
 
     if (projects.length === 0) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
     }
 
     let project = projects[0]
@@ -114,7 +114,7 @@ export async function GET(
 
   } catch (error) {
     return NextResponse.json(
-      { error: 'Error del servidor: No se pudo obtener el Proyecto' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -129,7 +129,7 @@ export async function PUT(
     const projectId = parseInt(resolvedParams.id)
 
     if (isNaN(projectId)) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de proyecto inválido' }, { status: 400 })
     }
 
     const body = await request.json()
@@ -275,7 +275,7 @@ export async function PUT(
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Error del servidor: No se pudo actualizar el Proyecto' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -290,7 +290,7 @@ export async function DELETE(
     const projectId = parseInt(resolvedParams.id)
 
     if (isNaN(projectId)) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de proyecto inválido' }, { status: 400 })
     }
 
     const deleteQuery = `DELETE FROM GPA_Projects WHERE PRJ_id = ?`
@@ -301,7 +301,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Error del servidor: No se pudo eliminar el Proyecto' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }

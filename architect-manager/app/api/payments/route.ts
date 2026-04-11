@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -49,11 +49,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as Partial<GPAPayment>
 
     if (!body.PAY_payment_date) {
-      return NextResponse.json({ error: 'Payment date is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Fecha de pago es requerida' }, { status: 400 })
     }
 
     if (!body.PAY_project_id) {
-      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'El ID del proyecto es requerido' }, { status: 400 })
     }
 
     const paymentData: Omit<GPAPayment, 'PAY_id'> = {
@@ -101,14 +101,14 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'Payment created successfully',
+      message: 'Pago creado exitosamente',
       paymentId: result.insertId
     }, { status: 201 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }

@@ -13,12 +13,12 @@ export async function DELETE(
     const roleId = parseInt(resolvedParams.id)
     
     if (isNaN(roleId)) {
-      return NextResponse.json({ error: 'Invalid role ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de rol inválido' }, { status: 400 })
     }
     
     // Prevent deletion of Admin role
     if (roleId === 1) {
-      return NextResponse.json({ error: 'Cannot delete the Admin role' }, { status: 400 })
+      return NextResponse.json({ error: 'No se puede eliminar el rol de administrador' }, { status: 400 })
     }
 
     // Check if role is associated with any users
@@ -28,7 +28,7 @@ export async function DELETE(
     const existing = await executeQuery(checkQuery, [roleId]) as any[]
     
     if (existing.length > 0) {
-      return NextResponse.json({ error: 'This role is associated with users' }, { status: 404 })
+      return NextResponse.json({ error: 'Este rol está asociado con usuarios' }, { status: 404 })
     }
     
     // Delete associated permissions
@@ -44,7 +44,7 @@ export async function DELETE(
     await executeQuery(deleteQuery, [roleId])
 
     return NextResponse.json({ 
-      message: 'Role deleted successfully'
+      message: 'Rol eliminado exitosamente'
     }, { status: 200 })
 
   } catch (error) {
@@ -65,12 +65,12 @@ export async function PUT(
     const roleId = parseInt(resolvedParams.id)
 
     if (isNaN(roleId)) {
-      return NextResponse.json({ error: 'Invalid role ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de rol inválido' }, { status: 400 })
     }
 
     if (roleId === 1) {
       return NextResponse.json(
-        { error: 'Cannot modify the Admin role' },
+        { error: 'No se puede modificar el rol de administrador' },
         { status: 400 }
       )
     }
@@ -179,12 +179,12 @@ export async function PUT(
         [roleId, ntpId]
       );
     }
-    return NextResponse.json({ message: 'Role updated successfully' }, { status: 200 })
+    return NextResponse.json({ message: 'Rol actualizado exitosamente' }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -196,7 +196,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const rolId = parseInt(resolvedParams.id);
     
     if (isNaN(rolId)) {
-      return NextResponse.json({ error: "Invalid role ID." }, { status: 400 });
+      return NextResponse.json({ error: "ID de rol inválido." }, { status: 400 });
     }
     
     const result = await executeQuery(
@@ -210,7 +210,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     );
     
     if (!result || result.length === 0) {
-      return NextResponse.json({ error: "Role not found." }, { status: 404 });
+      return NextResponse.json({ error: "Rol no encontrado." }, { status: 404 });
     }
     
     const role: GPARole = result[0] as GPARole;
@@ -222,7 +222,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     
     if (!permissionsRes.ok) {
       return NextResponse.json(
-        { error: "Server Error: Error in permission request for role" },
+        { error: "Error del servidor: Error en la solicitud de permisos para el rol" },
         { status: 500 }
       );
     }
@@ -237,7 +237,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     
     if (!notificationsTypesRes.ok) {
       return NextResponse.json(
-        { error: "Server Error: Error in notification types request for role" },
+        { error: "Error del servidor: Error en la solicitud de tipos de notificaciones para el rol" },
         { status: 500 }
       );
     }
@@ -246,14 +246,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     role.notifications_types = notificationsTypesData.notificationsTypes as GPANotificationsTypes[];
     
     return NextResponse.json({ 
-      message: "Role requested successfully",
+      message: "Rol solicitado exitosamente",
       role 
     }, { status: 200 });
     
   } catch (error) {
     console.error('Database error:', error);
     return NextResponse.json(
-      { error: "Server Error: Error fetching role." },
+      { error: "Error del servidor: Error al obtener el rol." },
       { status: 500 }
     );
   }

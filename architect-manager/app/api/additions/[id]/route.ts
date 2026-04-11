@@ -11,14 +11,14 @@ export async function GET(
     const additionId = parseInt(resolvedParams.id)
     
     if (isNaN(additionId)) {
-      return NextResponse.json({ error: 'Invalid addition ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de adición inválido' }, { status: 400 })
     }
     
     const query = 'SELECT * FROM GPA_Additions WHERE ATN_id = ?'
     const additions = await executeQuery(query, [additionId]) as GPAAddition[]
     
     if (additions.length === 0) {
-      return NextResponse.json({ error: 'Addition not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Adición no encontrada' }, { status: 404 })
     }
     
     return NextResponse.json(additions[0], { status: 200 })
@@ -26,7 +26,7 @@ export async function GET(
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al obtener la adición' },
       { status: 500 }
     )
   }
@@ -41,18 +41,18 @@ export async function PUT(
     const additionId = parseInt(resolvedParams.id)
     
     if (isNaN(additionId)) {
-      return NextResponse.json({ error: 'Invalid addition ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de adición inválido' }, { status: 400 })
     }
     
     const body = await request.json() as Partial<GPAAddition>
     
     // Validate required fields
     if (body.ATN_name !== undefined && (!body.ATN_name || body.ATN_name.trim() === '')) {
-      return NextResponse.json({ error: 'Addition name cannot be empty' }, { status: 400 })
+      return NextResponse.json({ error: 'Nombre de la adición no puede estar vacío' }, { status: 400 })
     }
     
     if (body.ATN_cost !== undefined && body.ATN_cost <= 0) {
-      return NextResponse.json({ error: 'Cost must be positive' }, { status: 400 })
+      return NextResponse.json({ error: 'El costo debe ser positivo' }, { status: 400 })
     }
     
     // Check if addition exists
@@ -60,7 +60,7 @@ export async function PUT(
     const existing = await executeQuery(checkQuery, [additionId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'Addition not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Adición no encontrada' }, { status: 404 })
     }
     
     // Build dynamic update query
@@ -93,7 +93,7 @@ export async function PUT(
     }
     
     if (updateFields.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+      return NextResponse.json({ error: 'No hay campos para actualizar' }, { status: 400 })
     }
     
     updateValues.push(additionId)
@@ -113,13 +113,13 @@ export async function PUT(
     await executeQuery(updateQuery, updateValues)
 
     return NextResponse.json({ 
-      message: 'Addition updated successfully'
+      message: 'Adición actualizada exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al actualizar la adición' },
       { status: 500 }
     )
   }
@@ -134,7 +134,7 @@ export async function DELETE(
     const additionId = parseInt(resolvedParams.id)
     
     if (isNaN(additionId)) {
-      return NextResponse.json({ error: 'Invalid addition ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de adición inválido' }, { status: 400 })
     }
     
     // Check if addition exists
@@ -142,20 +142,20 @@ export async function DELETE(
     const existing = await executeQuery(checkQuery, [additionId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'Addition not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Adición no encontrada' }, { status: 404 })
     }
     
     const deleteQuery = 'DELETE FROM GPA_Additions WHERE ATN_id = ?'
     await executeQuery(deleteQuery, [additionId])
     
     return NextResponse.json({ 
-      message: 'Addition deleted successfully'
+      message: 'Adición eliminada exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al eliminar la adición' },
       { status: 500 }
     )
   }

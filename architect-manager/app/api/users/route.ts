@@ -53,13 +53,13 @@ export async function POST(req: NextRequest) {
     );
     const user: GPAUser = result[0] as GPAUser;
     return NextResponse.json({
-      message: "User created successfully",
+      message: "Usuario creado exitosamente",
       user
     }, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
-      { error: "Error del servidor: Error en el registro del usuario" },
+      { error: "Error de servidor: Error en el registro del usuario" },
       { status: 500 }
     );
   }
@@ -83,12 +83,12 @@ export async function GET(request: NextRequest) {
             JOIN gpa_roles r ON us.usr_role_id = r.rol_id`
     );
     return NextResponse.json({
-      message: "Users requested successfully",
+      message: "Usuarios obtenidos exitosamente",
       users
     }, { status: 200 });
   } catch {
     return NextResponse.json(
-      { error: "Server Error: Error in the users request" },
+      { error: "Error de servidor: Error al obtener los usuarios" },
       { status: 500 }
     );
   }

@@ -75,8 +75,6 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
     } catch (error) {
     console.error("API error:", error);
     }
-
-      // Authentication successful, update user context
       const user: User = {
         id: data.user.id,
         active: data.user.active === 1,

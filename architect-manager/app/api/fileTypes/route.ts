@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     
     // Validate required fields according to GPAFileType interface
     if (!body.FTP_name || body.FTP_name.trim() === '') {
-      return NextResponse.json({ error: 'File type name is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Nombre del tipo de archivo es requerido' }, { status: 400 })
     }
     
     // Check if file type name already exists
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const existing = await executeQuery(checkQuery, [body.FTP_name.trim()]) as any[]
     
     if (existing.length > 0) {
-      return NextResponse.json({ error: 'File type name already exists' }, { status: 409 })
+      return NextResponse.json({ error: 'Nombre del tipo de archivo ya existe' }, { status: 409 })
     }
     
     // Create file type object following GPAFileType interface

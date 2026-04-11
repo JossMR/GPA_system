@@ -15,7 +15,7 @@ export async function GET(
     // Validate project ID
     const projectIdNum = parseInt(projectId)
     if (isNaN(projectIdNum)) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de proyecto inválido' }, { status: 400 })
     }
 
     // Get documents from database instead of file system
@@ -89,7 +89,7 @@ export async function POST(
     // Validate project ID
     const projectIdNum = parseInt(projectId)
     if (isNaN(projectIdNum)) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de proyecto inválido' }, { status: 400 })
     }
 
     const formData = await request.formData()
@@ -98,7 +98,7 @@ export async function POST(
     const isForPromotion: string = (formData.get('isForPromotion') as string) || 'N'
 
     if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
+      return NextResponse.json({ error: 'Archivo es requerido' }, { status: 400 })
     }
 
     // Create file buffer
@@ -176,7 +176,7 @@ export async function POST(
     ]) as any
 
     return NextResponse.json({
-      message: 'File uploaded successfully',
+      message: 'Archivo subido exitosamente',
       documentId: documentResult.insertId,
       filePath: publicPath,
       fileName: uniqueFileName,

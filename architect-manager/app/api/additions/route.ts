@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(additions, { status: 200 })
 
   } catch (error) {
-    console.error('Database error:', error)
+    console.error('Error de servidor:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al obtener las adiciones' },
       { status: 500 }
     )
   }
@@ -39,19 +39,19 @@ export async function POST(request: NextRequest) {
     
     // Validate required fields according to GPAAddition interface
     if (!body.ATN_name || body.ATN_name.trim() === '') {
-      return NextResponse.json({ error: 'Addition name is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Nombre del extra requerido' }, { status: 400 })
     }
     
     if (!body.ATN_project_id) {
-      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'ID del proyecto es requerido' }, { status: 400 })
     }
     
     if (!body.ATN_cost || body.ATN_cost <= 0) {
-      return NextResponse.json({ error: 'Cost is required and must be positive' }, { status: 400 })
+      return NextResponse.json({ error: 'El costo es requerido y debe ser positivo' }, { status: 400 })
     }
     
     if (!body.ATN_date) {
-      return NextResponse.json({ error: 'Date is required' }, { status: 400 })
+      return NextResponse.json({ error: 'La fecha es requerida' }, { status: 400 })
     }
     
     // Create addition object following GPAAddition interface
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     ])
 
     return NextResponse.json({ 
-      message: 'Addition created successfully',
+      message: 'Adición creada exitosamente',
       additionId: result.insertId
     }, { status: 201 })
 

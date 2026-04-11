@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al obtener los documentos' },
       { status: 500 }
     )
   }
@@ -53,19 +53,19 @@ export async function POST(request: NextRequest) {
     
     // Validate required fields according to GPADocument interface
     if (!body.DOC_project_id) {
-      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Error de servidor: ID del proyecto es requerido' }, { status: 400 })
     }
     
     if (!body.DOC_name || body.DOC_name.trim() === '') {
-      return NextResponse.json({ error: 'Document name is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Error de servidor: Nombre del documento es requerido' }, { status: 400 })
     }
     
     if (!body.DOC_file_path || body.DOC_file_path.trim() === '') {
-      return NextResponse.json({ error: 'File path is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Error de servidor: Ruta del archivo es requerida' }, { status: 400 })
     }
     
     if (!body.DOC_filetype_id) {
-      return NextResponse.json({ error: 'File type ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Error de servidor: ID del tipo de archivo es requerido' }, { status: 400 })
     }
     
     // Create document object following GPADocument interface
@@ -97,14 +97,14 @@ export async function POST(request: NextRequest) {
     ]) as any
     
     return NextResponse.json({ 
-      message: 'Document created successfully',
+      message: 'Error de servidor: Documento creado exitosamente',
       documentId: result.insertId
     }, { status: 201 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al crear el documento' },
       { status: 500 }
     )
   }

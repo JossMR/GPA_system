@@ -11,14 +11,14 @@ export async function GET(
     const documentId = parseInt(resolvedParams.id)
     
     if (isNaN(documentId)) {
-      return NextResponse.json({ error: 'Invalid document ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de documento inválido' }, { status: 400 })
     }
     
     const query = 'SELECT * FROM GPA_Documents WHERE DOC_id = ?'
     const documents = await executeQuery(query, [documentId]) as GPADocument[]
     
     if (documents.length === 0) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 })
     }
     
     return NextResponse.json(documents[0], { status: 200 })
@@ -26,7 +26,7 @@ export async function GET(
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al obtener el documento' },
       { status: 500 }
     )
   }
@@ -41,18 +41,18 @@ export async function PUT(
     const documentId = parseInt(resolvedParams.id)
     
     if (isNaN(documentId)) {
-      return NextResponse.json({ error: 'Invalid document ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de documento inválido' }, { status: 400 })
     }
     
     const body = await request.json() as Partial<GPADocument>
     
     // Validate required fields
     if (body.DOC_name !== undefined && (!body.DOC_name || body.DOC_name.trim() === '')) {
-      return NextResponse.json({ error: 'Document name cannot be empty' }, { status: 400 })
+      return NextResponse.json({ error: 'El nombre del documento no puede estar vacío' }, { status: 400 })
     }
     
     if (body.DOC_file_path !== undefined && (!body.DOC_file_path || body.DOC_file_path.trim() === '')) {
-      return NextResponse.json({ error: 'File path cannot be empty' }, { status: 400 })
+      return NextResponse.json({ error: 'La ruta del archivo no puede estar vacía' }, { status: 400 })
     }
     
     // Check if document exists
@@ -60,7 +60,7 @@ export async function PUT(
     const existing = await executeQuery(checkQuery, [documentId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 })
     }
     
     // Build dynamic update query
@@ -98,7 +98,7 @@ export async function PUT(
     }
     
     if (updateFields.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+      return NextResponse.json({ error: 'No hay campos para actualizar' }, { status: 400 })
     }
     
     updateValues.push(documentId)
@@ -108,13 +108,13 @@ export async function PUT(
     await executeQuery(updateQuery, updateValues)
     
     return NextResponse.json({ 
-      message: 'Document updated successfully'
+      message: 'Documento actualizado exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al actualizar el documento' },
       { status: 500 }
     )
   }
@@ -129,7 +129,7 @@ export async function DELETE(
     const documentId = parseInt(resolvedParams.id)
     
     if (isNaN(documentId)) {
-      return NextResponse.json({ error: 'Invalid document ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de documento inválido' }, { status: 400 })
     }
     
     // Check if document exists
@@ -137,20 +137,20 @@ export async function DELETE(
     const existing = await executeQuery(checkQuery, [documentId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 })
     }
     
     const deleteQuery = 'DELETE FROM GPA_Documents WHERE DOC_id = ?'
     await executeQuery(deleteQuery, [documentId])
     
     return NextResponse.json({ 
-      message: 'Document deleted successfully'
+      message: 'Documento eliminado exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error al eliminar el documento' },
       { status: 500 }
     )
   }

@@ -11,14 +11,14 @@ export async function GET(
     const typeId = parseInt(resolvedParams.id)
     
     if (isNaN(typeId)) {
-      return NextResponse.json({ error: 'Invalid type ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de tipo inválido' }, { status: 400 })
     }
     
     const query = 'SELECT * FROM GPA_Types WHERE TYP_id = ?'
     const types = await executeQuery(query, [typeId]) as GPAtype[]
     
     if (types.length === 0) {
-      return NextResponse.json({ error: 'Type not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Tipo no encontrado' }, { status: 404 })
     }
     
     return NextResponse.json(types[0], { status: 200 })
@@ -26,7 +26,7 @@ export async function GET(
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error del servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -41,14 +41,14 @@ export async function PUT(
     const typeId = parseInt(resolvedParams.id)
     
     if (isNaN(typeId)) {
-      return NextResponse.json({ error: 'Invalid type ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de tipo inválido' }, { status: 400 })
     }
     
     const body = await request.json() as Partial<GPAtype>
     
     // Validate required fields
     if (body.TYP_name !== undefined && (!body.TYP_name || body.TYP_name.trim() === '')) {
-      return NextResponse.json({ error: 'Type name cannot be empty' }, { status: 400 })
+      return NextResponse.json({ error: 'Nombre de tipo no puede estar vacío' }, { status: 400 })
     }
     
     // Check if type exists
@@ -56,7 +56,7 @@ export async function PUT(
     const existing = await executeQuery(checkQuery, [typeId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'Type not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Tipo no encontrado' }, { status: 404 })
     }
     
     // Check if new name already exists (if updating name)
@@ -65,7 +65,7 @@ export async function PUT(
       const duplicates = await executeQuery(duplicateQuery, [body.TYP_name.trim(), typeId]) as any[]
       
       if (duplicates.length > 0) {
-        return NextResponse.json({ error: 'Type name already exists' }, { status: 409 })
+        return NextResponse.json({ error: 'Nombre de tipo ya existe' }, { status: 409 })
       }
     }
     
@@ -79,7 +79,7 @@ export async function PUT(
     }
     
     if (updateFields.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+      return NextResponse.json({ error: 'No hay campos para actualizar' }, { status: 400 })
     }
     
     updateValues.push(typeId)
@@ -89,13 +89,13 @@ export async function PUT(
     await executeQuery(updateQuery, updateValues)
     
     return NextResponse.json({ 
-      message: 'Type updated successfully'
+      message: 'Tipo actualizado exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error del servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -110,7 +110,7 @@ export async function DELETE(
     const typeId = parseInt(resolvedParams.id)
     
     if (isNaN(typeId)) {
-      return NextResponse.json({ error: 'Invalid type ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de tipo inválido' }, { status: 400 })
     }
     
     // Check if type exists
@@ -118,20 +118,20 @@ export async function DELETE(
     const existing = await executeQuery(checkQuery, [typeId]) as any[]
     
     if (existing.length === 0) {
-      return NextResponse.json({ error: 'Type not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Tipo no encontrado' }, { status: 404 })
     }
     
     const deleteQuery = 'DELETE FROM GPA_Types WHERE TYP_id = ?'
     await executeQuery(deleteQuery, [typeId])
     
     return NextResponse.json({ 
-      message: 'Type deleted successfully'
+      message: 'Tipo eliminado exitosamente'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error del servidor: Error interno del servidor' },
       { status: 500 }
     )
   }

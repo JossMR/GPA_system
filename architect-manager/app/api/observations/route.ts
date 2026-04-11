@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -67,11 +67,11 @@ export async function POST(request: NextRequest) {
     
     // Validate required fields according to GPAObservation interface
     if (!body.OST_project_id) {
-      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'El ID del proyecto es requerido' }, { status: 400 })
     }
     
     if (!body.OST_content || body.OST_content.trim() === '') {
-      return NextResponse.json({ error: 'Observation content is required' }, { status: 400 })
+      return NextResponse.json({ error: 'El contenido de la observación es requerido' }, { status: 400 })
     }
     
     // Create observation object following GPAObservation interface
@@ -96,14 +96,14 @@ export async function POST(request: NextRequest) {
     ]) as any
     
     return NextResponse.json({ 
-      message: 'Observation created successfully',
+      message: 'Observación creada exitosamente',
       observationId: result.insertId
     }, { status: 201 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }

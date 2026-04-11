@@ -38,12 +38,12 @@ export async function GET(request: NextRequest) {
         }
 
     return NextResponse.json({
-      message: "Notifications requested successfully",
+      message: "Notificaciones obtenidas exitosamente",
       notifications
     }, { status: 200 });
   } catch {
     return NextResponse.json(
-      { error: "Server Error: Error in the notifications request" },
+      { error: "Error de servidor: Error en la solicitud de notificaciones" },
       { status: 500 }
     );
   }
@@ -54,13 +54,13 @@ export async function POST(request: NextRequest) {
           const newNotification:GPANotification = await request.json();
           if (!newNotification) {
               return NextResponse.json(
-                  { error: "Notification data not received for registration." },
+                  { error: "Error de servidor: No se recibieron datos de notificación para el registro." },
                   { status: 400 }
               );
           }
           if (!newNotification.destination_users_ids || newNotification.destination_users_ids.length === 0) {
               return NextResponse.json(
-                  { error: "At least one destination user ID must be provided." },
+                  { error: "Error de servidor: Se debe proporcionar al menos un ID de usuario destinatario." },
                   { status: 400 }
               );
           }
@@ -115,12 +115,12 @@ export async function POST(request: NextRequest) {
           );
           const notification: GPANotification = result[0] as GPANotification;
           return NextResponse.json({
-              message: "Notification registered succesfully",
+              message: "Notificación registrada exitosamente",
               notification
           }, { status: 200 });
       } catch (error) {
           return NextResponse.json(
-              { error: "Server Error: Error in the notification register" },
+              { error: "Error de servidor: Error en el registro de la notificación" },
               { status: 500 }
           );
       }

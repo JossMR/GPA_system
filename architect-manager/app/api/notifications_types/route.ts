@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url)
         const roleId = searchParams.get('rol_id')
-        let query = 
+        let query =
             `SELECT 
                 nt.NTP_id,
                 nt.NTP_name
@@ -15,22 +15,22 @@ export async function GET(request: NextRequest) {
         const params: any[] = []
         if (roleId) {
             const rolIdNum = parseInt(roleId)
-          if (!isNaN(rolIdNum)) {
-            query += ` JOIN gpa_rolesXGPA_notifications_types rn ON rn.NTP_id = nt.NTP_id
+            if (!isNaN(rolIdNum)) {
+                query += ` JOIN gpa_rolesXGPA_notifications_types rn ON rn.NTP_id = nt.NTP_id
                         WHERE rn.ROL_id = ?`
-            params.push(rolIdNum)
-            }        
+                params.push(rolIdNum)
+            }
         }
         const notificationsTypes: GPANotificationsTypes[] = await executeQuery(
             query, params
         );
         return NextResponse.json({
-            message: "Notifications types requested successfully",
+            message: "Tipos de notificaciones obtenidos exitosamente",
             notificationsTypes
         }, { status: 200 });
     } catch {
         return NextResponse.json(
-            { error: "Server Error: Error in the notifications types request" },
+            { error: "Error de servidor: Error interno del servidor" },
             { status: 500 }
         );
     }

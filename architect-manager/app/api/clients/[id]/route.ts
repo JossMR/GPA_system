@@ -31,13 +31,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       [clientId]
     );
     if (!result || result.length === 0) {
-      return NextResponse.json({ error: "Client not found." }, { status: 404 });
+      return NextResponse.json({ error: "Cliente no encontrado." }, { status: 404 });
     }
     const client: GPAClient = result[0] as GPAClient;
     return NextResponse.json({ client }, { status: 200 });
   } catch (error) {
     return NextResponse.json(
-      { error: "Server Error: Error fetching client." },
+      { error: "Error de servidor: Error al obtener el cliente." },
       { status: 500 }
     );
   }
@@ -140,7 +140,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ message: "Cliente actualizado exitosamente", client }, { status: 200 });
   } catch (error) {
     return NextResponse.json(
-      { error: "Error de Servidor: No se pudo actualizar el Cliente" },
+      { error: "Error de servidor: No se pudo actualizar el Cliente" },
       { status: 500 }
     );
   }

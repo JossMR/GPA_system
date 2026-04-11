@@ -9,13 +9,13 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get('project_id')
 
     if (!projectId) {
-      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de proyecto es requerido' }, { status: 400 })
     }
 
     // Validate project ID
     const projectIdNum = parseInt(projectId)
     if (isNaN(projectIdNum)) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de proyecto inválido' }, { status: 400 })
     }
 
     // Get project directory
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error listing files:', error)
     return NextResponse.json(
-      { error: 'Failed to list files' },
+      { error: 'Error del servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -65,17 +65,17 @@ export async function POST(request: NextRequest) {
     const projectId = formData.get('project_id') as string
 
     if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
+      return NextResponse.json({ error: 'Archivo es requerido' }, { status: 400 })
     }
 
     if (!projectId) {
-      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de proyecto es requerido' }, { status: 400 })
     }
 
     // Validate project ID is a number
     const projectIdNum = parseInt(projectId)
     if (isNaN(projectIdNum)) {
-      return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de proyecto inválido' }, { status: 400 })
     }
 
     // Create file buffer
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     const publicPath = `/uploads/projects/${projectId}/${uniqueFileName}`
 
     return NextResponse.json({
-      message: 'File uploaded successfully',
+      message: 'Archivo subido exitosamente',
       filePath: publicPath,
       fileName: uniqueFileName,
       originalName: originalName,
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error uploading file:', error)
     return NextResponse.json(
-      { error: 'Failed to upload file' },
+      { error: 'Error del servidor: Error interno del servidor' },
       { status: 500 }
     )
   }

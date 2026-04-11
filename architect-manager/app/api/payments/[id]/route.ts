@@ -12,14 +12,14 @@ export async function GET(
     const paymentId = parseInt(resolvedParams.id)
 
     if (isNaN(paymentId)) {
-      return NextResponse.json({ error: 'Invalid payment ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de pago inválido' }, { status: 400 })
     }
 
     const query = 'SELECT * FROM GPA_Payments WHERE PAY_id = ?'
     const payments = await executeQuery(query, [paymentId]) as GPAPayment[]
 
     if (payments.length === 0) {
-      return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
     }
 
     return NextResponse.json(payments[0], { status: 200 })
@@ -27,7 +27,7 @@ export async function GET(
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -42,7 +42,7 @@ export async function PUT(
     const paymentId = parseInt(resolvedParams.id)
 
     if (isNaN(paymentId)) {
-      return NextResponse.json({ error: 'Invalid payment ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de pago inválido' }, { status: 400 })
     }
 
     const body = await request.json()
@@ -90,7 +90,7 @@ export async function PUT(
     }
 
     if (updateFields.length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+      return NextResponse.json({ error: 'No hay campos para actualizar' }, { status: 400 })
     }
     const ResponseOldPayment = await fetch(`${new URL(request.url).origin}/api/payments/${paymentId}`, {
       headers: { 'Content-Type': 'application/json' }
@@ -134,12 +134,12 @@ export async function PUT(
       });
     }
 
-    return NextResponse.json({ message: 'Payment updated successfully' }, { status: 200 })
+    return NextResponse.json({ message: 'Pago actualizado exitosamente' }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
@@ -154,18 +154,18 @@ export async function DELETE(
     const paymentId = parseInt(resolvedParams.id)
 
     if (isNaN(paymentId)) {
-      return NextResponse.json({ error: 'Invalid payment ID' }, { status: 400 })
+      return NextResponse.json({ error: 'ID de pago inválido' }, { status: 400 })
     }
 
     const deleteQuery = 'DELETE FROM GPA_Payments WHERE PAY_id = ?'
     await executeQuery(deleteQuery, [paymentId])
 
-    return NextResponse.json({ message: 'Payment deleted successfully' }, { status: 200 })
+    return NextResponse.json({ message: 'Pago eliminado exitosamente' }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: Error interno del servidor' },
       { status: 500 }
     )
   }
