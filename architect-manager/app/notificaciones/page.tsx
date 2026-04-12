@@ -71,6 +71,14 @@ interface ProjectForSelection {
 }
 
 type UserOrderBy = 'name' | 'firstLastName' | 'secondLastName' | 'email' | 'role'
+type ProjectOrderBy =
+  | 'PRJ_case_number'
+  | 'client_name'
+  | 'type_name'
+  | 'PRJ_state'
+  | 'PRJ_start_construction_date'
+  | 'PRJ_completion_date'
+type ProjectOrderDir = 'ASC' | 'DESC'
 
 export default function NotificationsPage() {
   const { isAdmin, user } = useAuth()
@@ -102,6 +110,12 @@ export default function NotificationsPage() {
   const [userTotalUsers, setUserTotalUsers] = useState(0)
   const [userOrderBy, setUserOrderBy] = useState<UserOrderBy>('name')
   const [projectSearchTerm, setProjectSearchTerm] = useState("")
+  const [appliedProjectSearchTerm, setAppliedProjectSearchTerm] = useState("")
+  const [projectPage, setProjectPage] = useState(1)
+  const [projectTotalPages, setProjectTotalPages] = useState(0)
+  const [projectTotalProjects, setProjectTotalProjects] = useState(0)
+  const [projectOrderBy, setProjectOrderBy] = useState<ProjectOrderBy>('PRJ_case_number')
+  const [projectOrderDir, setProjectOrderDir] = useState<ProjectOrderDir>('ASC')
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [loadingProjects, setLoadingProjects] = useState(false)
 
@@ -130,14 +144,6 @@ export default function NotificationsPage() {
     return matchesSearch && matchesType && isDateValid
   })
 
-  const filteredProjects = projects.filter((p) => {
-    const searchLower = projectSearchTerm.toLowerCase()
-    return (
-      p.PRJ_case_number.toLowerCase().includes(searchLower) ||
-      p.client_name.toLowerCase().includes(searchLower)
-    )
-  })
-
   useEffect(() => {
     const fetchNotifications = async () => {
       if (!user) return
@@ -154,7 +160,6 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (isDialogOpen) {
-      fetchProjects()
       // Set current user as default selected
       if (user?.id) {
         setSelectedUsers([user.id])
@@ -179,6 +184,19 @@ export default function NotificationsPage() {
       fetchUsers(userPage, appliedUserSearchTerm, userOrderBy)
     }
   }, [isDialogOpen, userPage, appliedUserSearchTerm, userOrderBy])
+
+  useEffect(() => {
+    if (isDialogOpen && newNotification.tipo === 'proyectos') {
+      fetchProjects(projectPage, appliedProjectSearchTerm, projectOrderBy, projectOrderDir)
+    }
+  }, [
+    isDialogOpen,
+    newNotification.tipo,
+    projectPage,
+    appliedProjectSearchTerm,
+    projectOrderBy,
+    projectOrderDir,
+  ])
 
   const fetchUsers = async (page: number, search: string, orderBy: UserOrderBy = 'name') => {
     setLoadingUsers(true)
@@ -206,12 +224,26 @@ export default function NotificationsPage() {
     }
   }
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (
+    page: number,
+    search: string,
+    orderBy: ProjectOrderBy = 'PRJ_case_number',
+    orderDir: ProjectOrderDir = 'ASC'
+  ) => {
     setLoadingProjects(true)
     try {
-      const response = await fetch('/api/projects')
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: '10',
+        search,
+        orderBy,
+        orderDir,
+      })
+      const response = await fetch(`/api/projects?${params.toString()}`)
       const data = await response.json()
       setProjects(data.projects || [])
+      setProjectTotalPages(data.totalPages || 0)
+      setProjectTotalProjects(data.totalProjects || 0)
     } catch (error) {
       toast({
         title: "Error",
@@ -221,6 +253,34 @@ export default function NotificationsPage() {
     } finally {
       setLoadingProjects(false)
     }
+  }
+
+  const handleApplyProjectFilters = async () => {
+    const nextSearch = projectSearchTerm.trim()
+    if (projectPage === 1 && appliedProjectSearchTerm === nextSearch) {
+      await fetchProjects(1, nextSearch, projectOrderBy, projectOrderDir)
+      return
+    }
+    setProjectPage(1)
+    setAppliedProjectSearchTerm(nextSearch)
+  }
+
+  const handleClearProjectFilters = async () => {
+    if (
+      !projectSearchTerm
+      && !appliedProjectSearchTerm
+      && projectPage === 1
+      && projectOrderBy === 'PRJ_case_number'
+      && projectOrderDir === 'ASC'
+    ) {
+      await fetchProjects(1, '', 'PRJ_case_number', 'ASC')
+      return
+    }
+    setProjectSearchTerm('')
+    setAppliedProjectSearchTerm('')
+    setProjectPage(1)
+    setProjectOrderBy('PRJ_case_number')
+    setProjectOrderDir('ASC')
   }
 
   const toggleUserSelection = (userId: number) => {
@@ -267,6 +327,10 @@ export default function NotificationsPage() {
     setUserPage(1)
     setUserOrderBy('name')
     setProjectSearchTerm("")
+    setAppliedProjectSearchTerm("")
+    setProjectPage(1)
+    setProjectOrderBy('PRJ_case_number')
+    setProjectOrderDir('ASC')
   }
 
   const handleCreateNotification = async () => {
@@ -702,14 +766,65 @@ export default function NotificationsPage() {
                 {newNotification.tipo === "proyectos" && (
                   <div className="space-y-2">
                     <Label>Seleccionar Proyecto *</Label>
-                    <div className="relative mb-2">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#486b00]" />
-                      <Input
-                        placeholder="Buscar por número de caso o nombre del cliente..."
-                        value={projectSearchTerm}
-                        onChange={(e) => setProjectSearchTerm(e.target.value)}
-                        className="pl-8 border-[#a2c523]/30 focus:border-[#486b00]"
-                      />
+                    <div className="grid gap-3 md:grid-cols-12 mb-2">
+                      <div className="md:col-span-6">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#486b00]" />
+                          <Input
+                            placeholder="Buscar por caso, cliente o tipo..."
+                            value={projectSearchTerm}
+                            onChange={(e) => setProjectSearchTerm(e.target.value)}
+                            className="pl-8 border-[#a2c523]/30 focus:border-[#486b00]"
+                          />
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <Button variant="secondary" className="btn-secondary" size="sm" onClick={handleApplyProjectFilters}>
+                            Filtrar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleClearProjectFilters}
+                            disabled={
+                              !projectSearchTerm
+                              && !appliedProjectSearchTerm
+                              && projectPage === 1
+                              && projectOrderBy === 'PRJ_case_number'
+                              && projectOrderDir === 'ASC'
+                            }
+                          >
+                            Limpiar
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="md:col-span-4">
+                        <Label className="mb-2 block">Ordenar por</Label>
+                        <Select value={projectOrderBy} onValueChange={(value) => setProjectOrderBy(value as ProjectOrderBy)}>
+                          <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PRJ_case_number">Número de caso</SelectItem>
+                            <SelectItem value="client_name">Nombre de cliente</SelectItem>
+                            <SelectItem value="type_name">Tipo</SelectItem>
+                            <SelectItem value="PRJ_state">Estado</SelectItem>
+                            <SelectItem value="PRJ_start_construction_date">Fecha de inicio</SelectItem>
+                            <SelectItem value="PRJ_completion_date">Fecha de conclusión</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="mb-2 block">Dirección</Label>
+                        <Select value={projectOrderDir} onValueChange={(value) => setProjectOrderDir(value as ProjectOrderDir)}>
+                          <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="DESC">Descendente</SelectItem>
+                            <SelectItem value="ASC">Ascendente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="border rounded-md border-[#a2c523]/30">
                       <ScrollArea className="h-[200px]">
@@ -728,7 +843,7 @@ export default function NotificationsPage() {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {filteredProjects.map((project) => (
+                              {projects.map((project) => (
                                 <TableRow
                                   key={project.PRJ_id}
                                   className={`cursor-pointer hover:bg-[#c9e077]/10 ${newNotification.proyectoId === project.PRJ_id ? 'bg-[#c9e077]/20' : ''
@@ -752,7 +867,7 @@ export default function NotificationsPage() {
                                   <TableCell>{project.client_identification}</TableCell>
                                 </TableRow>
                               ))}
-                              {filteredProjects.length === 0 && (
+                              {projects.length === 0 && (
                                 <TableRow>
                                   <TableCell colSpan={4} className="text-center text-muted-foreground">
                                     No se encontraron proyectos
@@ -763,6 +878,41 @@ export default function NotificationsPage() {
                           </Table>
                         )}
                       </ScrollArea>
+                    </div>
+                    {projectTotalPages > 1 && (
+                      <div className="flex flex-wrap justify-center items-center gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setProjectPage((prev) => Math.max(1, prev - 1))}
+                          disabled={projectPage === 1}
+                        >
+                          Anterior
+                        </Button>
+
+                        {Array.from({ length: projectTotalPages }, (_, index) => index + 1).map((pageNumber) => (
+                          <Button
+                            key={pageNumber}
+                            variant={pageNumber === projectPage ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => setProjectPage(pageNumber)}
+                          >
+                            {pageNumber}
+                          </Button>
+                        ))}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setProjectPage((prev) => Math.min(projectTotalPages, prev + 1))}
+                          disabled={projectPage === projectTotalPages}
+                        >
+                          Siguiente
+                        </Button>
+                      </div>
+                    )}
+                    <div className="text-center text-xs text-muted-foreground">
+                      Mostrando {projects.length} de {projectTotalProjects} proyectos
                     </div>
                   </div>
                 )}
