@@ -191,6 +191,7 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
                         <Button
                             type="button"
                             variant="secondary"
+                            className="btn-secondary" 
                             onClick={() => fetchObservations(1)}
                         >
                             Filtrar

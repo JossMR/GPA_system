@@ -782,7 +782,7 @@ export default function NotificationsPage() {
                         />
                       </div>
                       <div className="flex gap-2 mt-2">
-                        <Button variant="secondary" size="sm" onClick={handleApplyUserFilters}>
+                        <Button variant="secondary" className="btn-secondary" size="sm" onClick={handleApplyUserFilters}>
                           Filtrar
                         </Button>
                         <Button

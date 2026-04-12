@@ -273,7 +273,7 @@ export default function ProjectsPage() {
                 </select>
               </div>
               <div className="flex gap-2 items-end">
-                <Button variant="secondary" onClick={handleApplyFilters}>
+                <Button variant="secondary" className="btn-secondary"  onClick={handleApplyFilters}>
                   Filtrar
                 </Button>
                 <Button

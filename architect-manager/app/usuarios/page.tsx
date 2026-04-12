@@ -328,7 +328,7 @@ export default function UsersPage() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="secondary" onClick={handleApplyFilters}>
+                  <Button variant="secondary" className="btn-secondary"  onClick={handleApplyFilters}>
                     Filtrar
                   </Button>
                   <Button
