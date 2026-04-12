@@ -70,6 +70,8 @@ interface ProjectForSelection {
   client_identification: string
 }
 
+type UserOrderBy = 'name' | 'firstLastName' | 'secondLastName' | 'email' | 'role'
+
 export default function NotificationsPage() {
   const { isAdmin, user } = useAuth()
   const { toast } = useToast()
@@ -94,6 +96,11 @@ export default function NotificationsPage() {
   const [projects, setProjects] = useState<ProjectForSelection[]>([])
   const [selectedUsers, setSelectedUsers] = useState<number[]>([])
   const [userSearchTerm, setUserSearchTerm] = useState("")
+  const [appliedUserSearchTerm, setAppliedUserSearchTerm] = useState("")
+  const [userPage, setUserPage] = useState(1)
+  const [userTotalPages, setUserTotalPages] = useState(0)
+  const [userTotalUsers, setUserTotalUsers] = useState(0)
+  const [userOrderBy, setUserOrderBy] = useState<UserOrderBy>('name')
   const [projectSearchTerm, setProjectSearchTerm] = useState("")
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [loadingProjects, setLoadingProjects] = useState(false)
@@ -123,11 +130,6 @@ export default function NotificationsPage() {
     return matchesSearch && matchesType && isDateValid
   })
 
-  const filteredUsers = users.filter((u) => {
-    const fullName = `${u.USR_name} ${u.USR_f_lastname} ${u.USR_s_lastname}`.toLowerCase()
-    return fullName.includes(userSearchTerm.toLowerCase())
-  })
-
   const filteredProjects = projects.filter((p) => {
     const searchLower = projectSearchTerm.toLowerCase()
     return (
@@ -152,7 +154,6 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (isDialogOpen) {
-      fetchUsers()
       fetchProjects()
       // Set current user as default selected
       if (user?.id) {
@@ -173,12 +174,27 @@ export default function NotificationsPage() {
     }
   }, [isDialogOpen, user])
 
-  const fetchUsers = async () => {
+  useEffect(() => {
+    if (isDialogOpen) {
+      fetchUsers(userPage, appliedUserSearchTerm, userOrderBy)
+    }
+  }, [isDialogOpen, userPage, appliedUserSearchTerm, userOrderBy])
+
+  const fetchUsers = async (page: number, search: string, orderBy: UserOrderBy = 'name') => {
     setLoadingUsers(true)
     try {
-      const response = await fetch('/api/users')
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: '10',
+        search,
+        orderBy,
+        orderDir: 'ASC',
+      })
+      const response = await fetch(`/api/users?${params.toString()}`)
       const data = await response.json()
       setUsers(data.users || [])
+      setUserTotalPages(data.totalPages || 0)
+      setUserTotalUsers(data.totalUsers || 0)
     } catch (error) {
       toast({
         title: "Error",
@@ -215,6 +231,27 @@ export default function NotificationsPage() {
     )
   }
 
+  const handleApplyUserFilters = async () => {
+    const nextSearch = userSearchTerm.trim()
+    if (userPage === 1 && appliedUserSearchTerm === nextSearch) {
+      await fetchUsers(1, nextSearch, userOrderBy)
+      return
+    }
+    setUserPage(1)
+    setAppliedUserSearchTerm(nextSearch)
+  }
+
+  const handleClearUserFilters = async () => {
+    if (!userSearchTerm && !appliedUserSearchTerm && userPage === 1 && userOrderBy === 'name') {
+      await fetchUsers(1, '', 'name')
+      return
+    }
+    setUserSearchTerm('')
+    setAppliedUserSearchTerm('')
+    setUserPage(1)
+    setUserOrderBy('name')
+  }
+
   const resetForm = () => {
     setNewNotification({
       titulo: "",
@@ -226,6 +263,9 @@ export default function NotificationsPage() {
     })
     setSelectedUsers(user?.id ? [user.id] : [])
     setUserSearchTerm("")
+    setAppliedUserSearchTerm("")
+    setUserPage(1)
+    setUserOrderBy('name')
     setProjectSearchTerm("")
   }
 
@@ -730,14 +770,46 @@ export default function NotificationsPage() {
                 {/* Users Selection */}
                 <div className="space-y-2">
                   <Label>Usuarios Destinatarios ({selectedUsers.length} seleccionados)</Label>
-                  <div className="relative mb-2">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#486b00]" />
-                    <Input
-                      placeholder="Buscar por nombre o apellidos..."
-                      value={userSearchTerm}
-                      onChange={(e) => setUserSearchTerm(e.target.value)}
-                      className="pl-8 border-[#a2c523]/30 focus:border-[#486b00]"
-                    />
+                  <div className="grid gap-3 md:grid-cols-12 mb-2">
+                    <div className="md:col-span-7">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#486b00]" />
+                        <Input
+                          placeholder="Buscar por nombre, apellidos o correo..."
+                          value={userSearchTerm}
+                          onChange={(e) => setUserSearchTerm(e.target.value)}
+                          className="pl-8 border-[#a2c523]/30 focus:border-[#486b00]"
+                        />
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <Button variant="secondary" size="sm" onClick={handleApplyUserFilters}>
+                          Filtrar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleClearUserFilters}
+                          disabled={!userSearchTerm && !appliedUserSearchTerm && userPage === 1 && userOrderBy === 'name'}
+                        >
+                          Limpiar
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="md:col-span-5">
+                      <Label className="mb-2 block">Ordenar por</Label>
+                      <Select value={userOrderBy} onValueChange={(value) => setUserOrderBy(value as UserOrderBy)}>
+                        <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="name">Nombre</SelectItem>
+                          <SelectItem value="firstLastName">Primer apellido</SelectItem>
+                          <SelectItem value="secondLastName">Segundo apellido</SelectItem>
+                          <SelectItem value="email">Correo</SelectItem>
+                          <SelectItem value="role">Rol</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="border rounded-md border-[#a2c523]/30">
                     <ScrollArea className="h-[250px]">
@@ -757,7 +829,7 @@ export default function NotificationsPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {filteredUsers.map((usr) => (
+                            {users.map((usr) => (
                               <TableRow
                                 key={usr.USR_id}
                                 className={`cursor-pointer hover:bg-[#c9e077]/10 ${selectedUsers.includes(usr.USR_id) ? 'bg-[#c9e077]/20' : ''
@@ -776,7 +848,7 @@ export default function NotificationsPage() {
                                 <TableCell>{usr.ROL_name}</TableCell>
                               </TableRow>
                             ))}
-                            {filteredUsers.length === 0 && (
+                            {users.length === 0 && (
                               <TableRow>
                                 <TableCell colSpan={5} className="text-center text-muted-foreground">
                                   No se encontraron usuarios
@@ -787,6 +859,41 @@ export default function NotificationsPage() {
                         </Table>
                       )}
                     </ScrollArea>
+                  </div>
+                  {userTotalPages > 1 && (
+                    <div className="flex flex-wrap justify-center items-center gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setUserPage((prev) => Math.max(1, prev - 1))}
+                        disabled={userPage === 1}
+                      >
+                        Anterior
+                      </Button>
+
+                      {Array.from({ length: userTotalPages }, (_, index) => index + 1).map((pageNumber) => (
+                        <Button
+                          key={pageNumber}
+                          variant={pageNumber === userPage ? "secondary" : "outline"}
+                          size="sm"
+                          onClick={() => setUserPage(pageNumber)}
+                        >
+                          {pageNumber}
+                        </Button>
+                      ))}
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setUserPage((prev) => Math.min(userTotalPages, prev + 1))}
+                        disabled={userPage === userTotalPages}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  )}
+                  <div className="text-center text-xs text-muted-foreground">
+                    Mostrando {users.length} de {userTotalUsers} usuarios
                   </div>
                 </div>
               </div>

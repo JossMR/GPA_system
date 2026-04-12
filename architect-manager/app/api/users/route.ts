@@ -67,8 +67,18 @@ export async function POST(req: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const users: GPAUser[] = await executeQuery(
-      `SELECT 
+    const pageParam = Number.parseInt(request.nextUrl.searchParams.get('page') || '1', 10);
+    const limitParam = Number.parseInt(request.nextUrl.searchParams.get('limit') || '10', 10);
+    const search = (request.nextUrl.searchParams.get('search') || '').trim();
+    const orderByParam = request.nextUrl.searchParams.get('orderBy') || 'creationDate';
+    const orderDirParam = (request.nextUrl.searchParams.get('orderDir') || 'DESC').toUpperCase();
+    const hasServerFilters = request.nextUrl.searchParams.has('page')
+      || request.nextUrl.searchParams.has('limit')
+      || request.nextUrl.searchParams.has('search')
+      || request.nextUrl.searchParams.has('orderBy')
+      || request.nextUrl.searchParams.has('orderDir');
+
+    const fullUsersQuery = `SELECT 
                 USR_id,
                 USR_role_id,
                 USR_active,
@@ -80,10 +90,92 @@ export async function GET(request: NextRequest) {
                 USR_last_access_date,
                 r.ROL_name
             FROM gpa_users us
-            JOIN gpa_roles r ON us.usr_role_id = r.rol_id`
+            JOIN gpa_roles r ON us.usr_role_id = r.rol_id`;
+
+    if (!hasServerFilters) {
+      const users: GPAUser[] = await executeQuery(fullUsersQuery);
+      return NextResponse.json({
+        message: "Usuarios obtenidos exitosamente",
+        users
+      }, { status: 200 });
+    }
+
+    const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
+    const limit = Number.isNaN(limitParam) || limitParam < 1 ? 10 : limitParam;
+    const orderByMap: Record<string, string> = {
+      name: 'USR_name',
+      firstLastName: 'USR_f_lastname',
+      secondLastName: 'USR_s_lastname',
+      email: 'USR_email',
+      role: 'ROL_name',
+      creationDate: 'USR_creation_date',
+      lastAccessDate: 'USR_last_access_date',
+    };
+    const orderBy = orderByMap[orderByParam] || 'USR_creation_date';
+    const orderDir = orderDirParam === 'ASC' ? 'ASC' : 'DESC';
+    const offset = (page - 1) * limit;
+
+    const filterParams: (string | number)[] = [];
+    let whereClause = '';
+    if (search) {
+      whereClause = `
+        WHERE (
+          CONCAT_WS(' ', us.USR_name, us.USR_f_lastname, us.USR_s_lastname) LIKE ?
+          OR us.USR_name LIKE ?
+          OR us.USR_f_lastname LIKE ?
+          OR us.USR_s_lastname LIKE ?
+          OR us.USR_email LIKE ?
+          OR r.ROL_name LIKE ?
+        )
+      `;
+      const likeSearch = `%${search}%`;
+      filterParams.push(likeSearch, likeSearch, likeSearch, likeSearch, likeSearch, likeSearch);
+    }
+
+    const countResult = await executeQuery(
+      `SELECT COUNT(us.USR_id) as totalUsers
+       FROM gpa_users us
+       JOIN gpa_roles r ON us.usr_role_id = r.rol_id
+       ${whereClause}`,
+      filterParams
     );
+    const totalUsers = Number((countResult as any[])[0]?.totalUsers || 0);
+    const totalPages = Math.ceil(totalUsers / limit);
+    const totalActiveUsersResult = await executeQuery(
+      'SELECT COUNT(USR_id) as totalActiveUsers FROM gpa_users WHERE USR_active = 1'
+    );
+    const totalAdminUsersResult = await executeQuery(
+      `SELECT COUNT(us.USR_id) as totalAdminUsers
+       FROM gpa_users us
+       JOIN gpa_roles r ON us.usr_role_id = r.rol_id
+       WHERE LOWER(r.ROL_name) = 'admin'`
+    );
+    const totalRegularUsersResult = await executeQuery(
+      `SELECT COUNT(us.USR_id) as totalRegularUsers
+       FROM gpa_users us
+       JOIN gpa_roles r ON us.usr_role_id = r.rol_id
+       WHERE LOWER(r.ROL_name) = 'usuario'`
+    );
+
+    const users: GPAUser[] = await executeQuery(
+      `${fullUsersQuery}
+       ${whereClause}
+       ORDER BY us.${orderBy} ${orderDir}
+       LIMIT ?, ?`,
+      [...filterParams, offset, limit]
+    );
+
     return NextResponse.json({
       message: "Usuarios obtenidos exitosamente",
+      page,
+      limit,
+      totalUsers,
+      totalPages,
+      totalActiveUsers: Number((totalActiveUsersResult as any[])[0]?.totalActiveUsers || 0),
+      totalAdminUsers: Number((totalAdminUsersResult as any[])[0]?.totalAdminUsers || 0),
+      totalRegularUsers: Number((totalRegularUsersResult as any[])[0]?.totalRegularUsers || 0),
+      orderBy,
+      orderDir,
       users
     }, { status: 200 });
   } catch {
