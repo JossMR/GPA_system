@@ -79,17 +79,35 @@ type ProjectOrderBy =
   | 'PRJ_start_construction_date'
   | 'PRJ_completion_date'
 type ProjectOrderDir = 'ASC' | 'DESC'
+type NotificationOrderBy = 'name' | 'scheduledDate' | 'status'
 
 export default function NotificationsPage() {
   const { isAdmin, user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
   const { refreshNotifications } = useNotifications()
-  const [notifications, setNotifications] = useState<GPANotification[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [tipoFilter, setTipoFilter] = useState("todas")
+  const [notificationsForMe, setNotificationsForMe] = useState<GPANotification[]>([])
+  const [notificationsCreatedByMe, setNotificationsCreatedByMe] = useState<GPANotification[]>([])
+
+  const [forMeSearchTerm, setForMeSearchTerm] = useState("")
+  const [forMeAppliedSearchTerm, setForMeAppliedSearchTerm] = useState("")
+  const [forMeTipoFilter, setForMeTipoFilter] = useState("todas")
+  const [forMeOrderBy, setForMeOrderBy] = useState<NotificationOrderBy>('scheduledDate')
+  const [forMePage, setForMePage] = useState(1)
+  const [forMeTotalPages, setForMeTotalPages] = useState(0)
+  const [forMeTotalNotifications, setForMeTotalNotifications] = useState(0)
+  const [loadingForMe, setLoadingForMe] = useState(true)
+
+  const [createdSearchTerm, setCreatedSearchTerm] = useState("")
+  const [createdAppliedSearchTerm, setCreatedAppliedSearchTerm] = useState("")
+  const [createdTipoFilter, setCreatedTipoFilter] = useState("todas")
+  const [createdOrderBy, setCreatedOrderBy] = useState<NotificationOrderBy>('scheduledDate')
+  const [createdPage, setCreatedPage] = useState(1)
+  const [createdTotalPages, setCreatedTotalPages] = useState(0)
+  const [createdTotalNotifications, setCreatedTotalNotifications] = useState(0)
+  const [loadingCreatedByMe, setLoadingCreatedByMe] = useState(true)
+
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
 
   // New notification form states
   const [newNotification, setNewNotification] = useState({
@@ -130,33 +148,85 @@ export default function NotificationsPage() {
     return `${day}/${month}/${year} ${hours}:${minutes}`
   }
 
-  const filteredNotifications = notifications.filter((not) => {
-    const matchesSearch =
-      not.NOT_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      not.NOT_description.toLowerCase().includes(searchTerm.toLowerCase())
+  const fetchNotificationsForMe = async (
+    targetPage: number,
+    targetSearch: string,
+    targetType: string,
+    targetOrderBy: NotificationOrderBy,
+  ) => {
+    if (!user?.id) return
+    setLoadingForMe(true)
+    try {
+      const params = new URLSearchParams({
+        scope: 'received',
+        user_id: String(user.id),
+        page: String(targetPage),
+        limit: '8',
+        search: targetSearch,
+        type: targetType,
+        orderBy: targetOrderBy,
+        orderDir: targetOrderBy === 'scheduledDate' ? 'DESC' : 'ASC',
+      })
+      const response = await fetch(`/api/notifications?${params.toString()}`)
+      const data = await response.json()
+      setNotificationsForMe(data.notifications || [])
+      setForMeTotalNotifications(data.totalNotifications || 0)
+      setForMeTotalPages(data.totalPages || 0)
+    } catch {
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar tus notificaciones.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingForMe(false)
+    }
+  }
 
-    const matchesType = tipoFilter === "todas" || not.notification_type_name === tipoFilter
-
-    const notificationDate = not.NOT_date ? new Date(not.NOT_date) : null
-    const now = new Date()
-    const isDateValid = !notificationDate || notificationDate <= now
-
-    return matchesSearch && matchesType && isDateValid
-  })
+  const fetchNotificationsCreatedByMe = async (
+    targetPage: number,
+    targetSearch: string,
+    targetType: string,
+    targetOrderBy: NotificationOrderBy,
+  ) => {
+    if (!user?.id) return
+    setLoadingCreatedByMe(true)
+    try {
+      const params = new URLSearchParams({
+        scope: 'created',
+        creator_user_id: String(user.id),
+        page: String(targetPage),
+        limit: '8',
+        search: targetSearch,
+        type: targetType,
+        orderBy: targetOrderBy,
+        orderDir: targetOrderBy === 'scheduledDate' ? 'DESC' : 'ASC',
+      })
+      const response = await fetch(`/api/notifications?${params.toString()}`)
+      const data = await response.json()
+      setNotificationsCreatedByMe(data.notifications || [])
+      setCreatedTotalNotifications(data.totalNotifications || 0)
+      setCreatedTotalPages(data.totalPages || 0)
+    } catch {
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar las notificaciones creadas por ti.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingCreatedByMe(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      if (!user) return
-      setLoading(true)
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      const response = await fetch(`/api/notifications?user_id=${user.id}`)
-      const data = await response.json()
-      const requestedNotifications: GPANotification[] = data.notifications
-      setNotifications(requestedNotifications)
-      setLoading(false)
-    }
-    fetchNotifications()
-  }, [user])
+    if (!user?.id) return
+    fetchNotificationsForMe(forMePage, forMeAppliedSearchTerm, forMeTipoFilter, forMeOrderBy)
+  }, [user, forMePage, forMeAppliedSearchTerm, forMeTipoFilter, forMeOrderBy])
+
+  useEffect(() => {
+    if (!user?.id) return
+    fetchNotificationsCreatedByMe(createdPage, createdAppliedSearchTerm, createdTipoFilter, createdOrderBy)
+  }, [user, createdPage, createdAppliedSearchTerm, createdTipoFilter, createdOrderBy])
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -284,11 +354,7 @@ export default function NotificationsPage() {
   }
 
   const toggleUserSelection = (userId: number) => {
-    setSelectedUsers(prev =>
-      prev.includes(userId)
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    )
+    setSelectedUsers([userId])
   }
 
   const handleApplyUserFilters = async () => {
@@ -333,6 +399,50 @@ export default function NotificationsPage() {
     setProjectOrderDir('ASC')
   }
 
+  const handleApplyForMeFilters = async () => {
+    const nextSearch = forMeSearchTerm.trim()
+    if (forMePage === 1 && forMeAppliedSearchTerm === nextSearch) {
+      await fetchNotificationsForMe(1, nextSearch, forMeTipoFilter, forMeOrderBy)
+      return
+    }
+    setForMePage(1)
+    setForMeAppliedSearchTerm(nextSearch)
+  }
+
+  const handleClearForMeFilters = async () => {
+    if (!forMeSearchTerm && !forMeAppliedSearchTerm && forMePage === 1 && forMeTipoFilter === 'todas' && forMeOrderBy === 'scheduledDate') {
+      await fetchNotificationsForMe(1, '', 'todas', 'scheduledDate')
+      return
+    }
+    setForMeSearchTerm('')
+    setForMeAppliedSearchTerm('')
+    setForMePage(1)
+    setForMeTipoFilter('todas')
+    setForMeOrderBy('scheduledDate')
+  }
+
+  const handleApplyCreatedFilters = async () => {
+    const nextSearch = createdSearchTerm.trim()
+    if (createdPage === 1 && createdAppliedSearchTerm === nextSearch) {
+      await fetchNotificationsCreatedByMe(1, nextSearch, createdTipoFilter, createdOrderBy)
+      return
+    }
+    setCreatedPage(1)
+    setCreatedAppliedSearchTerm(nextSearch)
+  }
+
+  const handleClearCreatedFilters = async () => {
+    if (!createdSearchTerm && !createdAppliedSearchTerm && createdPage === 1 && createdTipoFilter === 'todas' && createdOrderBy === 'scheduledDate') {
+      await fetchNotificationsCreatedByMe(1, '', 'todas', 'scheduledDate')
+      return
+    }
+    setCreatedSearchTerm('')
+    setCreatedAppliedSearchTerm('')
+    setCreatedPage(1)
+    setCreatedTipoFilter('todas')
+    setCreatedOrderBy('scheduledDate')
+  }
+
   const handleCreateNotification = async () => {
     // Validations
     if (!newNotification.titulo.trim()) {
@@ -362,10 +472,10 @@ export default function NotificationsPage() {
       return
     }
 
-    if (selectedUsers.length === 0) {
+    if (selectedUsers.length !== 1) {
       toast({
         title: "Error",
-        description: "Debe seleccionar al menos un usuario destinatario.",
+        description: "Debe seleccionar un unico usuario destinatario.",
         variant: "destructive",
       })
       return
@@ -421,10 +531,8 @@ export default function NotificationsPage() {
         variant: "success",
       })
 
-      // Refresh notifications
-      const refreshResponse = await fetch(`/api/notifications?user_id=${user?.id}`)
-      const refreshData = await refreshResponse.json()
-      setNotifications(refreshData.notifications)
+      await fetchNotificationsForMe(forMePage, forMeAppliedSearchTerm, forMeTipoFilter, forMeOrderBy)
+      await fetchNotificationsCreatedByMe(createdPage, createdAppliedSearchTerm, createdTipoFilter, createdOrderBy)
 
       await refreshNotifications()
       setIsDialogOpen(false)
@@ -440,7 +548,7 @@ export default function NotificationsPage() {
 
   const markAsRead = async (id: number) => {
     try {
-      const notification = notifications.find(not => not.NOT_id === id)
+      const notification = notificationsForMe.find(not => not.NOT_id === id)
 
       if (!notification) {
         throw new Error('Notificación no encontrada')
@@ -465,7 +573,7 @@ export default function NotificationsPage() {
         throw new Error('Error al actualizar la notificación')
       }
 
-      setNotifications((prev) =>
+      setNotificationsForMe((prev) =>
         prev.map((not) => not.NOT_id === id ? updatedNotification : not)
       )
 
@@ -479,11 +587,7 @@ export default function NotificationsPage() {
     }
   }
 
-  const deleteNotifications = (id: number) => {
-    setNotifications((prev) => prev.filter((not) => not.NOT_id !== id))
-  }
-
-  const noReadCount = filteredNotifications.filter((n) =>
+  const noReadCount = notificationsForMe.filter((n) =>
     n.destination_users_ids?.some(([userId, isRead]) => userId === user?.id && isRead === false)
   ).length
 
@@ -514,17 +618,16 @@ export default function NotificationsPage() {
           )}
         </div>
 
-        {/* Stadistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="card-hover border-[#a2c523]/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center">
                 <Bell className="mr-2 h-4 w-4 text-[#486b00]" />
-                Total
+                Para Mí
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#486b00]">{filteredNotifications.length}</div>
+              <div className="text-2xl font-bold text-[#486b00]">{forMeTotalNotifications}</div>
             </CardContent>
           </Card>
           <Card className="card-hover border-yellow-200">
@@ -538,33 +641,39 @@ export default function NotificationsPage() {
               <div className="text-2xl font-bold text-yellow-600">{noReadCount}</div>
             </CardContent>
           </Card>
+          <Card className="card-hover border-blue-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center">
+                <User className="mr-2 h-4 w-4 text-blue-600" />
+                Creadas Por Mí
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{createdTotalNotifications}</div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Filters */}
         <Card className="border-[#c9e077]/30">
           <CardHeader>
-            <CardTitle className="text-[#2e4600]">Filtros</CardTitle>
+            <CardTitle className="text-[#2e4600]">Notificaciones Para Mí</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Label htmlFor="search">Buscar</Label>
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#486b00]" />
-                  <Input
-                    id="search"
-                    placeholder="Buscar notificaciones por título o descripción..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8 border-[#a2c523]/30 focus:border-[#486b00]"
-                  />
-                </div>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-12">
+              <div className="md:col-span-5">
+                <Label>Buscar</Label>
+                <Input
+                  placeholder="Buscar por título o descripción..."
+                  value={forMeSearchTerm}
+                  onChange={(e) => setForMeSearchTerm(e.target.value)}
+                  className="border-[#a2c523]/30 focus:border-[#486b00]"
+                />
               </div>
-              <div className="w-48">
+              <div className="md:col-span-3">
                 <Label>Tipo</Label>
-                <Select value={tipoFilter} onValueChange={setTipoFilter}>
+                <Select value={forMeTipoFilter} onValueChange={(value) => { setForMeTipoFilter(value); setForMePage(1) }}>
                   <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
-                    <SelectValue placeholder="Filtrar por tipo" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todas">Todas</SelectItem>
@@ -573,52 +682,169 @@ export default function NotificationsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="md:col-span-2">
+                <Label>Ordenar por</Label>
+                <Select value={forMeOrderBy} onValueChange={(value) => { setForMeOrderBy(value as NotificationOrderBy); setForMePage(1) }}>
+                  <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Nombre</SelectItem>
+                    <SelectItem value="scheduledDate">Fecha programada</SelectItem>
+                    <SelectItem value="status">Estado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2 flex items-end gap-2">
+                <Button variant="secondary" className="btn-secondary" size="sm" onClick={handleApplyForMeFilters}>Filtrar</Button>
+                <Button variant="ghost" size="sm" onClick={handleClearForMeFilters}>Limpiar</Button>
+              </div>
             </div>
+
+            {loadingForMe ? (
+              <div className="text-center py-6 text-muted-foreground">Cargando notificaciones...</div>
+            ) : notificationsForMe.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">No se encontraron notificaciones para ti</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {notificationsForMe.map((notification, index) => {
+                  const isUnread = notification.destination_users_ids?.some(([userId, isRead]) => userId === user?.id && isRead === false)
+                  return (
+                    <Card
+                      key={notification.NOT_id}
+                      className={`card-hover animate-slide-up ${isUnread ? "border-l-4 border-l-[#a2c523] bg-[#c9e077]/5" : "border-[#c9e077]/20"}`}
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <h3 className={`text-lg font-semibold ${isUnread ? "text-[#2e4600]" : "text-muted-foreground"}`}>
+                                {notification.NOT_name}
+                              </h3>
+                              {isUnread ? (
+                                <Badge className="bg-[#a2c523] text-white text-xs">Nueva</Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-gray-100 text-gray-600 text-xs border-gray-300">Leído</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{notification.NOT_description}</p>
+                            <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                              <span className="flex items-center">
+                                <Calendar className="mr-1 h-3 w-3" />
+                                {"Programada para: " + formatDate(notification.NOT_date)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {notification.notification_type_name === "proyectos" && notification.PRJ_id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-[#486b00] hover:bg-[#c9e077]/20"
+                                onClick={() => router.push(`/proyectos/${notification.PRJ_id}/editar`)}
+                                title="Ir al proyecto"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {isUnread && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => markAsRead(notification.NOT_id || 0)}
+                                className="text-green-600 hover:bg-green-50"
+                                title="Marcar como leída"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+
+            {forMeTotalPages > 1 && (
+              <div className="flex flex-wrap justify-center items-center gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setForMePage((prev) => Math.max(1, prev - 1))} disabled={forMePage === 1}>Anterior</Button>
+                {Array.from({ length: forMeTotalPages }, (_, index) => index + 1).map((pageNumber) => (
+                  <Button key={pageNumber} variant={pageNumber === forMePage ? "secondary" : "outline"} size="sm" onClick={() => setForMePage(pageNumber)}>
+                    {pageNumber}
+                  </Button>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setForMePage((prev) => Math.min(forMeTotalPages, prev + 1))} disabled={forMePage === forMeTotalPages}>Siguiente</Button>
+              </div>
+            )}
+            <div className="text-center text-xs text-muted-foreground">Mostrando {notificationsForMe.length} de {forMeTotalNotifications} notificaciones</div>
           </CardContent>
         </Card>
 
-        {/* Notifications List */}
-        {loading ? (
-          <div className="flex justify-center items-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#486b00] mr-4" />
-            <span className="text-muted-foreground">Cargando notificaciones...</span>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredNotifications.map((notification, index) => {
-              const IconComponent = tipoIcons[notification.notification_type_name as keyof typeof tipoIcons]
-              const isUnread = notification.destination_users_ids?.some(([userId, isRead]) => userId === user?.id && isRead === false)
+        <Card className="border-[#c9e077]/30">
+          <CardHeader>
+            <CardTitle className="text-[#2e4600]">Notificaciones Creadas Por Mí</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-12">
+              <div className="md:col-span-5">
+                <Label>Buscar</Label>
+                <Input
+                  placeholder="Buscar por título o descripción..."
+                  value={createdSearchTerm}
+                  onChange={(e) => setCreatedSearchTerm(e.target.value)}
+                  className="border-[#a2c523]/30 focus:border-[#486b00]"
+                />
+              </div>
+              <div className="md:col-span-3">
+                <Label>Tipo</Label>
+                <Select value={createdTipoFilter} onValueChange={(value) => { setCreatedTipoFilter(value); setCreatedPage(1) }}>
+                  <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas</SelectItem>
+                    <SelectItem value="proyectos">Proyectos</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2">
+                <Label>Ordenar por</Label>
+                <Select value={createdOrderBy} onValueChange={(value) => { setCreatedOrderBy(value as NotificationOrderBy); setCreatedPage(1) }}>
+                  <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Nombre</SelectItem>
+                    <SelectItem value="scheduledDate">Fecha programada</SelectItem>
+                    <SelectItem value="status">Estado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2 flex items-end gap-2">
+                <Button variant="secondary" className="btn-secondary" size="sm" onClick={handleApplyCreatedFilters}>Filtrar</Button>
+                <Button variant="ghost" size="sm" onClick={handleClearCreatedFilters}>Limpiar</Button>
+              </div>
+            </div>
 
-              return (
-                <Card
-                  key={notification.NOT_id}
-                  className={`card-hover animate-slide-up ${isUnread ? "border-l-4 border-l-[#a2c523] bg-[#c9e077]/5" : "border-[#c9e077]/20"}`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4 flex-1">
-                        <div
-                          className={`p-2 rounded-full ${tipoColors[notification.notification_type_name as keyof typeof tipoColors]} text-white`}
-                        >
-                        </div>
+            {loadingCreatedByMe ? (
+              <div className="text-center py-6 text-muted-foreground">Cargando notificaciones...</div>
+            ) : notificationsCreatedByMe.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">No has creado notificaciones con esos filtros</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {notificationsCreatedByMe.map((notification, index) => (
+                  <Card key={notification.NOT_id} className="card-hover animate-slide-up border-[#c9e077]/20" style={{ animationDelay: `${index * 0.1}s` }}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center space-x-2">
-                            <h3
-                              className={`text-lg font-semibold ${isUnread ? "text-[#2e4600]" : "text-muted-foreground"}`}
-                            >
-                              {notification.NOT_name}
-                            </h3>
-                            {isUnread ? (
-                              <Badge className="bg-[#a2c523] text-white text-xs">Nueva</Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-gray-100 text-gray-600 text-xs border-gray-300">Leído</Badge>
-                            )}
-                            <Badge
-                              variant="outline"
-                              className={`text-xs ${tipoColors[notification.notification_type_name as keyof typeof tipoColors]} text-white border-0`}
-                            >
-                              {notification.notification_type_name}
+                            <h3 className="text-lg font-semibold text-[#2e4600]">{notification.NOT_name}</h3>
+                            <Badge variant="outline" className="bg-gray-100 text-gray-600 text-xs border-gray-300">
+                              {(notification as any).notification_status === 'unread' ? 'No leída' : 'Leída'}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">{notification.NOT_description}</p>
@@ -627,16 +853,8 @@ export default function NotificationsPage() {
                               <Calendar className="mr-1 h-3 w-3" />
                               {"Programada para: " + formatDate(notification.NOT_date)}
                             </span>
-                            {notification.creator_name && (
-                              <span className="flex items-center">
-                                <User className="mr-1 h-3 w-3" />
-                                {"Creada por: " + notification.creator_name}
-                              </span>
-                            )}
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
                         {notification.notification_type_name === "proyectos" && notification.PRJ_id && (
                           <Button
                             variant="ghost"
@@ -648,38 +866,27 @@ export default function NotificationsPage() {
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         )}
-                        {isUnread && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => markAsRead(notification.NOT_id || 0)}
-                            className="text-green-600 hover:bg-green-50"
-                            title="Marcar como leída"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        )}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )}
-        {filteredNotifications.length === 0 && !loading && (
-          <Card>
-            <CardContent className="text-center py-8">
-              <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No hay notificaciones</h3>
-              <p className="text-muted-foreground">
-                {searchTerm || tipoFilter !== "todas"
-                  ? "No se encontraron notificaciones con los filtros aplicados"
-                  : "Todas las notificaciones están al día"}
-              </p>
-            </CardContent>
-          </Card>
-        )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {createdTotalPages > 1 && (
+              <div className="flex flex-wrap justify-center items-center gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setCreatedPage((prev) => Math.max(1, prev - 1))} disabled={createdPage === 1}>Anterior</Button>
+                {Array.from({ length: createdTotalPages }, (_, index) => index + 1).map((pageNumber) => (
+                  <Button key={pageNumber} variant={pageNumber === createdPage ? "secondary" : "outline"} size="sm" onClick={() => setCreatedPage(pageNumber)}>
+                    {pageNumber}
+                  </Button>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setCreatedPage((prev) => Math.min(createdTotalPages, prev + 1))} disabled={createdPage === createdTotalPages}>Siguiente</Button>
+              </div>
+            )}
+            <div className="text-center text-xs text-muted-foreground">Mostrando {notificationsCreatedByMe.length} de {createdTotalNotifications} notificaciones</div>
+          </CardContent>
+        </Card>
 
         {/* Dialog for New Notification */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -919,7 +1126,7 @@ export default function NotificationsPage() {
 
                 {/* Users Selection */}
                 <div className="space-y-2">
-                  <Label>Usuarios Destinatarios ({selectedUsers.length} seleccionados)</Label>
+                  <Label>Usuario Destinatario ({selectedUsers.length} seleccionado)</Label>
                   <div className="grid gap-3 md:grid-cols-12 mb-2">
                     <div className="md:col-span-7">
                       <div className="relative">
