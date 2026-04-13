@@ -802,7 +802,7 @@ export default function PagosPage() {
 
         {/* Dialog para Crear/Editar/Ver Pago */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className={viewMode ? "sm:max-w-[700px]" : "sm:max-w-[1100px] max-h-[90vh]"}>
+          <DialogContent className={viewMode ? "sm:max-w-[700px]" : "sm:max-w-[1100px] max-h-[90vh] overflow-hidden"}>
             <DialogHeader>
               <DialogTitle className="text-[#2e4600]">
                 {viewMode ? "Detalles del Pago" : (selectedPayment ? "Editar Pago" : "Registrar Nuevo Pago")}
@@ -814,8 +814,9 @@ export default function PagosPage() {
                 }
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
+            <ScrollArea className={viewMode ? "max-h-[70vh] pr-4" : "max-h-[65vh] pr-4"}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
                 <Label htmlFor="proyecto">
                   Proyecto {!viewMode && <span className="text-red-500">*</span>}
                 </Label>
@@ -979,7 +980,7 @@ export default function PagosPage() {
                   </div>
                 )}
               </div>
-              <div>
+                <div>
                 <label htmlFor="numero-factura">
                   Número de Factura
                 </label>
@@ -1005,7 +1006,7 @@ export default function PagosPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="fecha">
                     Fecha del pago {!viewMode && <span className="text-red-500">*</span>}
@@ -1071,7 +1072,7 @@ export default function PagosPage() {
               </div>
 
               {/* Método de pago */}
-              <div className="grid gap-2">
+                <div className="grid gap-2">
                 <Label htmlFor="metodo">
                   Método de Pago {!viewMode && <span className="text-red-500">*</span>}
                 </Label>
@@ -1104,7 +1105,7 @@ export default function PagosPage() {
               </div>
 
               {/* Opción de cubrir monto completo - solo visible al crear */}
-              {!viewMode && !selectedPayment && formData.PAY_project_id && (
+                {!viewMode && !selectedPayment && formData.PAY_project_id && (
                 <div className="flex items-center space-x-2 bg-[#c9e077]/10 p-3 rounded-md">
                   <Checkbox
                     id="coverFullAmount"
@@ -1120,7 +1121,7 @@ export default function PagosPage() {
                 </div>
               )}
 
-              {formData.PAY_project_id && (
+                {formData.PAY_project_id && (
                 <div className="bg-[#c9e077]/20 p-3 rounded-md space-y-2">
                   {(() => {
                     const project = getSelectedProject()
@@ -1160,7 +1161,7 @@ export default function PagosPage() {
               )}
 
               {/* Advertencia si el monto excede el saldo restante */}
-              {!viewMode && formData.PAY_project_id && formData.PAY_amount_paid && (
+                {!viewMode && formData.PAY_project_id && formData.PAY_amount_paid && (
                 (() => {
                   const project = getSelectedProject()
                   const projectId = Number(formData.PAY_project_id)
@@ -1180,7 +1181,7 @@ export default function PagosPage() {
                 })()
               )}
 
-              <div className="grid gap-2">
+                <div className="grid gap-2">
                 <Label htmlFor="detalle">Descripción del pago</Label>
                 <Input
                   id="detalle"
@@ -1191,7 +1192,8 @@ export default function PagosPage() {
                   disabled={viewMode}
                 />
               </div>
-            </div>
+              </div>
+            </ScrollArea>
             <div className="flex justify-end space-x-2">
               {viewMode ? (
                 // 👁️ Modo Vista: Solo botón de cerrar
