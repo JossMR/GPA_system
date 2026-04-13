@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
 import { GPANotification } from '@/models/GPA_notification';
-import { de, el } from 'date-fns/locale';
 
 export async function DELETE(
   request: NextRequest,
@@ -138,6 +137,21 @@ export async function PUT(request: NextRequest,
       }
     }
     else {
+      const notificationDateQuery = 'SELECT NOT_date FROM GPA_Notifications WHERE NOT_id = ?';
+      const notificationDateResult = await executeQuery(notificationDateQuery, [notificationId]) as { NOT_date: string | Date }[];
+
+      if (!notificationDateResult.length) {
+        return NextResponse.json({ error: 'Notificación no encontrada' }, { status: 404 })
+      }
+
+      const notificationDate = new Date(notificationDateResult[0].NOT_date)
+      if (notificationDate.getTime() > Date.now()) {
+        return NextResponse.json(
+          { error: 'Las notificaciones futuras no se pueden marcar como leídas aún.' },
+          { status: 400 }
+        )
+      }
+
       const destinationUsersQuery = 'SELECT USR_id, UXN_read FROM GPA_UsersXGPA_Notifications WHERE NOT_id = ?';
       const existingDestinationUsers = await executeQuery(destinationUsersQuery, [notificationId]) as { USR_id: number; UXN_read: boolean }[];
 

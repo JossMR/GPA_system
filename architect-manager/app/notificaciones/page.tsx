@@ -19,6 +19,7 @@ import {
   Search,
   Check,
   X,
+  Pencil,
   ExternalLink,
   AlertTriangle,
   Info,
@@ -92,7 +93,7 @@ export default function NotificationsPage() {
   const [forMeSearchTerm, setForMeSearchTerm] = useState("")
   const [forMeAppliedSearchTerm, setForMeAppliedSearchTerm] = useState("")
   const [forMeTipoFilter, setForMeTipoFilter] = useState("todas")
-  const [forMeOrderBy, setForMeOrderBy] = useState<NotificationOrderBy>('scheduledDate')
+  const [forMeOrderBy, setForMeOrderBy] = useState<NotificationOrderBy>('status')
   const [forMePage, setForMePage] = useState(1)
   const [forMeTotalPages, setForMeTotalPages] = useState(0)
   const [forMeTotalNotifications, setForMeTotalNotifications] = useState(0)
@@ -101,13 +102,23 @@ export default function NotificationsPage() {
   const [createdSearchTerm, setCreatedSearchTerm] = useState("")
   const [createdAppliedSearchTerm, setCreatedAppliedSearchTerm] = useState("")
   const [createdTipoFilter, setCreatedTipoFilter] = useState("todas")
-  const [createdOrderBy, setCreatedOrderBy] = useState<NotificationOrderBy>('scheduledDate')
+  const [createdOrderBy, setCreatedOrderBy] = useState<NotificationOrderBy>('status')
   const [createdPage, setCreatedPage] = useState(1)
   const [createdTotalPages, setCreatedTotalPages] = useState(0)
   const [createdTotalNotifications, setCreatedTotalNotifications] = useState(0)
   const [loadingCreatedByMe, setLoadingCreatedByMe] = useState(true)
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editingNotification, setEditingNotification] = useState<GPANotification | null>(null)
+  const [editNotificationForm, setEditNotificationForm] = useState({
+    titulo: "",
+    mensaje: "",
+    tipo: "personal",
+    fecha: "",
+    hora: "",
+    proyectoId: null as number | null,
+  })
 
   // New notification form states
   const [newNotification, setNewNotification] = useState({
@@ -146,6 +157,28 @@ export default function NotificationsPage() {
     const hours = d.getHours().toString().padStart(2, '0')
     const minutes = d.getMinutes().toString().padStart(2, '0')
     return `${day}/${month}/${year} ${hours}:${minutes}`
+  }
+
+  const toDateInputValue = (date: string | Date | undefined) => {
+    if (!date) return ''
+    const d = new Date(date)
+    const year = d.getFullYear()
+    const month = (d.getMonth() + 1).toString().padStart(2, '0')
+    const day = d.getDate().toString().padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const toTimeInputValue = (date: string | Date | undefined) => {
+    if (!date) return ''
+    const d = new Date(date)
+    const hours = d.getHours().toString().padStart(2, '0')
+    const minutes = d.getMinutes().toString().padStart(2, '0')
+    return `${hours}:${minutes}`
+  }
+
+  const isFutureNotification = (date: string | Date | undefined) => {
+    if (!date) return false
+    return new Date(date).getTime() > Date.now()
   }
 
   const fetchNotificationsForMe = async (
@@ -267,6 +300,12 @@ export default function NotificationsPage() {
     projectOrderBy,
     projectOrderDir,
   ])
+
+  useEffect(() => {
+    if (isEditDialogOpen && editNotificationForm.tipo === 'proyectos') {
+      fetchProjects(1, '', 'PRJ_case_number', 'ASC')
+    }
+  }, [isEditDialogOpen, editNotificationForm.tipo])
 
   const fetchUsers = async (page: number, search: string, orderBy: UserOrderBy = 'name') => {
     setLoadingUsers(true)
@@ -410,15 +449,15 @@ export default function NotificationsPage() {
   }
 
   const handleClearForMeFilters = async () => {
-    if (!forMeSearchTerm && !forMeAppliedSearchTerm && forMePage === 1 && forMeTipoFilter === 'todas' && forMeOrderBy === 'scheduledDate') {
-      await fetchNotificationsForMe(1, '', 'todas', 'scheduledDate')
+    if (!forMeSearchTerm && !forMeAppliedSearchTerm && forMePage === 1 && forMeTipoFilter === 'todas' && forMeOrderBy === 'status') {
+      await fetchNotificationsForMe(1, '', 'todas', 'status')
       return
     }
     setForMeSearchTerm('')
     setForMeAppliedSearchTerm('')
     setForMePage(1)
     setForMeTipoFilter('todas')
-    setForMeOrderBy('scheduledDate')
+    setForMeOrderBy('status')
   }
 
   const handleApplyCreatedFilters = async () => {
@@ -432,15 +471,15 @@ export default function NotificationsPage() {
   }
 
   const handleClearCreatedFilters = async () => {
-    if (!createdSearchTerm && !createdAppliedSearchTerm && createdPage === 1 && createdTipoFilter === 'todas' && createdOrderBy === 'scheduledDate') {
-      await fetchNotificationsCreatedByMe(1, '', 'todas', 'scheduledDate')
+    if (!createdSearchTerm && !createdAppliedSearchTerm && createdPage === 1 && createdTipoFilter === 'todas' && createdOrderBy === 'status') {
+      await fetchNotificationsCreatedByMe(1, '', 'todas', 'status')
       return
     }
     setCreatedSearchTerm('')
     setCreatedAppliedSearchTerm('')
     setCreatedPage(1)
     setCreatedTipoFilter('todas')
-    setCreatedOrderBy('scheduledDate')
+    setCreatedOrderBy('status')
   }
 
   const handleCreateNotification = async () => {
@@ -554,6 +593,15 @@ export default function NotificationsPage() {
         throw new Error('Notificación no encontrada')
       }
 
+      if (isFutureNotification(notification.NOT_date)) {
+        toast({
+          title: "No disponible",
+          description: "Esta notificación es futura y aún no se puede marcar como leída.",
+          variant: "destructive",
+        })
+        return
+      }
+
       const updatedNotification = {
         ...notification,
         destination_users_ids: notification.destination_users_ids?.map(([userId, isRead]) =>
@@ -587,9 +635,109 @@ export default function NotificationsPage() {
     }
   }
 
-  const noReadCount = notificationsForMe.filter((n) =>
-    n.destination_users_ids?.some(([userId, isRead]) => userId === user?.id && isRead === false)
-  ).length
+  const handleOpenEditDialog = (notification: GPANotification) => {
+    setEditingNotification(notification)
+    setEditNotificationForm({
+      titulo: notification.NOT_name || "",
+      mensaje: notification.NOT_description || "",
+      tipo: notification.notification_type_name === "proyectos" ? "proyectos" : "personal",
+      fecha: toDateInputValue(notification.NOT_date),
+      hora: toTimeInputValue(notification.NOT_date),
+      proyectoId: notification.PRJ_id || null,
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdateNotification = async () => {
+    if (!editingNotification?.NOT_id) return
+
+    if (!editNotificationForm.titulo.trim()) {
+      toast({
+        title: "Error",
+        description: "El título es obligatorio.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!editNotificationForm.mensaje.trim()) {
+      toast({
+        title: "Error",
+        description: "El mensaje es obligatorio.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!editNotificationForm.fecha || !editNotificationForm.hora) {
+      toast({
+        title: "Error",
+        description: "La fecha y hora son obligatorias.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (editNotificationForm.tipo === "proyectos" && !editNotificationForm.proyectoId) {
+      toast({
+        title: "Error",
+        description: "Debe seleccionar un proyecto para notificaciones de tipo 'Proyectos'.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const updatedDate = `${editNotificationForm.fecha} ${editNotificationForm.hora}:00`
+      const ntpId = editNotificationForm.tipo === "proyectos" ? 1 : 2
+
+      const payload: GPANotification = {
+        ...editingNotification,
+        NOT_name: editNotificationForm.titulo,
+        NOT_description: editNotificationForm.mensaje,
+        NOT_date: updatedDate,
+        PRJ_id: editNotificationForm.tipo === "proyectos" ? (editNotificationForm.proyectoId || undefined) : undefined,
+        NTP_id: ntpId,
+      }
+
+      const response = await fetch(`/api/notifications/${editingNotification.NOT_id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al actualizar la notificación')
+      }
+
+      toast({
+        title: "Éxito",
+        description: "Notificación actualizada correctamente.",
+        variant: "success",
+      })
+
+      await fetchNotificationsForMe(forMePage, forMeAppliedSearchTerm, forMeTipoFilter, forMeOrderBy)
+      await fetchNotificationsCreatedByMe(createdPage, createdAppliedSearchTerm, createdTipoFilter, createdOrderBy)
+      await refreshNotifications()
+
+      setIsEditDialogOpen(false)
+      setEditingNotification(null)
+    } catch {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la notificación.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const noReadCount = notificationsForMe.filter((n) => {
+    const isUnread = n.destination_users_ids?.some(([userId, isRead]) => userId === user?.id && isRead === false)
+    const isFuture = isFutureNotification(n.NOT_date)
+    return Boolean(isUnread && !isFuture)
+  }).length
 
   return (
     <MainLayout>
@@ -709,20 +857,24 @@ export default function NotificationsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {notificationsForMe.map((notification, index) => {
                   const isUnread = notification.destination_users_ids?.some(([userId, isRead]) => userId === user?.id && isRead === false)
+                  const isFuture = isFutureNotification(notification.NOT_date)
+                  const isActiveUnread = Boolean(isUnread && !isFuture)
                   return (
                     <Card
                       key={notification.NOT_id}
-                      className={`card-hover animate-slide-up ${isUnread ? "border-l-4 border-l-[#a2c523] bg-[#c9e077]/5" : "border-[#c9e077]/20"}`}
+                      className={`card-hover animate-slide-up ${isActiveUnread ? "border-l-4 border-l-[#a2c523] bg-[#c9e077]/5" : "border-[#c9e077]/20"}`}
                       style={{ animationDelay: `${index * 0.1}s` }}
                     >
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center space-x-2">
-                              <h3 className={`text-lg font-semibold ${isUnread ? "text-[#2e4600]" : "text-muted-foreground"}`}>
+                              <h3 className={`text-lg font-semibold ${isActiveUnread ? "text-[#2e4600]" : "text-muted-foreground"}`}>
                                 {notification.NOT_name}
                               </h3>
-                              {isUnread ? (
+                              {isFuture ? (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs border-blue-200">Futura</Badge>
+                              ) : isUnread ? (
                                 <Badge className="bg-[#a2c523] text-white text-xs">Nueva</Badge>
                               ) : (
                                 <Badge variant="outline" className="bg-gray-100 text-gray-600 text-xs border-gray-300">Leído</Badge>
@@ -748,7 +900,7 @@ export default function NotificationsPage() {
                                 <ExternalLink className="h-4 w-4" />
                               </Button>
                             )}
-                            {isUnread && (
+                            {isActiveUnread && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -866,6 +1018,15 @@ export default function NotificationsPage() {
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-600 hover:bg-blue-50"
+                          onClick={() => handleOpenEditDialog(notification)}
+                          title="Editar notificación"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1268,6 +1429,123 @@ export default function NotificationsPage() {
                 onClick={handleCreateNotification}
               >
                 Crear Notificación
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog for Edit Notification */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle className="text-[#2e4600]">Editar Notificación</DialogTitle>
+              <DialogDescription>Actualiza los datos de la notificación creada por ti</DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-titulo">Título *</Label>
+                <Input
+                  id="edit-titulo"
+                  value={editNotificationForm.titulo}
+                  onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, titulo: e.target.value }))}
+                  className="border-[#a2c523]/30 focus:border-[#486b00]"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="edit-mensaje">Mensaje *</Label>
+                <Textarea
+                  id="edit-mensaje"
+                  value={editNotificationForm.mensaje}
+                  onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, mensaje: e.target.value }))}
+                  className="border-[#a2c523]/30 focus:border-[#486b00]"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-fecha">Fecha *</Label>
+                  <Input
+                    id="edit-fecha"
+                    type="date"
+                    value={editNotificationForm.fecha}
+                    onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, fecha: e.target.value }))}
+                    className="border-[#a2c523]/30 focus:border-[#486b00]"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-hora">Hora *</Label>
+                  <Input
+                    id="edit-hora"
+                    type="time"
+                    value={editNotificationForm.hora}
+                    onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, hora: e.target.value }))}
+                    className="border-[#a2c523]/30 focus:border-[#486b00]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Tipo *</Label>
+                <Select
+                  value={editNotificationForm.tipo}
+                  onValueChange={(value) => setEditNotificationForm((prev) => ({
+                    ...prev,
+                    tipo: value,
+                    proyectoId: value !== "proyectos" ? null : prev.proyectoId,
+                  }))}
+                >
+                  <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="proyectos">Proyectos</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {editNotificationForm.tipo === "proyectos" && (
+                <div className="grid gap-2">
+                  <Label>Proyecto *</Label>
+                  <Select
+                    value={editNotificationForm.proyectoId ? String(editNotificationForm.proyectoId) : "none"}
+                    onValueChange={(value) => setEditNotificationForm((prev) => ({
+                      ...prev,
+                      proyectoId: value === "none" ? null : Number(value),
+                    }))}
+                  >
+                    <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                      <SelectValue placeholder="Selecciona un proyecto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Selecciona un proyecto</SelectItem>
+                      {projects.map((project) => (
+                        <SelectItem key={project.PRJ_id} value={String(project.PRJ_id)}>
+                          {project.PRJ_case_number} - {project.client_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                className="border-[#a2c523] text-[#486b00] hover:bg-[#c9e077]/20"
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="gradient-primary text-white hover:opacity-90"
+                onClick={handleUpdateNotification}
+              >
+                Guardar Cambios
               </Button>
             </div>
           </DialogContent>
