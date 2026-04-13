@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { getPermissionDisplayName } from "@/lib/permission-display"
 
 export default function EditRolePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -375,7 +376,7 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
                         className="flex items-center dark:hover:bg-slate-900 hover:bg-slate-50 justify-between p-3 border rounded-lg"
                       >
                         <div className="flex items-center gap-3">
-                          <span className="font-medium">{permission.screen_name}</span>
+                          <span className="font-medium">{getPermissionDisplayName(permission)}</span>
                           <Badge
                             variant="outline"
                             className={
@@ -506,7 +507,7 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
                     onClick={() => handleAddPermission(permission)}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="font-medium">{permission.screen_name}</span>
+                      <span className="font-medium">{getPermissionDisplayName(permission)}</span>
                       <Badge
                         variant="outline"
                         className={

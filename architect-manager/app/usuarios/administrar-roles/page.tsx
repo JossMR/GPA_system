@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth-provider"
 import { GPARole } from "@/models/GPA_role"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { getPermissionDisplayName } from "@/lib/permission-display"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -299,7 +300,7 @@ export default function RolesPage() {
                                 <TableBody>
                                   {role.permissions.map((permission, idx) => (
                                     <TableRow key={idx}>
-                                      <TableCell className="font-medium">{permission.screen_name || 'N/A'}</TableCell>
+                                      <TableCell className="font-medium">{getPermissionDisplayName(permission)}</TableCell>
                                       <TableCell>
                                         <Badge 
                                           variant="outline"

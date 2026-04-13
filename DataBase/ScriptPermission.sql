@@ -34,6 +34,7 @@ INSERT INTO `gpa`.`GPA_Permission` (`PTY_id`, `SCN_id`, `PSN_id`) VALUES ('3', '
 INSERT INTO `gpa`.`GPA_Permission` (`PTY_id`, `SCN_id`, `PSN_id`) VALUES ('4', '11', '11');
 INSERT INTO `gpa`.`GPA_Permission` (`PTY_id`, `SCN_id`, `PSN_id`) VALUES ('4', '12', '12');
 INSERT INTO `gpa`.`GPA_Permission` (`PTY_id`, `SCN_id`, `PSN_id`) VALUES ('4', '13', '13');
+INSERT INTO `gpa`.`GPA_Permission` (`PTY_id`, `SCN_id`, `PSN_id`) VALUES ('1', '9', '14');
 
 INSERT INTO `gpa`.`GPA_Notifications_types` (`NTP_id`, `NTP_name`) VALUES ('1', 'Proyectos');
 INSERT INTO `gpa`.`GPA_Notifications_types` (`NTP_id`, `NTP_name`) VALUES ('2', 'Personal');
