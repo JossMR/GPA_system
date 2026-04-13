@@ -1,7 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
 import { GPAPayment } from '@/models/GPA_payment'
-import { GPAProject } from '@/models/GPA_project';
+
+async function recalculateProjectRemainingAmount(projectId: number) {
+  const projectResult = await executeQuery(
+    'SELECT PRJ_budget FROM GPA_Projects WHERE PRJ_id = ?',
+    [projectId]
+  ) as Array<{ PRJ_budget: number | null }>
+
+  if (projectResult.length === 0) {
+    return
+  }
+
+  const additionsResult = await executeQuery(
+    'SELECT COALESCE(SUM(ATN_cost), 0) AS totalAdditions FROM GPA_Additions WHERE ATN_project_id = ?',
+    [projectId]
+  ) as Array<{ totalAdditions: number | null }>
+
+  const paymentsResult = await executeQuery(
+    'SELECT COALESCE(SUM(PAY_amount_paid), 0) AS totalPaid FROM GPA_Payments WHERE PAY_project_id = ?',
+    [projectId]
+  ) as Array<{ totalPaid: number | null }>
+
+  const budget = Number(projectResult[0]?.PRJ_budget || 0)
+  const totalAdditions = Number(additionsResult[0]?.totalAdditions || 0)
+  const totalPaid = Number(paymentsResult[0]?.totalPaid || 0)
+  const remainingAmount = budget + totalAdditions - totalPaid
+
+  await executeQuery(
+    'UPDATE GPA_Projects SET PRJ_remaining_amount = ? WHERE PRJ_id = ?',
+    [remainingAmount, projectId]
+  )
+}
 
 export async function GET(
   request: NextRequest,
@@ -92,46 +122,27 @@ export async function PUT(
     if (updateFields.length === 0) {
       return NextResponse.json({ error: 'No hay campos para actualizar' }, { status: 400 })
     }
-    const ResponseOldPayment = await fetch(`${new URL(request.url).origin}/api/payments/${paymentId}`, {
-      headers: { 'Content-Type': 'application/json' }
-    });
-    let BodyResponseOldPayment = ResponseOldPayment.ok ? await ResponseOldPayment.json() : null;
-    let OldPayment = BodyResponseOldPayment as GPAPayment | null;
+    const oldPaymentResult = await executeQuery(
+      'SELECT PAY_project_id FROM GPA_Payments WHERE PAY_id = ?',
+      [paymentId]
+    ) as Array<{ PAY_project_id: number | null }>
+
+    if (oldPaymentResult.length === 0) {
+      return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
+    }
+
+    const oldProjectId = Number(oldPaymentResult[0].PAY_project_id)
 
     const updateQuery = `UPDATE GPA_Payments SET ${updateFields.join(', ')} WHERE PAY_id = ?`
     updateValues.push(paymentId)
 
     await executeQuery(updateQuery, updateValues)
 
-    //Update the new project of the comment to update the data inside
-    const project = await fetch(`${new URL(request.url).origin}/api/projects/${PAY_project_id}`, {
-      headers: { 'Content-Type': 'application/json' }
-    });
-    let responseProject = project.ok ? await project.json() : null;
-    let projectData = responseProject?.project as GPAProject | null;
-    let response;
-    if (projectData) {
-      const putUrl = `${new URL(request.url).origin}/api/projects/${projectData.PRJ_id}`;
-      response = await fetch(putUrl, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(projectData),
-      });
-    }
-    //Update the old project of the comment to update the data inside
-    const OldProject = await fetch(`${new URL(request.url).origin}/api/projects/${OldPayment?.PAY_project_id}`, {
-      headers: { 'Content-Type': 'application/json' }
-    });
-    let responseOldProject = OldProject.ok ? await OldProject.json() : null;
-    let OldProjectData = responseOldProject?.project as GPAProject | null;
-    let OldProjectResponse;
-    if (OldProjectData) {
-      const putUrl = `${new URL(request.url).origin}/api/projects/${OldPayment?.PAY_project_id}`;
-      OldProjectResponse = await fetch(putUrl, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(OldProjectData),
-      });
+    const updatedProjectId = Number(PAY_project_id ?? oldProjectId)
+
+    await recalculateProjectRemainingAmount(updatedProjectId)
+    if (updatedProjectId !== oldProjectId) {
+      await recalculateProjectRemainingAmount(oldProjectId)
     }
 
     return NextResponse.json({ message: 'Pago actualizado exitosamente' }, { status: 200 })
@@ -157,8 +168,21 @@ export async function DELETE(
       return NextResponse.json({ error: 'ID de pago inválido' }, { status: 400 })
     }
 
+    const paymentResult = await executeQuery(
+      'SELECT PAY_project_id FROM GPA_Payments WHERE PAY_id = ?',
+      [paymentId]
+    ) as Array<{ PAY_project_id: number | null }>
+
+    if (paymentResult.length === 0) {
+      return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
+    }
+
+    const projectId = Number(paymentResult[0].PAY_project_id)
+
     const deleteQuery = 'DELETE FROM GPA_Payments WHERE PAY_id = ?'
     await executeQuery(deleteQuery, [paymentId])
+
+    await recalculateProjectRemainingAmount(projectId)
 
     return NextResponse.json({ message: 'Pago eliminado exitosamente' }, { status: 200 })
 

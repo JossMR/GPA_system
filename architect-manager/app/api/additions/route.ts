@@ -2,6 +2,37 @@ import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database'
 import { GPAAddition } from '@/models/GPA_addition'
 
+async function recalculateProjectRemainingAmount(projectId: number) {
+  const projectResult = await executeQuery(
+    'SELECT PRJ_budget FROM GPA_Projects WHERE PRJ_id = ?',
+    [projectId]
+  ) as Array<{ PRJ_budget: number | null }>
+
+  if (projectResult.length === 0) {
+    return
+  }
+
+  const additionsResult = await executeQuery(
+    'SELECT COALESCE(SUM(ATN_cost), 0) AS totalAdditions FROM GPA_Additions WHERE ATN_project_id = ?',
+    [projectId]
+  ) as Array<{ totalAdditions: number | null }>
+
+  const paymentsResult = await executeQuery(
+    'SELECT COALESCE(SUM(PAY_amount_paid), 0) AS totalPaid FROM GPA_Payments WHERE PAY_project_id = ?',
+    [projectId]
+  ) as Array<{ totalPaid: number | null }>
+
+  const budget = Number(projectResult[0]?.PRJ_budget || 0)
+  const totalAdditions = Number(additionsResult[0]?.totalAdditions || 0)
+  const totalPaid = Number(paymentsResult[0]?.totalPaid || 0)
+  const remainingAmount = budget + totalAdditions - totalPaid
+
+  await executeQuery(
+    'UPDATE GPA_Projects SET PRJ_remaining_amount = ? WHERE PRJ_id = ?',
+    [remainingAmount, projectId]
+  )
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -72,11 +103,6 @@ export async function POST(request: NextRequest) {
         ATN_date
       ) VALUES (?, ?, ?, ?, ?)
     `
-    const updateProjectQuery = `
-      UPDATE GPA_Projects 
-      SET PRJ_remaining_amount = PRJ_remaining_amount + ? 
-      WHERE PRJ_id = ?
-    `
     const result = await executeQuery(insertQuery, [
       additionData.ATN_name,
       additionData.ATN_description || null,
@@ -84,12 +110,8 @@ export async function POST(request: NextRequest) {
       additionData.ATN_cost,
       additionData.ATN_date
     ]) as any
-    
-    // Update the project's remaining amount
-    await executeQuery(updateProjectQuery, [
-      additionData.ATN_cost,
-      additionData.ATN_project_id
-    ])
+
+    await recalculateProjectRemainingAmount(additionData.ATN_project_id)
 
     return NextResponse.json({ 
       message: 'Adición creada exitosamente',

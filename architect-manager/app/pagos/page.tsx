@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Plus, Search, Edit, DollarSign, Calendar, CreditCard, Building, TrendingUp, Eye } from "lucide-react"
+import { Plus, Search, Edit, DollarSign, Calendar, CreditCard, Building, TrendingUp, Eye, Trash2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { GPAPayment } from "@/models/GPA_payment"
 import { GPAProject } from "@/models/GPA_project"
@@ -61,9 +61,12 @@ export default function PagosPage() {
   const [totalPages, setTotalPages] = useState(0)
   const [totalPayments, setTotalPayments] = useState(0)
   const [selectedPayment, setSelectedPayment] = useState<GPAPayment | null>(null)
+  const [paymentToDelete, setPaymentToDelete] = useState<GPAPayment | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useState(false)
   const [sumPendingAmounts, setSumPendingAmounts] = useState(0)
+  const [deletingPayment, setDeletingPayment] = useState(false)
 
   useEffect(() => {
     // Actualiza sumPendingAmounts cada vez que projects cambie
@@ -368,6 +371,63 @@ export default function PagosPage() {
     setProjectPickerOrderDir("ASC")
     setViewMode(false)
     setIsDialogOpen(true)
+  }
+
+  const handleRequestDelete = (payment: GPAPayment) => {
+    setPaymentToDelete(payment)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDeletePayment = async () => {
+    if (!paymentToDelete?.PAY_id) return
+
+    try {
+      setDeletingPayment(true)
+      const response = await fetch(`/api/payments/${paymentToDelete.PAY_id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "No se pudo eliminar el pago")
+      }
+
+      toast({
+        title: "Éxito",
+        description: "Pago eliminado correctamente",
+        variant: "success",
+      })
+
+      const [projectsRes, additionsRes] = await Promise.all([
+        fetch("/api/projects"),
+        fetch("/api/additions"),
+      ])
+
+      const projectsJson = await projectsRes.json()
+      setProjects(projectsJson.projects || [])
+      const additionsData = await additionsRes.json()
+      setAdditions(additionsData || [])
+      updateInfo()
+
+      const nextPage = payments.length === 1 && page > 1 ? page - 1 : page
+      if (nextPage !== page) {
+        setPage(nextPage)
+      } else {
+        await fetchPayments(page, appliedSearchTerm, appliedStateFilter, orderBy, orderDir)
+      }
+
+      setIsDeleteDialogOpen(false)
+      setPaymentToDelete(null)
+    } catch (error: any) {
+      console.error("Error deleting payment:", error)
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo eliminar el pago",
+        variant: "destructive",
+      })
+    } finally {
+      setDeletingPayment(false)
+    }
   }
 
   const calculateRemainingAmount = (projectId: number, currentPaymentAmount: number): number => {
@@ -751,6 +811,16 @@ export default function PagosPage() {
                               className="hover:bg-[#c9e077]/20"
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRequestDelete(payment)}
+                              className="hover:bg-red-100 text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
@@ -1249,6 +1319,43 @@ export default function PagosPage() {
                   </Button>
                 </>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={isDeleteDialogOpen}
+          onOpenChange={(open) => {
+            setIsDeleteDialogOpen(open)
+            if (!open) setPaymentToDelete(null)
+          }}
+        >
+          <DialogContent className="sm:max-w-[480px]">
+            <DialogHeader>
+              <DialogTitle className="text-red-600">Eliminar pago</DialogTitle>
+              <DialogDescription>
+                Esta acción no se puede deshacer. Se eliminará el pago
+                {paymentToDelete?.PAY_bill_number ? ` de  ${paymentToDelete?.PAY_amount_paid} con factura ${paymentToDelete.PAY_bill_number} del proyecto con numero de caso ${paymentToDelete.projectCaseNumber}` : " seleccionado"}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteDialogOpen(false)
+                  setPaymentToDelete(null)
+                }}
+                disabled={deletingPayment}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeletePayment}
+                disabled={deletingPayment}
+              >
+                {deletingPayment ? "Eliminando..." : "Eliminar"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
