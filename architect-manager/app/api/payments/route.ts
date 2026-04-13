@@ -7,8 +7,22 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('project_id')
+    const pageParam = Number.parseInt(searchParams.get('page') || '1', 10)
+    const limitParam = Number.parseInt(searchParams.get('limit') || '10', 10)
+    const search = (searchParams.get('search') || '').trim()
+    const state = (searchParams.get('state') || '').trim()
+    const orderByParam = (searchParams.get('orderBy') || 'date').trim()
+    const orderDirParam = (searchParams.get('orderDir') || 'DESC').toUpperCase()
 
-    let query = `
+    const hasAdvancedFilters =
+      searchParams.has('page')
+      || searchParams.has('limit')
+      || searchParams.has('search')
+      || searchParams.has('state')
+      || searchParams.has('orderBy')
+      || searchParams.has('orderDir')
+
+    const baseSelect = `
       SELECT 
         p.*,
         pr.PRJ_state AS projectState,
@@ -24,16 +38,80 @@ export async function GET(request: NextRequest) {
     if (projectId) {
       const projectIdNum = parseInt(projectId)
       if (!isNaN(projectIdNum)) {
-        query += ' WHERE PAY_project_id = ?'
-        params.push(projectIdNum)
+        const query = `${baseSelect} WHERE PAY_project_id = ? ORDER BY PAY_payment_date ASC`
+        const payments = await executeQuery(query, [projectIdNum]) as GPAPayment[]
+        return NextResponse.json(payments, { status: 200 })
       }
     }
 
-    query += ' ORDER BY PAY_payment_date ASC'
+    // Keep old behavior for consumers that expect an array.
+    if (!hasAdvancedFilters) {
+      const query = `${baseSelect} ORDER BY PAY_payment_date ASC`
+      const payments = await executeQuery(query, params) as GPAPayment[]
+      return NextResponse.json(payments, { status: 200 })
+    }
 
-    const payments = await executeQuery(query, params) as GPAPayment[]
+    const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam
+    const limit = Number.isNaN(limitParam) || limitParam < 1 ? 10 : limitParam
+    const offset = (page - 1) * limit
 
-    return NextResponse.json(payments, { status: 200 })
+    const whereParts: string[] = []
+
+    if (search) {
+      whereParts.push(`(
+        pr.PRJ_case_number LIKE ?
+        OR p.PAY_bill_number LIKE ?
+        OR CONCAT(c.CLI_name, ' ', c.CLI_f_lastname, ' ', c.CLI_s_lastname) LIKE ?
+        OR p.PAY_method LIKE ?
+      )`)
+      const likeSearch = `%${search}%`
+      params.push(likeSearch, likeSearch, likeSearch, likeSearch)
+    }
+
+    if (state && state !== 'todos') {
+      whereParts.push('pr.PRJ_state = ?')
+      params.push(state)
+    }
+
+    const whereClause = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : ''
+
+    const orderByMap: Record<string, string> = {
+      date: 'p.PAY_payment_date',
+      caseNumber: 'pr.PRJ_case_number',
+      billNumber: 'p.PAY_bill_number',
+      client: `CONCAT(c.CLI_name, ' ', c.CLI_f_lastname, ' ', c.CLI_s_lastname)`,
+      method: 'p.PAY_method',
+    }
+    const orderBy = orderByMap[orderByParam] || 'p.PAY_payment_date'
+    const orderDir = orderDirParam === 'ASC' ? 'ASC' : 'DESC'
+
+    const countQuery = `
+      SELECT COUNT(*) as totalPayments
+      FROM GPA_Payments p
+      JOIN GPA_Projects pr ON p.PAY_project_id = pr.PRJ_id
+      JOIN GPA_Clients c ON pr.PRJ_client_id = c.CLI_id
+      ${whereClause}
+    `
+    const countResult = await executeQuery(countQuery, params) as Array<{ totalPayments: number }>
+    const totalPayments = Number(countResult[0]?.totalPayments || 0)
+    const totalPages = Math.ceil(totalPayments / limit)
+
+    const query = `
+      ${baseSelect}
+      ${whereClause}
+      ORDER BY ${orderBy} ${orderDir}
+      LIMIT ?, ?
+    `
+
+    const payments = await executeQuery(query, [...params, offset, limit]) as GPAPayment[]
+
+    return NextResponse.json({
+      payments,
+      page,
+      limit,
+      totalPayments,
+      totalPages,
+    }, { status: 200 })
 
   } catch (error) {
     console.error('Database error:', error)

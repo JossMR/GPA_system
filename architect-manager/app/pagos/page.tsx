@@ -40,6 +40,8 @@ type ProjectOrderBy =
   | "PRJ_completion_date"
 
 type ProjectOrderDir = "ASC" | "DESC"
+type PaymentOrderBy = "date" | "caseNumber" | "billNumber" | "client" | "method"
+type PaymentOrderDir = "ASC" | "DESC"
 
 export default function PagosPage() {
   const { isAdmin, getUserPermissions } = useAuth()
@@ -50,21 +52,18 @@ export default function PagosPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState("")
   const [stateFilter, setStateFilter] = useState("todos")
+  const [appliedStateFilter, setAppliedStateFilter] = useState("todos")
+  const [orderBy, setOrderBy] = useState<PaymentOrderBy>("date")
+  const [orderDir, setOrderDir] = useState<PaymentOrderDir>("DESC")
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalPayments, setTotalPayments] = useState(0)
   const [selectedPayment, setSelectedPayment] = useState<GPAPayment | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useState(false)
   const [sumPendingAmounts, setSumPendingAmounts] = useState(0)
-
-  // Debounce del searchTerm con delay de 500ms
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm)
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [searchTerm])
 
   useEffect(() => {
     // Actualiza sumPendingAmounts cada vez que projects cambie
@@ -124,6 +123,76 @@ export default function PagosPage() {
 
     //setSumPendingAmounts(totalPending)
     setProjectsWithDue(projectsWithPending)
+  }
+
+  const fetchPayments = async (
+    targetPage: number,
+    targetSearch: string,
+    targetState: string,
+    targetOrderBy: PaymentOrderBy,
+    targetOrderDir: PaymentOrderDir,
+  ) => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({
+        page: String(targetPage),
+        limit: "10",
+        search: targetSearch,
+        state: targetState,
+        orderBy: targetOrderBy,
+        orderDir: targetOrderDir,
+      })
+
+      const response = await fetch(`/api/payments?${params.toString()}`)
+      const data = await response.json()
+      setPayments(data.payments || [])
+      setTotalPages(data.totalPages || 0)
+      setTotalPayments(data.totalPayments || 0)
+    } catch (error) {
+      console.error("Error fetching payments:", error)
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los pagos",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleApplyFilters = async () => {
+    const nextSearch = searchTerm.trim()
+    if (page === 1 && appliedSearchTerm === nextSearch && appliedStateFilter === stateFilter) {
+      await fetchPayments(1, nextSearch, stateFilter, orderBy, orderDir)
+      return
+    }
+
+    setPage(1)
+    setAppliedSearchTerm(nextSearch)
+    setAppliedStateFilter(stateFilter)
+  }
+
+  const handleClearFilters = async () => {
+    if (
+      !searchTerm
+      && !appliedSearchTerm
+      && stateFilter === "todos"
+      && appliedStateFilter === "todos"
+      && orderBy === "date"
+      && orderDir === "DESC"
+      && page === 1
+    ) {
+      await fetchPayments(1, "", "todos", "date", "DESC")
+      return
+    }
+
+    setSearchTerm("")
+    setAppliedSearchTerm("")
+    setStateFilter("todos")
+    setAppliedStateFilter("todos")
+    setOrderBy("date")
+    setOrderDir("DESC")
+    setPage(1)
   }
 
   const fetchProjectPicker = async (
@@ -194,33 +263,18 @@ export default function PagosPage() {
     return projects.find((p) => p.PRJ_id === projectId) || projectPickerItems.find((p) => p.PRJ_id === projectId)
   }
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true)
+    const fetchData = async () => {
       try {
-        // Fetch payments
-        const paymentsRes = await fetch("/api/payments")
-        const paymentsData = await paymentsRes.json()
-        const orderedPayments = paymentsData.sort(
-          (a: any, b: any) => new Date(b.PAY_payment_date).getTime() - new Date(a.PAY_payment_date).getTime()
-        )
-        setPayments(orderedPayments)
+        const [projectsRes, additionsRes] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/additions"),
+        ])
 
-        // Fetch projects
-        const projectsRes = await fetch("/api/projects")
         const projectsJson = await projectsRes.json()
-        const projectsList = projectsJson.projects || []
-        setProjects(projectsList)
+        setProjects(projectsJson.projects || [])
 
-        // Calculate total pending amounts per project
-        // Group payments by project
-        const paymentsByProject = new Map<number, GPAPayment[]>()
-        orderedPayments.forEach((p: GPAPayment) => {
-          const projectId = p.PAY_project_id
-          if (!paymentsByProject.has(projectId)) {
-            paymentsByProject.set(projectId, [])
-          }
-          paymentsByProject.get(projectId)?.push(p)
-        })
+        const additionsData = await additionsRes.json()
+        setAdditions(additionsData || [])
 
         updateInfo()
       } catch (err) {
@@ -230,12 +284,14 @@ export default function PagosPage() {
           description: "No se pudieron cargar los datos",
           variant: "destructive",
         })
-      } finally {
-        setLoading(false)
       }
     }
     fetchData()
   }, [])
+
+  useEffect(() => {
+    fetchPayments(page, appliedSearchTerm, appliedStateFilter, orderBy, orderDir)
+  }, [page, appliedSearchTerm, appliedStateFilter, orderBy, orderDir])
 
   useEffect(() => {
     if (isDialogOpen && !viewMode) {
@@ -249,19 +305,6 @@ export default function PagosPage() {
     projectPickerOrderBy,
     projectPickerOrderDir,
   ])
-
-  // useMemo para que el filtrado pesado solo se ejecute cuando cambien las dependencias reales
-  const filteredPayments = useMemo(() => {
-    return payments.filter((payment) => {
-      const matchesSearch =
-        (payment.projectCaseNumber || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        (payment.projectClientName || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-
-      const matchesState = stateFilter === "todos" || (payment.projectState) === stateFilter
-
-      return matchesSearch && matchesState
-    })
-  }, [payments, debouncedSearchTerm, stateFilter])
 
   // Suma de todos los montos de pagos registrados (memoizado para evitar recalcular en cada render)
   const totalIngresos = useMemo(() => {
@@ -453,22 +496,17 @@ export default function PagosPage() {
       })
 
       // Refresh payments, projects, and additions lists
-      const [paymentsRes, projectsRes, additionsRes] = await Promise.all([
-        fetch("/api/payments"),
+      const [projectsRes, additionsRes] = await Promise.all([
         fetch("/api/projects"),
         fetch("/api/additions")
       ])
-
-      const paymentsData = await paymentsRes.json()
-      const orderedPayments = paymentsData.sort(
-        (a: any, b: any) => new Date(b.PAY_payment_date).getTime() - new Date(a.PAY_payment_date).getTime()
-      )
-      setPayments(orderedPayments)
 
       const projectsJson = await projectsRes.json()
       setProjects(projectsJson.projects || [])
       const additionsData = await additionsRes.json()
       setAdditions(additionsData || [])
+
+      await fetchPayments(page, appliedSearchTerm, appliedStateFilter, orderBy, orderDir)
 
       setIsDialogOpen(false)
       setSelectedPayment(null)
@@ -547,7 +585,7 @@ export default function PagosPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#7d4427]">{payments.length}</div>
+              <div className="text-2xl font-bold text-[#7d4427]">{totalPayments}</div>
             </CardContent>
           </Card>
         </div>
@@ -558,8 +596,8 @@ export default function PagosPage() {
             <CardTitle className="text-[#2e4600]">Filtros</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4">
-              <div className="flex-1">
+            <div className="grid gap-3 md:grid-cols-12">
+              <div className="md:col-span-4">
                 <Label htmlFor="search">Buscar</Label>
                 <div className="relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#486b00]" />
@@ -567,14 +605,18 @@ export default function PagosPage() {
                     id="search"
                     placeholder="Buscar por nombre de cliente o número de caso..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }}
                     className="pl-8 border-[#a2c523]/30 focus:border-[#486b00]"
                   />
                 </div>
               </div>
-              <div className="w-48">
+              <div className="md:col-span-3">
                 <Label htmlFor="estado">Estado del Proyecto</Label>
-                <Select value={stateFilter} onValueChange={setStateFilter}>
+                <Select value={stateFilter} onValueChange={(value) => {
+                  setStateFilter(value)
+                  setAppliedStateFilter(value)
+                  setPage(1)
+                }}>
                   <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
                     <SelectValue placeholder="Filtrar por estado" />
                   </SelectTrigger>
@@ -596,6 +638,41 @@ export default function PagosPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="md:col-span-2">
+                <Label>Ordenar por</Label>
+                <Select value={orderBy} onValueChange={(value) => { setOrderBy(value as PaymentOrderBy); setPage(1) }}>
+                  <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">Fecha</SelectItem>
+                    <SelectItem value="caseNumber">Número de caso</SelectItem>
+                    <SelectItem value="billNumber">Número de factura</SelectItem>
+                    <SelectItem value="client">Cliente</SelectItem>
+                    <SelectItem value="method">Método</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-1">
+                <Label>Dirección</Label>
+                <Select value={orderDir} onValueChange={(value) => { setOrderDir(value as PaymentOrderDir); setPage(1) }}>
+                  <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DESC">Desc</SelectItem>
+                    <SelectItem value="ASC">Asc</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2 flex items-end gap-2">
+                <Button variant="secondary" className="btn-secondary" size="sm" onClick={handleApplyFilters}>
+                  Filtrar
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+                  Limpiar
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -603,7 +680,7 @@ export default function PagosPage() {
         {/* Tabla de Pagos */}
         <Card className="border-[#a2c523]/20">
           <CardHeader>
-            <CardTitle className="text-[#2e4600]">Historial de Pagos ({filteredPayments.length})</CardTitle>
+            <CardTitle className="text-[#2e4600]">Historial de Pagos ({totalPayments})</CardTitle>
             <CardDescription>Todas las transacciones registradas en el sistema</CardDescription>
           </CardHeader>
           <CardContent>
@@ -624,7 +701,7 @@ export default function PagosPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPayments.map((payment, index) => (
+                  {payments.map((payment, index) => (
                     <TableRow key={payment.PAY_id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
                       <TableCell>
                         <div className="flex items-center text-sm">
@@ -683,6 +760,43 @@ export default function PagosPage() {
                 </TableBody>
               </Table>
             )}
+
+            {totalPages > 1 && (
+              <div className="flex flex-wrap justify-center items-center gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Anterior
+                </Button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
+                  <Button
+                    key={pageNumber}
+                    variant={pageNumber === page ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </Button>
+                ))}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            )}
+
+            <div className="text-center text-sm text-muted-foreground mt-4">
+              Mostrando {payments.length} de {totalPayments} pagos del filtro actual
+            </div>
           </CardContent>
         </Card>
 
