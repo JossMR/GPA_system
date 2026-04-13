@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus, Search, Edit, DollarSign, Calendar, CreditCard, Building, TrendingUp, Eye } from "lucide-react"
@@ -29,6 +30,16 @@ const metodoPago = {
   Debit: "Débito",
   Deposit: "Depósito",
 }
+
+type ProjectOrderBy =
+  | "PRJ_case_number"
+  | "client_name"
+  | "type_name"
+  | "PRJ_state"
+  | "PRJ_start_construction_date"
+  | "PRJ_completion_date"
+
+type ProjectOrderDir = "ASC" | "DESC"
 
 export default function PagosPage() {
   const { isAdmin, getUserPermissions } = useAuth()
@@ -72,6 +83,15 @@ export default function PagosPage() {
     PAY_description: "",
   })
   const [coverFullAmount, setCoverFullAmount] = useState(false)
+  const [projectPickerItems, setProjectPickerItems] = useState<GPAProject[]>([])
+  const [projectPickerLoading, setProjectPickerLoading] = useState(false)
+  const [projectPickerPage, setProjectPickerPage] = useState(1)
+  const [projectPickerTotalPages, setProjectPickerTotalPages] = useState(0)
+  const [projectPickerTotalProjects, setProjectPickerTotalProjects] = useState(0)
+  const [projectPickerSearchTerm, setProjectPickerSearchTerm] = useState("")
+  const [projectPickerAppliedSearchTerm, setProjectPickerAppliedSearchTerm] = useState("")
+  const [projectPickerOrderBy, setProjectPickerOrderBy] = useState<ProjectOrderBy>("PRJ_case_number")
+  const [projectPickerOrderDir, setProjectPickerOrderDir] = useState<ProjectOrderDir>("ASC")
 
   const stateLabels: Record<string, string> = {
     "Document Collection": "Recepción de documentos",
@@ -104,6 +124,74 @@ export default function PagosPage() {
 
     //setSumPendingAmounts(totalPending)
     setProjectsWithDue(projectsWithPending)
+  }
+
+  const fetchProjectPicker = async (
+    targetPage: number,
+    targetSearch: string,
+    targetOrderBy: ProjectOrderBy,
+    targetOrderDir: ProjectOrderDir,
+  ) => {
+    setProjectPickerLoading(true)
+    try {
+      const params = new URLSearchParams({
+        page: String(targetPage),
+        limit: "10",
+        search: targetSearch,
+        orderBy: targetOrderBy,
+        orderDir: targetOrderDir,
+      })
+
+      const response = await fetch(`/api/projects?${params.toString()}`)
+      const data = await response.json()
+      setProjectPickerItems(data.projects || [])
+      setProjectPickerTotalPages(data.totalPages || 0)
+      setProjectPickerTotalProjects(data.totalProjects || 0)
+    } catch {
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los proyectos.",
+        variant: "destructive",
+      })
+    } finally {
+      setProjectPickerLoading(false)
+    }
+  }
+
+  const handleApplyProjectPickerFilters = async () => {
+    const nextSearch = projectPickerSearchTerm.trim()
+    if (projectPickerPage === 1 && projectPickerAppliedSearchTerm === nextSearch) {
+      await fetchProjectPicker(1, nextSearch, projectPickerOrderBy, projectPickerOrderDir)
+      return
+    }
+
+    setProjectPickerPage(1)
+    setProjectPickerAppliedSearchTerm(nextSearch)
+  }
+
+  const handleClearProjectPickerFilters = async () => {
+    if (
+      !projectPickerSearchTerm
+      && !projectPickerAppliedSearchTerm
+      && projectPickerPage === 1
+      && projectPickerOrderBy === "PRJ_case_number"
+      && projectPickerOrderDir === "ASC"
+    ) {
+      await fetchProjectPicker(1, "", "PRJ_case_number", "ASC")
+      return
+    }
+
+    setProjectPickerSearchTerm("")
+    setProjectPickerAppliedSearchTerm("")
+    setProjectPickerPage(1)
+    setProjectPickerOrderBy("PRJ_case_number")
+    setProjectPickerOrderDir("ASC")
+  }
+
+  const getSelectedProject = () => {
+    const projectId = Number(formData.PAY_project_id)
+    if (!projectId) return undefined
+    return projects.find((p) => p.PRJ_id === projectId) || projectPickerItems.find((p) => p.PRJ_id === projectId)
   }
   useEffect(() => {
     async function fetchData() {
@@ -149,6 +237,19 @@ export default function PagosPage() {
     fetchData()
   }, [])
 
+  useEffect(() => {
+    if (isDialogOpen && !viewMode) {
+      fetchProjectPicker(projectPickerPage, projectPickerAppliedSearchTerm, projectPickerOrderBy, projectPickerOrderDir)
+    }
+  }, [
+    isDialogOpen,
+    viewMode,
+    projectPickerPage,
+    projectPickerAppliedSearchTerm,
+    projectPickerOrderBy,
+    projectPickerOrderDir,
+  ])
+
   // useMemo para que el filtrado pesado solo se ejecute cuando cambien las dependencias reales
   const filteredPayments = useMemo(() => {
     return payments.filter((payment) => {
@@ -180,6 +281,11 @@ export default function PagosPage() {
       PAY_description: payment.PAY_description || "",
     })
     setCoverFullAmount(false)
+    setProjectPickerPage(1)
+    setProjectPickerSearchTerm("")
+    setProjectPickerAppliedSearchTerm("")
+    setProjectPickerOrderBy("PRJ_case_number")
+    setProjectPickerOrderDir("ASC")
     setViewMode(false)
     setIsDialogOpen(true)
   }
@@ -212,6 +318,11 @@ export default function PagosPage() {
       PAY_description: "",
     })
     setCoverFullAmount(false)
+    setProjectPickerPage(1)
+    setProjectPickerSearchTerm("")
+    setProjectPickerAppliedSearchTerm("")
+    setProjectPickerOrderBy("PRJ_case_number")
+    setProjectPickerOrderDir("ASC")
     setViewMode(false)
     setIsDialogOpen(true)
   }
@@ -226,13 +337,13 @@ export default function PagosPage() {
   // Effect to handle "cover full amount" checkbox
   useEffect(() => {
     if (coverFullAmount && formData.PAY_project_id) {
-      const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
+      const project = getSelectedProject()
       if (project) {
         const remainingAmount = Number(project.PRJ_remaining_amount || 0)
         setFormData(prev => ({ ...prev, PAY_amount_paid: remainingAmount.toString() }))
       }
     }
-  }, [coverFullAmount, formData.PAY_project_id, projects])
+  }, [coverFullAmount, formData.PAY_project_id, projects, projectPickerItems])
 
   const handleSave = async () => {
     try {
@@ -274,7 +385,7 @@ export default function PagosPage() {
       }
 
       // Validate payment doesn't exceed remaining amount
-      const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
+      const project = getSelectedProject()
       const remainingAmount = Number(project?.PRJ_remaining_amount || 0)
       const amountPaid = Number(formData.PAY_amount_paid)
 
@@ -564,7 +675,7 @@ export default function PagosPage() {
 
         {/* Dialog para Crear/Editar/Ver Pago */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className={viewMode ? "sm:max-w-[700px]" : "sm:max-w-[1100px] max-h-[90vh]"}>
             <DialogHeader>
               <DialogTitle className="text-[#2e4600]">
                 {viewMode ? "Detalles del Pago" : (selectedPayment ? "Editar Pago" : "Registrar Nuevo Pago")}
@@ -584,7 +695,7 @@ export default function PagosPage() {
                 {viewMode ? (
                   <Input
                     value={(() => {
-                      const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
+                      const project = getSelectedProject()
                       return project
                         ? `${project.PRJ_case_number} - ${project.client_name} - ${formatCurrency(project.PRJ_budget)}`
                         : "N/A"
@@ -593,21 +704,152 @@ export default function PagosPage() {
                     className="bg-gray-50 dark:bg-gray-800 border-[#a2c523]/30"
                   />
                 ) : (
-                  <Select
-                    value={formData.PAY_project_id}
-                    onValueChange={(value) => setFormData({ ...formData, PAY_project_id: value })}
-                  >
-                    <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
-                      <SelectValue placeholder="Seleccionar proyecto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projects.map((project) => (
-                        <SelectItem key={project.PRJ_id} value={project.PRJ_id?.toString() || ""}>
-                          {project.PRJ_case_number} - {project.client_name} - {formatCurrency(project.PRJ_budget)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <div className="grid gap-3 md:grid-cols-12">
+                      <div className="md:col-span-6">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#486b00]" />
+                          <Input
+                            placeholder="Buscar por caso, cliente o tipo..."
+                            value={projectPickerSearchTerm}
+                            onChange={(e) => setProjectPickerSearchTerm(e.target.value)}
+                            className="pl-8 border-[#a2c523]/30 focus:border-[#486b00]"
+                          />
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <Button variant="secondary" className="btn-secondary" size="sm" onClick={handleApplyProjectPickerFilters}>
+                            Filtrar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleClearProjectPickerFilters}
+                            disabled={
+                              !projectPickerSearchTerm
+                              && !projectPickerAppliedSearchTerm
+                              && projectPickerPage === 1
+                              && projectPickerOrderBy === "PRJ_case_number"
+                              && projectPickerOrderDir === "ASC"
+                            }
+                          >
+                            Limpiar
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="md:col-span-4">
+                        <Label className="mb-2 block">Ordenar por</Label>
+                        <Select value={projectPickerOrderBy} onValueChange={(value) => setProjectPickerOrderBy(value as ProjectOrderBy)}>
+                          <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PRJ_case_number">Número de caso</SelectItem>
+                            <SelectItem value="client_name">Nombre de cliente</SelectItem>
+                            <SelectItem value="type_name">Tipo</SelectItem>
+                            <SelectItem value="PRJ_state">Estado</SelectItem>
+                            <SelectItem value="PRJ_start_construction_date">Fecha de inicio</SelectItem>
+                            <SelectItem value="PRJ_completion_date">Fecha de conclusión</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <Label className="mb-2 block">Dirección</Label>
+                        <Select value={projectPickerOrderDir} onValueChange={(value) => setProjectPickerOrderDir(value as ProjectOrderDir)}>
+                          <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="DESC">Descendente</SelectItem>
+                            <SelectItem value="ASC">Ascendente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="border rounded-md border-[#a2c523]/30">
+                      <ScrollArea className="h-[200px]">
+                        {projectPickerLoading ? (
+                          <div className="p-4 text-center text-muted-foreground">Cargando proyectos...</div>
+                        ) : (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-12"></TableHead>
+                                <TableHead>Número de Caso</TableHead>
+                                <TableHead>Cliente</TableHead>
+                                <TableHead>Presupuesto</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {projectPickerItems.map((project) => (
+                                <TableRow
+                                  key={project.PRJ_id}
+                                  className={`cursor-pointer hover:bg-[#c9e077]/10 ${Number(formData.PAY_project_id) === project.PRJ_id ? "bg-[#c9e077]/20" : ""}`}
+                                  onClick={() => setFormData((prev) => ({ ...prev, PAY_project_id: String(project.PRJ_id || "") }))}
+                                >
+                                  <TableCell>
+                                    <Checkbox
+                                      checked={Number(formData.PAY_project_id) === project.PRJ_id}
+                                      onCheckedChange={() => setFormData((prev) => ({ ...prev, PAY_project_id: String(project.PRJ_id || "") }))}
+                                    />
+                                  </TableCell>
+                                  <TableCell>{project.PRJ_case_number}</TableCell>
+                                  <TableCell>{project.client_name}</TableCell>
+                                  <TableCell>{formatCurrency(project.PRJ_budget)}</TableCell>
+                                </TableRow>
+                              ))}
+                              {projectPickerItems.length === 0 && (
+                                <TableRow>
+                                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                    No se encontraron proyectos
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </ScrollArea>
+                    </div>
+
+                    {projectPickerTotalPages > 1 && (
+                      <div className="flex flex-wrap justify-center items-center gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setProjectPickerPage((prev) => Math.max(1, prev - 1))}
+                          disabled={projectPickerPage === 1}
+                        >
+                          Anterior
+                        </Button>
+
+                        {Array.from({ length: projectPickerTotalPages }, (_, index) => index + 1).map((pageNumber) => (
+                          <Button
+                            key={pageNumber}
+                            variant={pageNumber === projectPickerPage ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => setProjectPickerPage(pageNumber)}
+                          >
+                            {pageNumber}
+                          </Button>
+                        ))}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setProjectPickerPage((prev) => Math.min(projectPickerTotalPages, prev + 1))}
+                          disabled={projectPickerPage === projectPickerTotalPages}
+                        >
+                          Siguiente
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="text-center text-xs text-muted-foreground">
+                      Mostrando {projectPickerItems.length} de {projectPickerTotalProjects} proyectos
+                    </div>
+                  </div>
                 )}
               </div>
               <div>
@@ -754,7 +996,7 @@ export default function PagosPage() {
               {formData.PAY_project_id && (
                 <div className="bg-[#c9e077]/20 p-3 rounded-md space-y-2">
                   {(() => {
-                    const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
+                    const project = getSelectedProject()
                     const budget = Number(project?.PRJ_budget) || 0
                     const projectAdditions = additions.filter(a => a.ATN_project_id === Number(formData.PAY_project_id))
                     const totalAdditions = projectAdditions.reduce((sum, a) => sum + (a.ATN_cost || 0), 0)
@@ -793,7 +1035,7 @@ export default function PagosPage() {
               {/* Advertencia si el monto excede el saldo restante */}
               {!viewMode && formData.PAY_project_id && formData.PAY_amount_paid && (
                 (() => {
-                  const project = projects.find(p => p.PRJ_id === Number(formData.PAY_project_id))
+                  const project = getSelectedProject()
                   const remainingAmount = Number(project?.PRJ_remaining_amount || 0)
                   const amountPaid = Number(formData.PAY_amount_paid)
 
