@@ -334,6 +334,18 @@ export default function PagosPage() {
     return Math.max(0, RemainingAmount)
   }
 
+  const getMaxAllowedAmountForPayment = (projectId: number): number => {
+    const project = projects.find((p) => p.PRJ_id === projectId) || projectPickerItems.find((p) => p.PRJ_id === projectId)
+    const remainingAmount = Number(project?.PRJ_remaining_amount || 0)
+
+    if (!selectedPayment) return remainingAmount
+
+    const isSameProject = Number(selectedPayment.PAY_project_id) === projectId
+    const oldPaymentAmount = Number(selectedPayment.PAY_amount_paid || 0)
+
+    return isSameProject ? remainingAmount + oldPaymentAmount : remainingAmount
+  }
+
   // Effect to handle "cover full amount" checkbox
   useEffect(() => {
     if (coverFullAmount && formData.PAY_project_id) {
@@ -386,13 +398,14 @@ export default function PagosPage() {
 
       // Validate payment doesn't exceed remaining amount
       const project = getSelectedProject()
-      const remainingAmount = Number(project?.PRJ_remaining_amount || 0)
+      const project_Id = Number(formData.PAY_project_id)
+      const maxAllowedAmount = getMaxAllowedAmountForPayment(project_Id)
       const amountPaid = Number(formData.PAY_amount_paid)
 
-      if (amountPaid > remainingAmount) {
+      if (amountPaid > maxAllowedAmount) {
         toast({
           title: "Error",
-          description: `El monto a pagar (${formatCurrency(amountPaid)}) excede el saldo restante del proyecto (${formatCurrency(remainingAmount)})`,
+          description: `El monto a pagar (${formatCurrency(amountPaid)}) excede el saldo permitido del proyecto (${formatCurrency(maxAllowedAmount)})`,
           variant: "destructive",
         })
         return
@@ -1036,7 +1049,8 @@ export default function PagosPage() {
               {!viewMode && formData.PAY_project_id && formData.PAY_amount_paid && (
                 (() => {
                   const project = getSelectedProject()
-                  const remainingAmount = Number(project?.PRJ_remaining_amount || 0)
+                  const projectId = Number(formData.PAY_project_id)
+                  const remainingAmount = getMaxAllowedAmountForPayment(projectId)
                   const amountPaid = Number(formData.PAY_amount_paid)
 
                   if (amountPaid > remainingAmount) {
