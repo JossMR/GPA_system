@@ -132,6 +132,7 @@ export default function NotificationsPage() {
   const [users, setUsers] = useState<UserForSelection[]>([])
   const [projects, setProjects] = useState<ProjectForSelection[]>([])
   const [selectedUsers, setSelectedUsers] = useState<number[]>([])
+  const [selectedEditUsers, setSelectedEditUsers] = useState<number[]>([])
   const [userSearchTerm, setUserSearchTerm] = useState("")
   const [appliedUserSearchTerm, setAppliedUserSearchTerm] = useState("")
   const [userPage, setUserPage] = useState(1)
@@ -179,6 +180,21 @@ export default function NotificationsPage() {
   const isFutureNotification = (date: string | Date | undefined) => {
     if (!date) return false
     return new Date(date).getTime() > Date.now()
+  }
+
+  const toMySQLDateTime = (date: string | Date | undefined) => {
+    if (!date) return null
+    const parsed = new Date(date)
+    if (Number.isNaN(parsed.getTime())) return null
+
+    const year = parsed.getFullYear()
+    const month = String(parsed.getMonth() + 1).padStart(2, '0')
+    const day = String(parsed.getDate()).padStart(2, '0')
+    const hours = String(parsed.getHours()).padStart(2, '0')
+    const minutes = String(parsed.getMinutes()).padStart(2, '0')
+    const seconds = String(parsed.getSeconds()).padStart(2, '0')
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
   }
 
   const fetchNotificationsForMe = async (
@@ -289,6 +305,12 @@ export default function NotificationsPage() {
   }, [isDialogOpen, userPage, appliedUserSearchTerm, userOrderBy])
 
   useEffect(() => {
+    if (isEditDialogOpen) {
+      fetchUsers(userPage, appliedUserSearchTerm, userOrderBy)
+    }
+  }, [isEditDialogOpen, userPage, appliedUserSearchTerm, userOrderBy])
+
+  useEffect(() => {
     if (isDialogOpen && newNotification.tipo === 'proyectos') {
       fetchProjects(projectPage, appliedProjectSearchTerm, projectOrderBy, projectOrderDir)
     }
@@ -394,6 +416,10 @@ export default function NotificationsPage() {
 
   const toggleUserSelection = (userId: number) => {
     setSelectedUsers([userId])
+  }
+
+  const toggleEditUserSelection = (userId: number) => {
+    setSelectedEditUsers([userId])
   }
 
   const handleApplyUserFilters = async () => {
@@ -636,6 +662,8 @@ export default function NotificationsPage() {
   }
 
   const handleOpenEditDialog = (notification: GPANotification) => {
+    const existingUserIds = notification.destination_users_ids?.map(([id]) => id) || []
+
     setEditingNotification(notification)
     setEditNotificationForm({
       titulo: notification.NOT_name || "",
@@ -645,6 +673,7 @@ export default function NotificationsPage() {
       hora: toTimeInputValue(notification.NOT_date),
       proyectoId: notification.PRJ_id || null,
     })
+    setSelectedEditUsers(existingUserIds.length ? [existingUserIds[0]] : (user?.id ? [user.id] : []))
     setIsEditDialogOpen(true)
   }
 
@@ -687,6 +716,15 @@ export default function NotificationsPage() {
       return
     }
 
+    if (selectedEditUsers.length !== 1) {
+      toast({
+        title: "Error",
+        description: "Debe seleccionar un unico usuario destinatario.",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       const updatedDate = `${editNotificationForm.fecha} ${editNotificationForm.hora}:00`
       const ntpId = editNotificationForm.tipo === "proyectos" ? 1 : 2
@@ -695,9 +733,14 @@ export default function NotificationsPage() {
         ...editingNotification,
         NOT_name: editNotificationForm.titulo,
         NOT_description: editNotificationForm.mensaje,
+        NOT_created_at: toMySQLDateTime(editingNotification.NOT_created_at),
         NOT_date: updatedDate,
-        PRJ_id: editNotificationForm.tipo === "proyectos" ? (editNotificationForm.proyectoId || undefined) : undefined,
+        PRJ_id: editNotificationForm.tipo === "proyectos" ? (editNotificationForm.proyectoId || null) : null,
         NTP_id: ntpId,
+        destination_users_ids: selectedEditUsers.map((userId) => {
+          const existingDestination = editingNotification.destination_users_ids?.find(([existingId]) => existingId === userId)
+          return [userId, existingDestination ? existingDestination[1] : false]
+        }),
       }
 
       const response = await fetch(`/api/notifications/${editingNotification.NOT_id}`, {
@@ -1436,102 +1479,364 @@ export default function NotificationsPage() {
 
         {/* Dialog for Edit Notification */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
+          <DialogContent className="sm:max-w-[900px] max-h-[90vh]">
             <DialogHeader>
               <DialogTitle className="text-[#2e4600]">Editar Notificación</DialogTitle>
               <DialogDescription>Actualiza los datos de la notificación creada por ti</DialogDescription>
             </DialogHeader>
-
-            <div className="grid gap-4 py-2">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-titulo">Título *</Label>
-                <Input
-                  id="edit-titulo"
-                  value={editNotificationForm.titulo}
-                  onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, titulo: e.target.value }))}
-                  className="border-[#a2c523]/30 focus:border-[#486b00]"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="edit-mensaje">Mensaje *</Label>
-                <Textarea
-                  id="edit-mensaje"
-                  value={editNotificationForm.mensaje}
-                  onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, mensaje: e.target.value }))}
-                  className="border-[#a2c523]/30 focus:border-[#486b00]"
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-fecha">Fecha *</Label>
-                  <Input
-                    id="edit-fecha"
-                    type="date"
-                    value={editNotificationForm.fecha}
-                    onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, fecha: e.target.value }))}
-                    className="border-[#a2c523]/30 focus:border-[#486b00]"
-                  />
+            <ScrollArea className="max-h-[calc(90vh-200px)] pr-4">
+              <div className="grid gap-6 py-4">
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-titulo">Título *</Label>
+                    <Input
+                      id="edit-titulo"
+                      placeholder="Título de la notificación"
+                      value={editNotificationForm.titulo}
+                      onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, titulo: e.target.value }))}
+                      className="border-[#a2c523]/30 focus:border-[#486b00]"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-mensaje">Mensaje *</Label>
+                    <Textarea
+                      id="edit-mensaje"
+                      placeholder="Describe el recordatorio..."
+                      value={editNotificationForm.mensaje}
+                      onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, mensaje: e.target.value }))}
+                      className="border-[#a2c523]/30 focus:border-[#486b00]"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-fecha">Fecha *</Label>
+                      <Input
+                        id="edit-fecha"
+                        type="date"
+                        value={editNotificationForm.fecha}
+                        onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, fecha: e.target.value }))}
+                        className="border-[#a2c523]/30 focus:border-[#486b00]"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-hora">Hora *</Label>
+                      <Input
+                        id="edit-hora"
+                        type="time"
+                        value={editNotificationForm.hora}
+                        onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, hora: e.target.value }))}
+                        className="border-[#a2c523]/30 focus:border-[#486b00]"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>Tipo *</Label>
+                      <Select
+                        value={editNotificationForm.tipo}
+                        onValueChange={(value) => setEditNotificationForm((prev) => ({
+                          ...prev,
+                          tipo: value,
+                          proyectoId: value !== "proyectos" ? null : prev.proyectoId,
+                        }))}
+                      >
+                        <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="proyectos">Proyectos</SelectItem>
+                          <SelectItem value="personal">Personal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-hora">Hora *</Label>
-                  <Input
-                    id="edit-hora"
-                    type="time"
-                    value={editNotificationForm.hora}
-                    onChange={(e) => setEditNotificationForm((prev) => ({ ...prev, hora: e.target.value }))}
-                    className="border-[#a2c523]/30 focus:border-[#486b00]"
-                  />
-                </div>
-              </div>
 
-              <div className="grid gap-2">
-                <Label>Tipo *</Label>
-                <Select
-                  value={editNotificationForm.tipo}
-                  onValueChange={(value) => setEditNotificationForm((prev) => ({
-                    ...prev,
-                    tipo: value,
-                    proyectoId: value !== "proyectos" ? null : prev.proyectoId,
-                  }))}
-                >
-                  <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="proyectos">Proyectos</SelectItem>
-                    <SelectItem value="personal">Personal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                {editNotificationForm.tipo === "proyectos" && (
+                  <div className="space-y-2">
+                    <Label>Seleccionar Proyecto *</Label>
+                    <div className="grid gap-3 md:grid-cols-12 mb-2">
+                      <div className="md:col-span-6">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#486b00]" />
+                          <Input
+                            placeholder="Buscar por caso, cliente o tipo..."
+                            value={projectSearchTerm}
+                            onChange={(e) => setProjectSearchTerm(e.target.value)}
+                            className="pl-8 border-[#a2c523]/30 focus:border-[#486b00]"
+                          />
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <Button variant="secondary" className="btn-secondary" size="sm" onClick={handleApplyProjectFilters}>
+                            Filtrar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleClearProjectFilters}
+                            disabled={
+                              !projectSearchTerm
+                              && !appliedProjectSearchTerm
+                              && projectPage === 1
+                              && projectOrderBy === 'PRJ_case_number'
+                              && projectOrderDir === 'ASC'
+                            }
+                          >
+                            Limpiar
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="md:col-span-4">
+                        <Label className="mb-2 block">Ordenar por</Label>
+                        <Select value={projectOrderBy} onValueChange={(value) => setProjectOrderBy(value as ProjectOrderBy)}>
+                          <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PRJ_case_number">Número de caso</SelectItem>
+                            <SelectItem value="client_name">Nombre de cliente</SelectItem>
+                            <SelectItem value="type_name">Tipo</SelectItem>
+                            <SelectItem value="PRJ_state">Estado</SelectItem>
+                            <SelectItem value="PRJ_start_construction_date">Fecha de inicio</SelectItem>
+                            <SelectItem value="PRJ_completion_date">Fecha de conclusión</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="mb-2 block">Dirección</Label>
+                        <Select value={projectOrderDir} onValueChange={(value) => setProjectOrderDir(value as ProjectOrderDir)}>
+                          <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="DESC">Descendente</SelectItem>
+                            <SelectItem value="ASC">Ascendente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="border rounded-md border-[#a2c523]/30">
+                      <ScrollArea className="h-[200px]">
+                        {loadingProjects ? (
+                          <div className="p-4 text-center text-muted-foreground">
+                            Cargando proyectos...
+                          </div>
+                        ) : (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-12"></TableHead>
+                                <TableHead>Número de Caso</TableHead>
+                                <TableHead>Cliente</TableHead>
+                                <TableHead>Identificación</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {projects.map((project) => (
+                                <TableRow
+                                  key={project.PRJ_id}
+                                  className={`cursor-pointer hover:bg-[#c9e077]/10 ${editNotificationForm.proyectoId === project.PRJ_id ? 'bg-[#c9e077]/20' : ''
+                                    }`}
+                                  onClick={() => setEditNotificationForm((prev) => ({
+                                    ...prev,
+                                    proyectoId: project.PRJ_id
+                                  }))}
+                                >
+                                  <TableCell>
+                                    <Checkbox
+                                      checked={editNotificationForm.proyectoId === project.PRJ_id}
+                                      onCheckedChange={() => setEditNotificationForm((prev) => ({
+                                        ...prev,
+                                        proyectoId: project.PRJ_id
+                                      }))}
+                                    />
+                                  </TableCell>
+                                  <TableCell>{project.PRJ_case_number}</TableCell>
+                                  <TableCell>{project.client_name}</TableCell>
+                                  <TableCell>{project.client_identification}</TableCell>
+                                </TableRow>
+                              ))}
+                              {projects.length === 0 && (
+                                <TableRow>
+                                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                    No se encontraron proyectos
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </ScrollArea>
+                    </div>
+                    {projectTotalPages > 1 && (
+                      <div className="flex flex-wrap justify-center items-center gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setProjectPage((prev) => Math.max(1, prev - 1))}
+                          disabled={projectPage === 1}
+                        >
+                          Anterior
+                        </Button>
 
-              {editNotificationForm.tipo === "proyectos" && (
-                <div className="grid gap-2">
-                  <Label>Proyecto *</Label>
-                  <Select
-                    value={editNotificationForm.proyectoId ? String(editNotificationForm.proyectoId) : "none"}
-                    onValueChange={(value) => setEditNotificationForm((prev) => ({
-                      ...prev,
-                      proyectoId: value === "none" ? null : Number(value),
-                    }))}
-                  >
-                    <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
-                      <SelectValue placeholder="Selecciona un proyecto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Selecciona un proyecto</SelectItem>
-                      {projects.map((project) => (
-                        <SelectItem key={project.PRJ_id} value={String(project.PRJ_id)}>
-                          {project.PRJ_case_number} - {project.client_name}
-                        </SelectItem>
+                        {Array.from({ length: projectTotalPages }, (_, index) => index + 1).map((pageNumber) => (
+                          <Button
+                            key={pageNumber}
+                            variant={pageNumber === projectPage ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => setProjectPage(pageNumber)}
+                          >
+                            {pageNumber}
+                          </Button>
+                        ))}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setProjectPage((prev) => Math.min(projectTotalPages, prev + 1))}
+                          disabled={projectPage === projectTotalPages}
+                        >
+                          Siguiente
+                        </Button>
+                      </div>
+                    )}
+                    <div className="text-center text-xs text-muted-foreground">
+                      Mostrando {projects.length} de {projectTotalProjects} proyectos
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>Usuario Destinatario ({selectedEditUsers.length} seleccionado)</Label>
+                  <div className="grid gap-3 md:grid-cols-12 mb-2">
+                    <div className="md:col-span-7">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#486b00]" />
+                        <Input
+                          placeholder="Buscar por nombre, apellidos o correo..."
+                          value={userSearchTerm}
+                          onChange={(e) => setUserSearchTerm(e.target.value)}
+                          className="pl-8 border-[#a2c523]/30 focus:border-[#486b00]"
+                        />
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <Button variant="secondary" className="btn-secondary" size="sm" onClick={handleApplyUserFilters}>
+                          Filtrar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleClearUserFilters}
+                          disabled={!userSearchTerm && !appliedUserSearchTerm && userPage === 1 && userOrderBy === 'name'}
+                        >
+                          Limpiar
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="md:col-span-5">
+                      <Label className="mb-2 block">Ordenar por</Label>
+                      <Select value={userOrderBy} onValueChange={(value) => setUserOrderBy(value as UserOrderBy)}>
+                        <SelectTrigger className="border-[#a2c523]/30 focus:border-[#486b00]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="name">Nombre</SelectItem>
+                          <SelectItem value="firstLastName">Primer apellido</SelectItem>
+                          <SelectItem value="secondLastName">Segundo apellido</SelectItem>
+                          <SelectItem value="email">Correo</SelectItem>
+                          <SelectItem value="role">Rol</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="border rounded-md border-[#a2c523]/30">
+                    <ScrollArea className="h-[250px]">
+                      {loadingUsers ? (
+                        <div className="p-4 text-center text-muted-foreground">
+                          Cargando usuarios...
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-12"></TableHead>
+                              <TableHead>Nombre</TableHead>
+                              <TableHead>Primer Apellido</TableHead>
+                              <TableHead>Segundo Apellido</TableHead>
+                              <TableHead>Rol</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {users.map((usr) => (
+                              <TableRow
+                                key={usr.USR_id}
+                                className={`cursor-pointer hover:bg-[#c9e077]/10 ${selectedEditUsers.includes(usr.USR_id) ? 'bg-[#c9e077]/20' : ''
+                                  }`}
+                                onClick={() => toggleEditUserSelection(usr.USR_id)}
+                              >
+                                <TableCell>
+                                  <Checkbox
+                                    checked={selectedEditUsers.includes(usr.USR_id)}
+                                    onCheckedChange={() => toggleEditUserSelection(usr.USR_id)}
+                                  />
+                                </TableCell>
+                                <TableCell>{usr.USR_name}</TableCell>
+                                <TableCell>{usr.USR_f_lastname}</TableCell>
+                                <TableCell>{usr.USR_s_lastname}</TableCell>
+                                <TableCell>{usr.ROL_name}</TableCell>
+                              </TableRow>
+                            ))}
+                            {users.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                  No se encontraron usuarios
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </ScrollArea>
+                  </div>
+                  {userTotalPages > 1 && (
+                    <div className="flex flex-wrap justify-center items-center gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setUserPage((prev) => Math.max(1, prev - 1))}
+                        disabled={userPage === 1}
+                      >
+                        Anterior
+                      </Button>
+
+                      {Array.from({ length: userTotalPages }, (_, index) => index + 1).map((pageNumber) => (
+                        <Button
+                          key={pageNumber}
+                          variant={pageNumber === userPage ? "secondary" : "outline"}
+                          size="sm"
+                          onClick={() => setUserPage(pageNumber)}
+                        >
+                          {pageNumber}
+                        </Button>
                       ))}
-                    </SelectContent>
-                  </Select>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setUserPage((prev) => Math.min(userTotalPages, prev + 1))}
+                        disabled={userPage === userTotalPages}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  )}
+                  <div className="text-center text-xs text-muted-foreground">
+                    Mostrando {users.length} de {userTotalUsers} usuarios
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            </ScrollArea>
 
             <div className="flex justify-end space-x-2 pt-4 border-t">
               <Button
