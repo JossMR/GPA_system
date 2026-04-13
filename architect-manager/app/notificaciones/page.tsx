@@ -182,7 +182,7 @@ export default function NotificationsPage() {
     return new Date(date).getTime() > Date.now()
   }
 
-  const toMySQLDateTime = (date: string | Date | undefined) => {
+  const toMySQLDateTime = (date: string | Date | undefined | null) => {
     if (!date) return null
     const parsed = new Date(date)
     if (Number.isNaN(parsed.getTime())) return null

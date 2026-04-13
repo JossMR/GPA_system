@@ -2,7 +2,7 @@ export interface GPANotification {
   NOT_id?: number
   NOT_creator_user_id: number
   NOT_name: string
-  NOT_created_at?: string | Date
+  NOT_created_at?: string | Date | null
   NOT_date?:string | Date
   PRJ_id?: number | null
   NOT_description: string
