@@ -101,7 +101,13 @@ export function ProjectObservations({ projectId }: ProjectObservationsProps) {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => null)
-                throw new Error(errorData?.error || "No se pudo guardar la observación")
+                const errorMessage = errorData?.error || "No se pudo guardar la observación."
+                toast({
+                    title: "Error",
+                    description: errorMessage,
+                    variant: "destructive",
+                })
+                return
             }
 
             setNewObservationContent("")

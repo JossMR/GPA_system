@@ -389,7 +389,11 @@ export default function PagosPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || "No se pudo eliminar el pago")
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo eliminar el pago",
+          variant: "destructive"
+        })
       }
 
       toast({
@@ -545,7 +549,12 @@ export default function PagosPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || "Error al guardar el pago")
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo guardar el pago.",
+          variant: "destructive",
+        })
+        return
       }
 
       toast({

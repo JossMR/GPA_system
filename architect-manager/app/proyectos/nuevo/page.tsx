@@ -163,8 +163,14 @@ export default function NewProjectPage() {
       })
       if (!response.ok) {
         const errorData = await response.json()
-        const errorMessage = errorData.error || "Error creating project"
-        throw new Error(errorMessage)
+        const errorMessage = errorData.error || "Error registrando el proyecto"
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        })
+        setLoading(false)
+        return
       }
       const data = await response.json()
       

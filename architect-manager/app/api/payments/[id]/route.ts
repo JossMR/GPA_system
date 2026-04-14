@@ -174,7 +174,7 @@ export async function DELETE(
     ) as Array<{ PAY_project_id: number | null }>
 
     if (paymentResult.length === 0) {
-      return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
+      return NextResponse.json({ error: 'Pago a borrar no encontrado' }, { status: 404 })
     }
 
     const projectId = Number(paymentResult[0].PAY_project_id)
@@ -189,7 +189,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Error de servidor: Error interno del servidor' },
+      { error: 'Error de servidor: Error interno del servidor' + (error instanceof Error ? `: ${error.message}` : "") },
       { status: 500 }
     )
   }

@@ -50,7 +50,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Database error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Error de servidor: No se pudo eliminar correctamente el rol' },
       { status: 500 }
     )
   }

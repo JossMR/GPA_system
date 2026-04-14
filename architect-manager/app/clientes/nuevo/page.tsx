@@ -72,7 +72,13 @@ export default function NewClientPage() {
         // Obtener el mensaje de error de la respuesta
         const errorData = await response.json()
         const errorMessage = errorData.error || "Error creating client"
-        throw new Error(errorMessage)
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        })
+        setLoading(false)
+        return
       }
       toast({
         title: "Cliente Registrado",

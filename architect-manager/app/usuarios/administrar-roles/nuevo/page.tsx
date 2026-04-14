@@ -162,7 +162,13 @@ export default function NewRolePage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || "Error creando el rol")
+        toast({
+          title: "Error",
+          description: errorData.error || "Ocurrió un error al crear el rol",
+          variant: "destructive"
+        })
+        setLoading(false)
+        return
       }
 
       toast({

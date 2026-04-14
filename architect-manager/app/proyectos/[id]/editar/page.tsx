@@ -242,7 +242,13 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       })
 
       if (!response.ok) {
-        throw new Error("Error al eliminar el pago")
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo eliminar el pago",
+          variant: "destructive"
+        })
+        return
       }
 
       toast({
@@ -344,7 +350,11 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || "Error al guardar el pago")
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo guardar el pago.",
+          variant: "destructive",
+        })
       }
 
       toast({
@@ -454,7 +464,13 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       })
 
       if (!response.ok) {
-        throw new Error("Error al eliminar el costo")
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo eliminar el costo",
+          variant: "destructive",
+        })
+        return
       }
 
       toast({
@@ -544,7 +560,12 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || "Error al guardar el costo")
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo guardar el costo",
+          variant: "destructive",
+        })
+        return
       }
 
       toast({

@@ -47,7 +47,16 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
         const response = await fetch(`/api/clients/${id}`)
 
         if (!response.ok) {
-          throw new Error("Client not found")
+          const errorData = await response.json()
+          const errorMessage = errorData.error || "Error fetching client data"
+          toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive"
+          })
+          setFetchingData(false)
+          router.push("/clientes")
+          return
         }
 
         const data = await response.json()

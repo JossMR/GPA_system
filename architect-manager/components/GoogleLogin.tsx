@@ -6,6 +6,7 @@ import { useState, useEffect } from "react"
 import { User, useAuth } from "@/components/auth-provider"
 import { Loader2 } from "lucide-react"
 import { permission } from "process"
+import { toast } from "sonner"
 interface GoogleLoginButtonProps {
   onSuccessRedirect: () => void
   setLoading: (value: boolean) => void
@@ -70,7 +71,9 @@ export default function GoogleLoginButton({ onSuccessRedirect, setLoading }: Goo
         }),
       })
       if (!response2.ok) {
-        throw new Error("Error updating last access date");
+        const errorData = await response2.json()
+        const errorMessage = errorData.error || "Error updating last access date"
+        toast.error(errorMessage)
       }
     } catch (error) {
     console.error("API error:", error);

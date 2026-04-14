@@ -587,7 +587,6 @@ export default function NotificationsPage() {
           description: "No se pudo crear la notificación.",
           variant: "destructive",
         })
-        throw new Error('Error al crear la notificación')
       }
 
       toast({
@@ -616,7 +615,12 @@ export default function NotificationsPage() {
       const notification = notificationsForMe.find(not => not.NOT_id === id)
 
       if (!notification) {
-        throw new Error('Notificación no encontrada')
+        toast({
+          title: "Error",
+          description: "Notificación no encontrada.",
+          variant: "destructive",
+        })
+        return
       }
 
       if (isFutureNotification(notification.NOT_date)) {
@@ -644,7 +648,13 @@ export default function NotificationsPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Error al actualizar la notificación')
+        const result = await response.json()
+        toast({
+          title: "Error",
+          description: result.error || "Error al actualizar la notificación",
+          variant: "destructive",
+        })
+        return
       }
 
       setNotificationsForMe((prev) =>
@@ -752,7 +762,12 @@ export default function NotificationsPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Error al actualizar la notificación')
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar la notificación.",
+          variant: "destructive",
+        })
+        return
       }
 
       toast({

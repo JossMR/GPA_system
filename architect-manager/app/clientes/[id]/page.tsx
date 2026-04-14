@@ -46,7 +46,11 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
     const fetchClient = async () => {
       try {
         const response = await fetch(`/api/clients/${id}`)
-        if (!response.ok) throw new Error("Error fetching client")
+        if (!response.ok) {
+          const errorData = await response.json()
+          const errorMessage = errorData.error || "Error al obtener los datos del cliente"
+          throw new Error(errorMessage)
+        }
         const data = await response.json()
         setCliente(data.client)
       } catch (error) {
@@ -58,7 +62,11 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
     const fetchProjectsByClient = async () => {
       try {
         const response = await fetch(`/api/clients/${id}/projects`)
-        if (!response.ok) throw new Error("Error fetching projects")
+        if (!response.ok) {
+          const errorData = await response.json()
+          const errorMessage = errorData.error || "Error al obtener los proyectos del cliente"
+          throw new Error(errorMessage)
+        }
         const data = await response.json()
         setProjects(data.projects)
       } catch (error) {

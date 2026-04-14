@@ -67,7 +67,11 @@ export default function ViewProjectPage({ params }: { params: Promise<{ id: stri
       setError(null)
       try {
         const response = await fetch(`/api/projects/${id}?include=all`)
-        if (!response.ok) throw new Error("No se pudo cargar el proyecto")
+        if (!response.ok) {
+          const errorData = await response.json()
+          const errorMessage = errorData.error || "Error fetching project data"
+          throw new Error(errorMessage)
+        }
         const data = await response.json()
         setProject(data.project)
 

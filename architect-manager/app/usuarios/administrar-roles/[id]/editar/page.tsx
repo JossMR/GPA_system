@@ -44,7 +44,17 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
       setFetchingData(true)
       try {
         const response = await fetch(`/api/roles/${id}`)
-        if (!response.ok) throw new Error("No se pudo cargar el rol")
+        if (!response.ok) {
+          const errorData = await response.json()
+          toast({
+            title: "Error",
+            description: errorData.error || "No se pudo cargar el rol",
+            variant: "destructive"
+          })
+          setFetchingData(false)
+          router.push("/usuarios/administrar-roles")
+          return
+        }
         const data = await response.json()
         const roleData = data.role as GPARole
 
@@ -56,7 +66,7 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
       } catch (error) {
         toast({
           title: "Error",
-          description: "No se pudo cargar el rol",
+          description: "No se pudo cargar el rol" + (error instanceof Error ? `: ${error.message}` : ""),
           variant: "destructive"
         })
         router.push("/usuarios/administrar-roles")
@@ -211,12 +221,18 @@ export default function EditRolePage({ params }: { params: Promise<{ id: string 
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || "Error actualizando el rol")
+        toast({
+          title: "Error",
+          description: errorData.error || "Ocurrió un error al actualizar el rol",
+          variant: "destructive"
+        })
+        setLoading(false)
+        return
       }
-
+      const data = await response.json()
       toast({
         title: "Rol actualizado",
-        description: "Los cambios fueron guardados correctamente",
+        description: data.message || "Los cambios fueron guardados correctamente",
         variant: "success"
       })
 

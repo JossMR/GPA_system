@@ -122,7 +122,13 @@ export default function AdminNotificationsPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Error al eliminar la notificación')
+        const errorData = await response.json()
+        toast({
+          title: "Error",
+          description: errorData.error || "No se pudo eliminar la notificación.",
+          variant: "destructive",
+        })
+        return
       }
 
       setNotifications((prev) => prev.filter((not) => not.NOT_id !== notificationToDelete))
