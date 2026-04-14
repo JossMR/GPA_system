@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { GPAtype } from "@/models/GPA_type"
 import { useToast } from "@/hooks/use-toast"
+import { Label } from "./ui/label"
 
 interface Props {
   value: number | null
@@ -72,28 +73,38 @@ export function ProjectTypeManager({ value, onChange }: Props) {
   }
 
   return (
-    <div className="flex gap-2 items-end">
-      <Input
-        placeholder="Nuevo tipo"
-        value={newType}
-        onChange={e => setNewType(e.target.value)}
-        disabled={loading}
-      />
-      <Button
-        onClick={handleAddType}
-        disabled={loading || !newType.trim()}
-        size="sm"
-      >
-        {loading ? (
-          <span className="flex items-center gap-2">
-            <Spinner />
-            Guardando...
-          </span>
-        ) : (
-          "Guardar"
-        )}
-      </Button>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start">
+      <div className="flex flex-col gap-2">
+        <Label className="text-[#2e4600] font-medium">
+          Crear nuevo tipo de proyecto
+        </Label>
+        <div className="flex gap-2 items-end">
+          <Input
+            placeholder="Nuevo tipo"
+            value={newType}
+            onChange={e => setNewType(e.target.value)}
+            disabled={loading}
+          />
+          <Button
+            onClick={handleAddType}
+            disabled={loading || !newType.trim()}
+            size="sm"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <Spinner />
+                Guardando...
+              </span>
+            ) : (
+              "Guardar"
+            )}
+          </Button>
+        </div>
+      </div>
       <div className="flex flex-col gap-1 w-full">
+        <Label className="text-[#2e4600] font-medium">
+          Selecciona un tipo de proyecto existente
+        </Label>
         <Select value={value ? String(value) : ""} onValueChange={v => onChange(Number(v))}>
           <SelectTrigger
             className={`border-[#a2c523]/30 focus:border-[#486b00] rounded px-3 py-2 w-full ${

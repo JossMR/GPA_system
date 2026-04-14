@@ -406,7 +406,7 @@ export default function NewProjectPage() {
 
                   {/*Categories*/}
                   <div className="space-y-2">
-                    <Label className="text-[#2e4600] font-medium">Categorías asignadas</Label>
+                    <Label className="text-[#2e4600] font-medium">Categorías asignadas(Opcional)</Label>
                     <ProjectCategoryTags
                       categories={assignedCategories}
                       onRemove={handleRemoveCategory}
