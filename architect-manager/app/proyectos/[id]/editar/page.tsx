@@ -768,8 +768,17 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     <Input
                       id="area"
                       name="area"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      onKeyDown={(e) => {
+                        if (["e", "E", "+", "-"].includes(e.key)) {
+                          e.preventDefault()
+                        }
+                      }}
                       defaultValue={project.PRJ_area_m2 ?? ""}
-                      placeholder="Ej: 22.5"
+                      placeholder="Ej: 22,5"
                       className="border-[#a2c523]/30 focus:border-[#486b00]"
                     />
                   </div>
