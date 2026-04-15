@@ -812,7 +812,7 @@ export default function PagosPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {isAdmin && (
+                          {(getUserPermissions().some((p) => p.screen === "pagos" && p.permission_type === "Edit") || isAdmin) && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -822,7 +822,7 @@ export default function PagosPage() {
                               <Edit className="h-4 w-4" />
                             </Button>
                           )}
-                          {isAdmin && (
+                          {(getUserPermissions().some((p) => p.screen === "pagos" && p.permission_type === "Edit") || isAdmin) && (
                             <Button
                               variant="ghost"
                               size="sm"
