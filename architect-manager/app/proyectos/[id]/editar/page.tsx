@@ -768,8 +768,17 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     <Input
                       id="area"
                       name="area"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      onKeyDown={(e) => {
+                        if (["e", "E", "+", "-"].includes(e.key)) {
+                          e.preventDefault()
+                        }
+                      }}
                       defaultValue={project.PRJ_area_m2 ?? ""}
-                      placeholder="Ej: 22.5"
+                      placeholder="Ej: 22,5"
                       className="border-[#a2c523]/30 focus:border-[#486b00]"
                     />
                   </div>
@@ -841,7 +850,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                 <ProjectTypeManager value={projectTypeId} onChange={setProjectTypeId} />
                 {/* Categorías */}
                 <div className="space-y-2">
-                  <Label className="text-[#2e4600] font-medium">Categorías asignadas</Label>
+                  <Label className="text-[#2e4600] font-medium">Categorías asignadas(Opcional)</Label>
                   <ProjectCategoryTags
                     categories={assignedCategories}
                     onRemove={handleRemoveCategory}

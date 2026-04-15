@@ -324,7 +324,16 @@ export default function NewProjectPage() {
                       <Input
                         id="area"
                         name="area"
-                        placeholder="Ej: 22.5"
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        onKeyDown={(e) => {
+                          if (["e", "E", "+", "-"].includes(e.key)) {
+                            e.preventDefault()
+                          }
+                        }}
+                        placeholder="Ej: 22,5"
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                       />
                     </div>
@@ -397,7 +406,7 @@ export default function NewProjectPage() {
 
                   {/*Categories*/}
                   <div className="space-y-2">
-                    <Label className="text-[#2e4600] font-medium">Categorías asignadas</Label>
+                    <Label className="text-[#2e4600] font-medium">Categorías asignadas(Opcional)</Label>
                     <ProjectCategoryTags
                       categories={assignedCategories}
                       onRemove={handleRemoveCategory}
@@ -801,36 +810,6 @@ export default function NewProjectPage() {
                   </CardContent>
                 </Card>
               )}
-
-              <Card className="border-[#c9e077]/30">
-                <CardHeader>
-                  <CardTitle className="text-[#2e4600] flex items-center">
-                    <FileText className="mr-2 h-5 w-5" />
-                    Documentos Requeridos
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 space-y-3">
-                  <div className="text-sm space-y-2">
-                    <p className="flex items-center">
-                      <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
-                      Planos arquitectónicos
-                    </p>
-                    <p className="flex items-center">
-                      <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
-                      Permisos de construcción
-                    </p>
-                    <p className="flex items-center">
-                      <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
-                      Estudio de suelos
-                    </p>
-                    <p className="flex items-center">
-                      <span className="w-2 h-2 rounded-full bg-[#a2c523] mr-2"></span>
-                      Contrato firmado
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
               <Card className="border-[#7d4427]/20">
                 <CardHeader className="bg-[#7d4427]/10 rounded-t-lg">
                   <CardTitle className="text-[#7d4427]">Fases del Proyecto</CardTitle>
@@ -854,6 +833,9 @@ export default function NewProjectPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span>APC y permisos de construcción</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Desembolso</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>En construcción</span>
