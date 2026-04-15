@@ -313,6 +313,7 @@ export default function NewProjectPage() {
                         id="caseNumber"
                         name="caseNumber"
                         placeholder="Ej: 1256"
+                        maxLength={20}
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                         required
                       />
@@ -327,7 +328,7 @@ export default function NewProjectPage() {
                         type="number"
                         inputMode="decimal"
                         min="0"
-                        step="0.01"
+                        step="any"
                         onKeyDown={(e) => {
                           if (["e", "E", "+", "-"].includes(e.key)) {
                             e.preventDefault()
@@ -449,6 +450,7 @@ export default function NewProjectPage() {
                             <Input
                               placeholder="Nueva categoría"
                               value={newCat}
+                              maxLength={60}
                               onChange={e => setNewCat(e.target.value)}
                             />
                             <Button
@@ -495,6 +497,7 @@ export default function NewProjectPage() {
                         id="neighborhood"
                         name="neighborhood"
                         placeholder="Ej: Santa Cecília"
+                        maxLength={120}
                         className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
                       />
                     </div>
@@ -507,6 +510,7 @@ export default function NewProjectPage() {
                       id="additionalDirections"
                       name="additionalDirections"
                       placeholder="Direcciones adicionales para llegar al sitio"
+                      maxLength={100}
                       className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[120px]"
                     />
                   </div>
@@ -530,6 +534,7 @@ export default function NewProjectPage() {
                         id="logbookNumber"
                         name="logbookNumber"
                         placeholder="Ej: 22"
+                        maxLength={20}
                         className="border-[#a2c523]/30 focus:border-[#486b00]"
                       />
                     </div>
@@ -553,6 +558,7 @@ export default function NewProjectPage() {
                       id="notes"
                       name="notes"
                       placeholder="Notas adicionales sobre el proyecto"
+                      maxLength={300}
                       className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[120px]"
                     />
                   </div>
@@ -579,8 +585,9 @@ export default function NewProjectPage() {
                         <Input
                           id="budget"
                           name="budget"
-                          type="text"
+                          type="number"
                           inputMode="decimal"
+                          step="any"
                           placeholder="Ej: 150000.25"
                           className="pl-10 border-[#7d4427]/30 focus:border-[#7d4427] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           style={{ MozAppearance: "textfield" }}

@@ -757,6 +757,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                       name="caseNumber"
                       defaultValue={project.PRJ_case_number ?? ""}
                       placeholder="Ej: 1256"
+                      maxLength={20}
                       className="border-[#a2c523]/30 focus:border-[#486b00]"
                       required
                     />
@@ -771,7 +772,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                       type="number"
                       inputMode="decimal"
                       min="0"
-                      step="0.01"
+                      step="any"
                       onKeyDown={(e) => {
                         if (["e", "E", "+", "-"].includes(e.key)) {
                           e.preventDefault()
@@ -893,6 +894,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                           <Input
                             placeholder="Nueva categoría"
                             value={newCat}
+                            maxLength={60}
                             onChange={e => setNewCat(e.target.value)}
                           />
                           <Button
@@ -938,6 +940,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                       name="neighborhood"
                       defaultValue={project.PRJ_neighborhood ?? ""}
                       placeholder="Ej: Santa Cecília"
+                      maxLength={100}
                       className="pl-10 border-[#a2c523]/30 focus:border-[#486b00]"
                     />
                   </div>
@@ -951,6 +954,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     name="additionalDirections"
                     defaultValue={project.PRJ_additional_directions ?? ""}
                     placeholder="Direcciones adicionales para llegar al sitio"
+                    maxLength={300}
                     className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[120px]"
                   />
                 </div>
@@ -976,6 +980,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                       name="logbookNumber"
                       defaultValue={project.PRJ_logbook_number ?? ""}
                       placeholder="Ej: 22"
+                      maxLength={30}
                       className="border-[#a2c523]/30 focus:border-[#486b00]"
                     />
                   </div>
@@ -1001,6 +1006,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
                     name="notes"
                     defaultValue={project.PRJ_notes ?? ""}
                     placeholder="Notas adicionales sobre el proyecto"
+                    maxLength={300}
                     className="border-[#a2c523]/30 focus:border-[#486b00] min-h-[120px]"
                   />
                 </div>
