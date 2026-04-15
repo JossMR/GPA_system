@@ -47,7 +47,7 @@ export default function RolesPage() {
       console.error("Error fetching roles:", error)
       toast({
         title: "Error",
-        description: "No se pudieron cargar los roles",
+        description: typeof error === "string" ? error : "No se pudieron cargar los roles",
         variant: "destructive"
       })
     } finally {
@@ -101,19 +101,11 @@ export default function RolesPage() {
 
       if (!response.ok) {
         const data = await response.json()
-        if (response.status === 404 && data.error === 'This role is associated with users') {
-          toast({
-            title: "No se puede eliminar el rol",
-            description: "Este rol está asociado con usuarios activos. Por favor, reasigna los usuarios a otro rol antes de eliminarlo.",
-            variant: "destructive",
-          })
-        } else {
           toast({
             title: "Error",
-            description: "No se pudo eliminar el rol",
+            description: data.error || "No se pudo eliminar el rol",
             variant: "destructive",
           })
-        }
         return
       }
 

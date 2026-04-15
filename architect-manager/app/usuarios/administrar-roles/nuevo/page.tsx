@@ -170,10 +170,10 @@ export default function NewRolePage() {
         setLoading(false)
         return
       }
-
+      const data =await response.json()
       toast({
         title: "Rol creado",
-        description: "El nuevo rol fue creado correctamente",
+        description: data.message || "El nuevo rol fue creado correctamente",
         variant: "success"
       })
 

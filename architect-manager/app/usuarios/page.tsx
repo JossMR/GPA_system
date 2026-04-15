@@ -82,7 +82,7 @@ export default function UsersPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudieron cargar los usuarios.",
+        description: typeof error === "string" ? error : "No se pudieron cargar los usuarios.",
         variant: "destructive",
       })
     } finally {
