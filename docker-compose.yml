@@ -2,13 +2,13 @@ services:
   db:
     image: mysql
     container_name: MYSQL
-    ports: 
+    ports:
       - 3306:3306
-    environment: 
+    environment:
       MYSQL_ROOT_PASSWORD: "admin"
       MYSQL_DATABASE: "GPA"
-    volumes: 
-      - ./schemas:/var/lib/mysql
+    volumes:
+      - mysql_data:/var/lib/mysql
 
   architect-manager:
     build:
@@ -26,4 +26,8 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - ./architect-manager/public/uploads:/app/public/uploads
+      - uploads_data:/app/public/uploads
+
+volumes:
+  mysql_data:
+  uploads_data:
