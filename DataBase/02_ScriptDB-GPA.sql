@@ -1,4 +1,6 @@
-﻿/*
+﻿USE gpa;
+
+/*
 Created: 27/5/2025
 Modified: 3/11/2025
 Model: RE MySQL 8.0

@@ -1,6 +1,9 @@
 services:
   db:
     image: mysql
+    build:
+      context: ./DataBase
+      dockerfile: Dockerfile
     container_name: MYSQL
     ports:
       - 3306:3306

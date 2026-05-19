@@ -1,6 +1,8 @@
+USE gpa;
+
 INSERT INTO `gpa`.`GPA_Roles` (`ROL_id`, `ROL_name`, `ROL_notifications_for`) VALUES ('1', 'admin', 'E');
 
-INSERT INTO `gpa`.`GPA_Users` (`USR_id`, `USR_email`, `USR_active`, `USR_role_id`, `USR_name`, `USR_f_lastname`, `USR_s_lastname`, `USR_creation_date`, `USR_last_access_date`) VALUES ('1', 'test@gmail.com', '1', '1', 'Nombre', 'PApellido', 'SApellido', '2025-10-10', '2026-01-01');
+INSERT INTO `gpa`.`GPA_Users` (`USR_id`, `USR_email`, `USR_active`, `USR_role_id`, `USR_name`, `USR_f_lastname`, `USR_s_lastname`, `USR_creation_date`, `USR_last_access_date`) VALUES ('1', 'kendallsalazarnavarro@gmail.com', '1', '1', 'Nombre', 'PApellido', 'SApellido', '2025-10-10', '2026-01-01');
 
 INSERT INTO `gpa`.`GPA_Permission_type` (`PTY_name`, `PTY_id`) VALUES ('Edit', '1');
 INSERT INTO `gpa`.`GPA_Permission_type` (`PTY_name`, `PTY_id`) VALUES ('View', '2');
