@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
       `SELECT COUNT(us.USR_id) as totalRegularUsers
        FROM gpa_users us
        JOIN gpa_roles r ON us.usr_role_id = r.rol_id
-       WHERE LOWER(r.ROL_name) = 'usuario'`
+       WHERE LOWER(r.ROL_name) != 'admin'`
     );
 
     const users: GPAUser[] = await executeQuery(
@@ -221,6 +221,56 @@ export async function PUT(req: NextRequest) {
         { error: "Debe haber al menos un usuario activo en el sistema." },
         { status: 401 }
       );
+    }
+
+    const currentUserResult = await executeQuery(
+      `SELECT us.USR_id, us.USR_active, LOWER(r.ROL_name) as roleName
+       FROM gpa_users us
+       JOIN gpa_roles r ON us.USR_role_id = r.ROL_id
+       WHERE us.USR_id = ?`,
+      [updatedUser.USR_id]
+    );
+    const currentUser = (currentUserResult as any[])[0] as { USR_id: number; USR_active: number | boolean; roleName: string } | undefined;
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "El usuario indicado no existe." },
+        { status: 404 }
+      );
+    }
+
+    const targetRoleResult = await executeQuery(
+      'SELECT LOWER(ROL_name) as roleName FROM gpa_roles WHERE ROL_id = ?',
+      [updatedUser.USR_role_id]
+    );
+    const targetRole = ((targetRoleResult as any[])[0] as { roleName?: string } | undefined)?.roleName;
+    if (!targetRole) {
+      return NextResponse.json(
+        { error: "El rol seleccionado no existe." },
+        { status: 400 }
+      );
+    }
+
+    const nextIsActive = Number(updatedUser.USR_active) === 1 || updatedUser.USR_active === true;
+    const currentIsAdmin = currentUser.roleName === 'admin';
+    const nextIsAdminActive = targetRole === 'admin' && nextIsActive;
+
+    if (currentIsAdmin && !nextIsAdminActive) {
+      const otherActiveAdminsResult = await executeQuery(
+        `SELECT COUNT(us.USR_id) as totalAdmins
+         FROM gpa_users us
+         JOIN gpa_roles r ON us.USR_role_id = r.ROL_id
+         WHERE LOWER(r.ROL_name) = 'admin'
+           AND us.USR_active = 1
+           AND us.USR_id <> ?`,
+        [updatedUser.USR_id]
+      );
+      const otherActiveAdmins = Number((otherActiveAdminsResult as any[])[0]?.totalAdmins || 0);
+      if (otherActiveAdmins === 0) {
+        return NextResponse.json(
+          { error: "No se puede quitar el rol o desactivar al último administrador activo del sistema." },
+          { status: 401 }
+        );
+      }
     }
 
     // Update the user in the database
