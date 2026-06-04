@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get project directory
-    const projectDir = path.join(process.cwd(),'app', 'public', 'uploads', 'projects', projectId)
+    const projectDir = path.join(process.cwd(), 'public', 'uploads', 'projects', projectId)
     
     if (!existsSync(projectDir)) {
       return NextResponse.json({ files: [] }, { status: 200 })
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     const uniqueFileName = `${baseName}_${timestamp}${fileExtension}`
 
     // Create directory structure: /uploads/projects/{project_id}/
-    const uploadDir = path.join(process.cwd(),'app', 'public', 'uploads', 'projects', projectId)
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'projects', projectId)
     
     // Create directory if it doesn't exist
     if (!existsSync(uploadDir)) {
