@@ -1,0 +1,139 @@
+\documentclass[12pt]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{verbatim}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\title{Informe Técnico — Sistema GPA}
+\author{Equipo de Proyecto}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\cleardoublepage
+
+\chapter{Capítulo VII: Desafíos}
+\section{Desafíos técnicos enfrentados durante el desarrollo}
+\begin{itemize}
+  \item Integración frontend/backend: adaptar una aplicación Next.js (TypeScript) para consumir y exponer rutas API hacia una base de datos MySQL administrada por \texttt{lib/database.ts} y los modelos en \texttt{models/}. Se diseñó una capa de acceso a datos y se manejaron conexiones en entornos SSR.
+  \item Dockerización y persistencia: contenerizar la aplicación y la base de datos (ficheros \texttt{docker-compose.yml}, \texttt{DataBase/Dockerfile}) y garantizar arranques idempotentes del contenedor MySQL con scripts de inicialización en \texttt{DataBase/initdb/}.
+  \item Autenticación y sesiones: integrar proveedores externos (p. ej. Google, con \texttt{GoogleLogin.tsx} y \texttt{auth-provider.tsx}) y compatibilizar OAuth/JWT/sesiones con rutas y lógica de permisos.
+  \item Manejo de archivos y uploads: soportar subida y almacenamiento de documentos en \texttt{public/uploads/} con validación y control de tipos y tamaños.
+  \item Calidad y pruebas: configurar y mantener tests con Jest (\texttt{jest.config.js}, \texttt{__tests__/}) y asegurar cobertura para evitar regresiones.
+  \item Internacionalización y formatos: normalizar formatos de datos (fechas, moneda) y asegurar consistencia entre componentes y backend (ej. \texttt{lib/formatters.ts}).
+  \item Compatibilidad y despliegue: coordinar versiones de Node, pnpm y Next.js para despliegues reproducibles.
+\end{itemize}
+
+\section{Riesgos materializados y acciones de mitigación aplicadas}
+\begin{itemize}
+  \item Pérdida o corrupción de datos durante despliegues de base de datos. Mitigación: backups, snapshots y scripts de inicialización controlados en \texttt{DataBase/}.
+  \item Vulnerabilidades en autenticación y exposición de endpoints. Mitigación: revisión de flujos de login, uso de variables de entorno para secretos, validación de entrada y restricciones por roles (modelos \texttt{GPA_permission}, \texttt{GPA_role}).
+  \item Retrasos por dependencias externas (p. ej. OAuth). Mitigación: flujos de fallback, caché de sesiones y pruebas mock de integración.
+  \item Problemas con archivos subidos (malware, tamaños). Mitigación: validación de tipo/size en frontend y backend, escaneo básico y almacenamiento seguro.
+  \item Incremento de deuda técnica por cambios de alcance. Mitigación: revisiones de código, PRs pequeños y tests automatizados.
+\end{itemize}
+
+\section{Cambios de alcance y su impacto en el cronograma}
+\begin{itemize}
+  \item Se añadieron módulos de notificaciones y pagos tras la planificación inicial, ampliando el alcance y sumando aproximadamente 2–3 semanas para integración y pruebas.
+  \item Integración de Google OAuth y refactor de roles/permiso implicaron ajustes en \texttt{auth-provider.tsx} y modelos (\texttt{GPA_user}, \texttt{GPA_role}, \texttt{GPA_permission}), retrasando entregables de API.
+  \item Dockerizar el entorno completo trajo trabajo adicional en scripts de arranque, pero mejoró la reproducibilidad y redujo errores en despliegues.
+  \item Para mitigar el impacto se priorizaron entregables críticos (login, operaciones CRUD básicas, reportes esenciales) y se pospusieron funcionalidades no críticas a iteraciones siguientes.
+\end{itemize}
+
+\section{Lecciones aprendidas por el equipo de proyecto}
+\begin{itemize}
+  \item Versionar migraciones y scripts de base de datos evita problemas de sincronización en despliegues.
+  \item TDD y cobertura de pruebas reducen regresiones al introducir nuevas funcionalidades.
+  \item Mantener contratos claros entre frontend y backend (DTOs/Tipos TypeScript) simplifica integraciones.
+  \item Contenerizar desde etapas tempranas mejora la consistencia entre entornos de desarrollo, CI y producción.
+  \item Documentar componentes clave (\texttt{auth-provider}, \texttt{lib/database.ts}, modelos) acelera la incorporación de nuevos miembros.
+  \item Revisiones de seguridad tempranas evitan remedios costosos posteriormente.
+\end{itemize}
+
+\cleardoublepage
+\chapter{Capítulo VIII: Detalles Técnicos}
+\section{Arquitectura del sistema (diagrama de componentes)}
+Descripción breve:
+\begin{itemize}
+  \item Frontend: Next.js (carpeta \texttt{app/}, \texttt{components/}) responsable de UI, validación cliente y llamadas a la API.
+  \item API / Backend ligero: rutas API integradas en Next.js que usan la capa de acceso a datos en \texttt{lib/database.ts}.
+  \item Persistencia: MySQL con esquemas y scripts versionados en \texttt{DataBase/} y \texttt{schemas/}.
+  \item Servicios auxiliares: manejo de archivos en \texttt{public/uploads/}, servicios de notificaciones y procesamiento asíncrono según necesidad.
+  \item Orquestación: \texttt{docker-compose.yml} / \texttt{docker-compose.deploy.yml} para levantar la app y la BD en contenedores.
+\end{itemize}
+
+\subsection*{Diagrama sugerido (Mermaid)}
+\begin{verbatim}
+graph LR
+  A[Usuario (Browser)] -->|HTTP/SSR| B[Next.js Frontend]
+  B -->|API Calls| C[Next.js API / Server]
+  C -->|DB Queries| D[MySQL (DataBase/)]
+  C -->|File store| E[Uploads (public/uploads)]
+  C -->|Auth| F[OAuth Provider / Auth Service]
+  subgraph DevOps
+    G[Docker Compose]
+    G --> B
+    G --> D
+  end
+\end{verbatim}
+
+\section{Tecnologías, lenguajes y frameworks utilizados}
+\begin{itemize}
+  \item Lenguajes: TypeScript, SQL, Bash.
+  \item Frontend / Framework: Next.js (App Router), React.
+  \item Estilos: Tailwind CSS (\texttt{tailwind.config.ts}).
+  \item Runtime / Paquete: Node.js, pnpm.
+  \item Base de datos: MySQL (\texttt{DataBase/}).
+  \item Contenerización: Docker, Docker Compose.
+  \item Pruebas: Jest (\texttt{jest.config.js}, \texttt{__tests__/}).
+\end{itemize}
+
+\section{Repositorio del código fuente y control de versiones}
+\begin{itemize}
+  \item Control: Git; repositorio raíz contiene la aplicación y scripts de despliegue.
+  \item Ramificación recomendada: \texttt{main} para producción, \texttt{develop} para integración, ramas \texttt{feature/*} para desarrollo.
+  \item Convenciones: commits claros y atómicos; se recomienda usar Conventional Commits.
+\end{itemize}
+
+\section{Estándares de codificación aplicados}
+\begin{itemize}
+  \item TypeScript estricto con interfaces y tipos en \texttt{models/}.
+  \item Componentes React funcionales y hooks.
+  \item Formato y linting: usar Prettier y ESLint (si no configurados, recomendarlos).
+  \item Estructura modular: separar \texttt{components/}, \texttt{lib/}, \texttt{models/} y lógica de negocio.
+\end{itemize}
+
+\section{Requerimientos de hardware y software para la ejecución}
+\textbf{Mínimos:}
+\begin{itemize}
+  \item Sistema operativo: Windows/Linux/macOS.
+  \item Node.js >= 16.
+  \item pnpm o npm.
+  \item Docker y Docker Compose para entornos reproducibles (recomendado).
+  \item RAM: 8 GB mínimo, 16 GB recomendado para contenedores locales.
+\end{itemize}
+
+Ejemplo de arranque rápido:
+\begin{verbatim}
+pnpm install
+pnpm dev
+# o con Docker
+docker-compose up --build
+\end{verbatim}
+
+\section{Seguridad: autenticación, autorización y manejo de datos sensibles}
+\begin{itemize}
+  \item Autenticación: OAuth (Google) vía \texttt{GoogleLogin.tsx} y gestión de sesiones en \texttt{auth-provider.tsx}. Mantener secretos en variables de entorno.
+  \item Autorización: modelos de roles y permisos (\texttt{GPA_role}, \texttt{GPA_permission}) y comprobaciones server-side en rutas API.
+  \item Manejo de datos sensibles: no almacenar secretos en el repo, usar conexiones cifradas en producción y encriptar campos sensibles si aplica.
+  \item Validación y saneamiento: validación en frontend y backend; consultas parametrizadas para prevenir SQL injection.
+  \item Operacional: rotación de claves, restringir permisos de cuentas de servicio, logs sin datos sensibles y backups periódicos.
+\end{itemize}
+
+\end{document}
